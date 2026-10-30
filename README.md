@@ -35,4 +35,9 @@ En Windows: `scripts\verificar-windows.ps1` comprueba las herramientas y ejecuta
 
 ## Licencia
 
-Pendiente de elegir por el autor (el proyecto será de código abierto).
+MercHosting es software libre: puedes redistribuirlo y/o modificarlo bajo los términos de la
+**Licencia Pública General de GNU, versión 3** o (a tu elección) cualquier versión posterior,
+publicada por la Free Software Foundation. Se distribuye sin ninguna garantía.
+Texto completo en [`LICENSE`](LICENSE).
+
+Copyright (C) 2026 Amir (Amercson)

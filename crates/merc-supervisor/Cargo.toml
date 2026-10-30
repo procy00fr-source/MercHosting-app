@@ -3,6 +3,7 @@ name = "merc-supervisor"
 description = "Supervisor de procesos Java de MercHosting: arranque, readiness, parada limpia, crash y logs."
 version.workspace = true
 edition.workspace = true
+license.workspace = true
 
 [dependencies]
 merc-core = { path = "../merc-core" }

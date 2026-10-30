@@ -3,6 +3,7 @@ name = "merc-store"
 description = "Persistencia SQLite de MercHosting con migraciones versionadas."
 version.workspace = true
 edition.workspace = true
+license.workspace = true
 
 [dependencies]
 merc-core = { path = "../merc-core" }

@@ -5,6 +5,7 @@ members = ["crates/merc-core", "crates/merc-store", "crates/merc-supervisor"]
 [workspace.package]
 version = "0.1.0"
 edition = "2021"
+license = "GPL-3.0-or-later"
 rust-version = "1.80"
 
 [workspace.dependencies]

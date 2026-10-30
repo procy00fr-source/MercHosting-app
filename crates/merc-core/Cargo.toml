@@ -3,6 +3,7 @@ name = "merc-core"
 description = "Dominio de MercHosting: estados, rutas confinadas, detección de servidores y perfiles de arranque."
 version.workspace = true
 edition.workspace = true
+license.workspace = true
 
 [dependencies]
 serde.workspace = true

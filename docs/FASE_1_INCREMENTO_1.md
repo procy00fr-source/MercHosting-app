@@ -71,13 +71,18 @@ La prueba con un servidor real está pendiente (ver sección 4).
 
 **BLOQUEADO (necesita tu PC o tu decisión)**
 - Prueba con tu servidor NeoForge 1.21.1 real y Java 21: hace falta ejecutar en Windows.
-- Elegir la licencia de código abierto (no se eligió por ti).
 
 ## 4. Cómo reproducir en Windows
 
 1. Instala Rust (https://rustup.rs) y un JDK 21 (por ejemplo, Eclipse Temurin).
 2. Ejecuta `scripts\verificar-windows.ps1` con clic derecho → «Ejecutar con PowerShell».
 3. Se genera `verificacion-windows.log` con las versiones y el resultado de las 45 pruebas.
+
+## 4b. Historial de verificación en Windows
+
+- 30-10-2026, intento 1: Windows con Rust 1.99.1 y Temurin 21.0.13. **Las pruebas no llegaron a ejecutarse**
+  porque el script tenía un error: en Windows PowerShell 5.1, `$ErrorActionPreference = "Stop"` junto con
+  `2>&1` convierte la salida normal de cargo en stderr en un error fatal. Script corregido (usa `cmd /c`).
 
 ## 5. Riesgos y límites conocidos
 
