@@ -1,0 +1,11 @@
+NOTA DE PRECEDENCIA: prevalecen LEEME_PRIMERO.txt y 00_INICIO/00_DIRECTIVA_MAESTRA.txt. NO panel remoto web/móvil; SÍ compañeros desde aplicación de escritorio. Supporter US$8 único, solo cosméticos.
+
+# RELEASE WINDOWS Y FIRMA DIGITAL
+
+Entregables: instalador Windows .exe y, cuando convenga, paquete MSIX para Microsoft Store. Revisar requisitos actuales de Store y licencias. Proceso de release con versionado semántico, changelog, firmas, checksums, SBOM si viable, verificación de dependencias y binarios, actualización segura y rollback. Repositorio y descargas oficiales verificables.
+
+SmartScreen: firmar ayuda a identidad y confianza, pero no garantiza que desaparezca advertencia en primeras descargas. Evaluar proveedor de firma disponible en Perú, certificados OV y alternativas de firma para OSS, o distribución mediante Store. No pedir a usuarios que desactiven Windows Defender, SmartScreen ni antivirus. No ofrecer bypass engañoso.
+
+Costos: reservar parte de ventas Supporter US$8 para mantenimiento, certificados y backend de cuentas; recordar que ingreso único no implica costos únicos. No comprometer pago mensual de proveedor sin validar elegibilidad y demanda.
+
+Privacidad: política de datos de cuenta, identificadores, logs y auditoría, retención, eliminación, exportación, seguridad de secretos, divulgación responsable. Términos de compra y política de reembolso claros. Transparencia sobre servicios de terceros (Playit, catálogos mods, pagos).

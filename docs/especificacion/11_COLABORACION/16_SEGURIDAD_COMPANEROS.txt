@@ -1,0 +1,20 @@
+NOTA DE PRECEDENCIA: prevalecen LEEME_PRIMERO.txt y 00_INICIO/00_DIRECTIVA_MAESTRA.txt. NO panel remoto web/móvil; SÍ compañeros desde aplicación de escritorio. Supporter US$8 único, solo cosméticos.
+
+# CUENTAS, COMPAÑEROS Y ARCHIVOS REALES — SEGURIDAD OBLIGATORIA
+
+REGISTRO: nombre de usuario único + contraseña, sin email obligatorio; identificador interno inmutable; Argon2id, protección de credenciales, límites de intentos, recuperación por códigos de un solo uso, sesiones revocables y TLS. Servicio de identidad mínimo para buscar cuentas, invitaciones y permisos. Explicar que sin email/códigos la recuperación puede ser imposible. No crear servicios remotos de administración accesibles públicamente sin autenticar.
+
+INVITAR: propietario busca nombre de usuario, confirma identidad, elige servidor, rol y permisos; destinatario acepta. Roles Observador, Moderador, Operador, Administrador y Personalizado. Permisos backend separados: estado, iniciar, detener, reiniciar, leer consola, enviar comandos de Minecraft, logs, ver/listar archivos, leer, descargar, subir, editar, borrar, instalar mods/JARs, jugadores/whitelist/OP, backups crear/descargar/restaurar/borrar, mundo, ajustes, red. Los permisos de ejecutar comandos, instalar JAR y restaurar backups son de alto riesgo; no agrupar con lectura. Denegar por defecto y revocación inmediata.
+
+ADVERTENCIA AL DAR ACCESO A ARCHIVOS (texto literal visible):
+"Estás a punto de darle a esta persona acceso a archivos reales almacenados dentro de tu computadora. Aunque MercHosting limitará su acceso a los archivos del servidor autorizado, esta persona podría ver, descargar, modificar o eliminar información según los permisos que concedas. Los mods y plugins JAR pueden ejecutar código en tu PC. Concede estos permisos únicamente a personas de confianza."
+
+La advertencia se muestra al habilitar por primera vez o ampliar lectura, descarga, edición, subida, borrado, instalación JAR o ejecución de comandos. Mostrar el conjunto concreto de riesgos, confirmación explícita y opción Cancelar. No sustituye las protecciones técnicas.
+
+AISLAMIENTO: rutas canónicas, no permitir traversal, symlinks/junctions/reparse points fuera de la instancia, ZIP slip, acceso a otras instancias, secretos Playit, tokens MercHosting ni datos privados Windows. Límite de tamaño y cuotas, validación de uploads, backups, auditoría. Importante: la ejecución de mods/plugins no es sandbox; un JAR malicioso puede comprometer el usuario Windows que ejecuta Java. Explicarlo y aplicar protecciones reforzadas.
+
+REMOTO: únicamente desde cliente escritorio MercHosting instalado en otra PC, no panel web/móvil. Canal separado y cifrado, autenticar cada sesión, autorización por recurso y acción en anfitrión, auditoría, protección de replay y CSRF si aplica, no ejecutar shell arbitrario. La PC anfitriona debe estar encendida; no prometer encendido remoto sin función explícita. El propietario puede pausar invitaciones, ver sesiones, revocar inmediatamente y consultar historial.
+
+PRUEBAS DE ABUSO: usuario invitado intenta escalar permisos, adivinar IDs, abrir .., seguir symlink, descargar tokens, enviar comandos sin permiso, instalar JAR, editar otro servidor, reutilizar sesión revocada, alterar rol local. Todos deben fallar del lado servidor.
+
+LÍMITE DE PRODUCTO: la administración colaborativa entre computadoras ocurre desde otra instalación de escritorio MercHosting. NO desarrollar un panel web ni móvil. El website oficial solo presenta y distribuye la aplicación. El canal administrativo nunca debe reutilizar el túnel público de Minecraft/Playit.

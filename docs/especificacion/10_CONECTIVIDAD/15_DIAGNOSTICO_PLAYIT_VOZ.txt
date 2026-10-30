@@ -1,0 +1,15 @@
+NOTA DE PRECEDENCIA: prevalecen LEEME_PRIMERO.txt y 00_INICIO/00_DIRECTIVA_MAESTRA.txt. NO panel remoto web/móvil; SÍ compañeros desde aplicación de escritorio. Supporter US$8 único, solo cosméticos.
+
+# PLAYIT + SIMPLE VOICE CHAT + MONITOR DE ESTADO
+
+FLUJO: usuario elige Playit voluntariamente -> enlaza su propia cuenta mediante mecanismo oficial -> MercHosting gestiona agente sin consola visible -> crea o guía creación del túnel Minecraft -> muestra hostname real y copia -> persiste asociación por instancia. Nunca usar cuenta compartida del desarrollador. Si API oficial no permite crear túneles programáticamente, mostrar asistente integrado con pasos mínimos y sincronización de estado; no automatizar páginas privadas ni simular éxito.
+
+MONITOR: separar 1) estado oficial global/regional Playit (consultar fuente documentada, no scrapear de forma frágil), 2) agente local, 3) túnel Minecraft, 4) estado proceso Java, 5) conectividad externa comprobada cuando exista prueba fiable, 6) voz. Estados operativo/degradado/interrupción/desconocido; hora última consulta, mensajes claros, reconectar y diagnósticos. Latencia medida con metodología clara; no atribuir lag a Playit sin pruebas.
+
+VOICE CHAT: detectar Simple Voice Chat en mods/plugins por metadatos/versiones, leer config real voicechat-server.properties y puerto UDP (típicamente 24454, no asumir). Cuando Playit esté activado, preparar automáticamente túnel compatible MC Simple Voice Chat/UDP, si el proveedor y cuota lo permiten; mapear endpoint público al puerto local, escribir voice_host según documentación de la versión instalada, backup previo y reinicio controlado. Mostrar al usuario desde el consentimiento inicial que los puertos adicionales necesarios para mods compatibles se configurarán automáticamente. No preguntar de nuevo por operaciones rutinarias; sí avisar antes de cambios destructivos/reinicios con jugadores.
+
+Varias instancias: puertos locales únicos, túneles independientes, ownership de recursos, reconciliación al iniciar y limpieza selectiva sin tocar túneles ajenos. Si se quita el mod, ofrecer desactivar el túnel asociado; si se cambia puerto, reconciliar sin romper otro servidor. Los jugadores necesitan el mod cliente. Voice Chat puede fallar aun si el túnel aparece activo: ofrecer diagnóstico real y no afirmar que el audio funciona sin prueba.
+
+SEGURIDAD: Playit no es el canal de administración de compañeros. Secretos en almacén protegido Windows, scopes mínimos, procesos verificados, descargas oficiales, estado de EULA/online-mode/whitelist seguro, no exponer puertos de panel o archivos. Considerar requisitos UDP separados de otros mods como proximidad. LAN/directo siguen disponibles. La PC debe permanecer encendida y conectada.
+
+PRUEBAS: Windows limpio, cuenta nueva, cuenta existente, CGNAT, caída de agente, caída Playit, reconexión, 2+ instancias, puerto ocupado, mod ausente, mod instalado/desinstalado, servidor con jugadores, voz entre dos PCs, fallback por API restringida. Guardar evidencia.

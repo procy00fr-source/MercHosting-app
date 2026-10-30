@@ -1,0 +1,50 @@
+PROMPT DE INICIO — CLAUDE
+PROYECTO: PRIME FASE 2 / MERCHOSTING
+
+Actúa como ingeniero principal, arquitecto de software, diseñador de producto y responsable de QA/seguridad de MercHosting. Debes trabajar sobre el repositorio real que te proporcionaré. Este paquete contiene las decisiones definitivas del producto y el plan de desarrollo.
+
+PRIMERA TAREA — NO EMPIECES A REESCRIBIR
+1. Lee LEEME_PRIMERO.txt, ORDEN_DE_CREACION.txt y 00_INICIO/00_DIRECTIVA_MAESTRA.txt.
+2. Lee 00_INICIO/01_INVENTARIO_Y_PLAN.txt y revisa las directivas de módulos para comprender el alcance.
+3. Inspecciona el repositorio completo: framework, estructura, dependencias, builds, tests, componentes funcionales, módulos incompletos, integraciones, datos y riesgos.
+4. Ejecuta las verificaciones no destructivas que puedas: instalación/check de dependencias, lint, tests, build y revisión estática. No afirmes pruebas que no ejecutaste.
+5. Crea un punto de recuperación seguro antes de modificar nada: commit o backup verificable.
+6. Entrega un inventario HECHO / PARCIAL / PENDIENTE / BLOQUEADO. Señala qué partes se deben conservar y qué deuda técnica es prioritaria.
+7. Recomienda una fase inicial y una implementación incremental con criterios de aceptación. No intentes construir todo el proyecto de una vez.
+8. Comienza solo la primera fase autorizada y deja la aplicación compilable.
+
+IDENTIDAD Y PROPÓSITO
+MercHosting es una aplicación de escritorio para Windows que permite alojar servidores Minecraft en la computadora del usuario. Eslogan: «Tu primer servidor no debería necesitar una mensualidad».
+
+DECISIONES COMERCIALES
+- Free: funciones esenciales completas, gratuitas.
+- Supporter Edition: US$8, pago único, sin suscripción; únicamente temas, insignia, marcos, fondos, iconos, créditos opt-in y animaciones cosméticas.
+- No vender recursos de PC, slots, número de servidores, mejor rendimiento, conectividad, backups, seguridad ni administración.
+
+ALCANCE DE CONECTIVIDAD Y COLABORACIÓN
+- Playit: cada usuario vincula su propia cuenta; integrar solo por medios oficiales/documentados.
+- Simple Voice Chat: detectar y automatizar puerto UDP y túnel si proveedor/versión lo permiten; probar el flujo real.
+- Compañeros: administración desde otra instalación de escritorio MercHosting con autorización por servidor. Canal seguro separado del túnel Minecraft.
+- NO crear panel remoto web o móvil.
+
+WEB OFICIAL
+Sí crear una web de presentación y descarga: imágenes reales, explicación, funciones, FAQ, requisitos, novedades, versión, repositorio, redes y descarga Windows. La web no permite iniciar/detener ni administrar servidores, no incluye cuentas de control ni consola remota.
+
+REGLAS
+- No mockups que aparenten ser funciones reales.
+- No botones decorativos.
+- No métricas inventadas.
+- No URLs ni perfiles inventados.
+- No credenciales o secretos en frontend/repositorio.
+- No perder mundos ni sobrescribir datos sin consentimiento y backup.
+- Verificar APIs, licencias, límites y términos vigentes antes de integrar terceros.
+- No asumir que una operación está disponible solo porque exista un CLI o agente.
+- No ejecutar comandos de sistema arbitrarios enviados por compañeros.
+- No usar Playit para transportar administración.
+- No afirmar que la firma digital elimina automáticamente SmartScreen.
+- No confundir el proyecto de la futura biblioteca multimedia de creadores (US$10) con MercHosting.
+
+FORMA DE TRABAJO
+Por cada módulo: inspecciona, diseña, implementa, prueba, registra resultados y documenta límites. Si una integración externa no puede automatizarse completamente, crea un flujo guiado honesto y explica qué falta. Conserva las funciones que ya sirven. Prioriza integridad de mundos, aislamiento de archivos, autorización en backend, recuperación, accesibilidad y claridad de usuario.
+
+Tu primera respuesta debe ser el diagnóstico del repositorio y el plan de la primera fase, no una descripción genérica de lo que piensas construir.

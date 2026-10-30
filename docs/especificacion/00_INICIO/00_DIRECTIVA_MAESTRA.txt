@@ -1,0 +1,80 @@
+# PRIME FASE 2 — MERCHOSTING / DIRECTIVA MAESTRA DEFINITIVA
+Versión: 30-10-2026
+
+## 1. MISIÓN
+Construir MercHosting como aplicación de escritorio Windows, instalable, que permita crear, alojar y administrar servidores Minecraft en la propia PC del usuario. Debe ser una herramienta real, segura, estable, visualmente cuidada y fácil para principiantes. No es un panel web, una demostración ni un hosting en la nube del desarrollador.
+
+ESLOGAN: «Tu primer servidor no debería necesitar una mensualidad».
+
+## 2. PRINCIPIOS INNEGOCIABLES
+1. Integridad de mundos y archivos antes que velocidad o estética.
+2. La PC del usuario ejecuta Minecraft Java y consume sus recursos; MercHosting debe explicarlo con claridad.
+3. La interfaz controla la aplicación; CMD/PowerShell no son necesarios para el uso habitual.
+4. No simular funciones, métricas, descargas, túneles, estado ni pagos.
+5. No afirmar compatibilidad sin probar versiones específicas.
+6. No sobrescribir mundos ni configuraciones sin consentimiento, backup y plan de reversión.
+7. Seguridad y permisos se validan en backend, no solo ocultando controles de UI.
+8. Mantener el proyecto usable en cada fase y conservar lo que ya funciona.
+
+## 3. ALCANCE DE PRODUCTO
+- Windows 10/11 según dependencias y pruebas reales.
+- Varias instancias aisladas, Java por instancia, loaders y software servidor compatibles.
+- Crear/importar/clonar/archivar/eliminar servidores.
+- Consola, logs, archivos, propiedades, jugadores, whitelist, OP, mundos y permisos.
+- Centro de instalación de software, mods, plugins, modpacks, datapacks y resource packs.
+- Playit opcional, Simple Voice Chat UDP, estado y diagnóstico real.
+- Cuentas MercHosting, invitaciones y compañeros con permisos granulares desde instalaciones de escritorio.
+- Backups, restauración, salud, automatizaciones, detección de problemas y mantenimiento.
+- Web oficial de presentación y descarga, separada de la app y sin funciones de administración.
+
+## 4. ARQUITECTURA
+Propuesta preferida a validar: Tauri 2 + React + TypeScript; Rust para procesos, archivos, descargas, supervisor y seguridad; SQLite con migraciones. No forzar una reescritura si el repositorio tiene una base funcional mejor.
+
+Supervisor persistente separado de la UI para mantener procesos Minecraft cuando se cierre la ventana, con IPC local autenticado y ACL restrictivas. Manejar procesos Java de forma segura, stdin/stdout/stderr, Job Objects según corresponda, directorios por instancia y reconciliación robusta. No matar procesos desconocidos para liberar puertos. No prometer recuperar pipes si el supervisor no conserva su propiedad y logs.
+
+Servicios desacoplados: InstanceRegistry, ProcessSupervisor, JavaRuntimeManager, ConsoleService, FileService, ConfigService, PlayerService, WorldService, ModManager, PluginManager, ModpackManager, BackupService, MetricsService, Scheduler, AuditService, NetworkIntegrationManager, AccountService, CompanionAuthorization, PaymentEntitlement y UpdateService.
+
+## 5. CREACIÓN DE SERVIDORES
+Asistente por pasos: nombre/icono; tipo de software; versión/build; Java; RAM con explicación de que proviene de la PC; puerto; jugadores; mundo/seed; dificultad; modo; whitelist; online-mode; distancias; EULA; resumen; instalación con progreso real. Vanilla, Paper, Spigot, Purpur, Forge, NeoForge, Fabric, Mohist y Arclight solo donde existan versiones y métodos de instalación compatibles. No usar un JAR universal ficticio. No aceptar EULA en nombre del usuario.
+
+## 6. ADMINISTRACIÓN
+Estados reales: STOPPED, VALIDATING, STARTING, LOADING, ONLINE, STOPPING, CRASHED, ERROR, RECOVERING y UNKNOWN. ONLINE requiere prueba de readiness; proceso vivo no basta. Detener limpiamente por stdin/protocolo, esperar guardado, informar si se requiere finalización forzada. Consola con logs rotativos, filtros y comandos; archivos con rutas confinadas; editores de propiedades; gestión de jugadores y mundos con soporte explícito por loader/plugin.
+
+## 7. INSTALACIÓN DE CONTENIDO
+Usar APIs oficiales y términos actuales de Modrinth, CurseForge y repositorios compatibles. Mostrar autor, licencia, versiones, loader, lado cliente/servidor, dependencias, incompatibilidades, changelog y fuente. Resolver dependencias obligatorias; no confundir mod cliente con mod servidor. Preferir server pack oficial; no declarar un pack cliente como instalable en servidor. Verificar hash cuando esté disponible, descargar en staging, validar y hacer backup antes de aplicar. ZIP Slip, traversal, symlinks y archivos ejecutables requieren protección. JARs son código de terceros: advertir de riesgos.
+
+## 8. PLAYIT Y SIMPLE VOICE CHAT
+Cada usuario vincula su propia identidad Playit mediante el flujo permitido. Gestionar agente en segundo plano solo según capacidades y términos oficiales. Mostrar estado oficial del proveedor separado del agente, túnel, servidor y latencia medida. No inventar API privada. La conexión normal Minecraft es diferente de UDP de voz. Detectar Simple Voice Chat, leer puerto realmente configurado (24454 UDP solo como valor por defecto, no asumirlo), preparar túnel UDP compatible y actualizar voice_host cuando sea compatible. El cliente de cada jugador también necesita el mod compatible. Reiniciar solo con aviso y cuando sea necesario. Si una operación requiere confirmación externa, no ocultarla.
+
+## 9. CUENTAS Y COMPAÑEROS
+Registro con nombre único y contraseña, sin correo obligatorio. Hash de contraseña moderno (Argon2id o equivalente), TLS, sesiones revocables, rate limiting, protección contra enumeración, códigos de recuperación de un solo uso y explicación clara de pérdida de cuenta. Identificador interno inmutable.
+
+Buscar por nombre, enviar invitación, aceptar/rechazar, elegir servidor y permisos. Roles predefinidos más personalizados. Validar cada acción en el backend del host. Canal de administración entre instalaciones de escritorio seguro, cifrado y separado de Minecraft/Playit. No panel web/móvil. No abrir endpoints administrativos públicamente sin diseño revisado.
+
+Permisos independientes: ver estado; iniciar; detener; reiniciar; leer consola; ejecutar comandos; ver logs; listar archivos; leer/descargar; editar; subir; eliminar; administrar mods/plugins; jugadores; whitelist; OP; backups; restaurar; mundos; configuración; conectividad. Leer consola no equivale a ejecutar comandos. Restaurar backup, borrar mundos, OP, ejecutar comandos e instalar JARs deben ser permisos de alto riesgo.
+
+Advertencia obligatoria al habilitar archivos: «Le estarás dando a esta persona acceso a archivos reales almacenados en tu computadora, dentro del servidor que autorizas. Según los permisos, podrá ver, descargar, modificar, subir o eliminar archivos. Concede el acceso solo a personas de confianza». Mostrar permisos por separado y confirmar. Explicar que mods/plugins pueden ejecutar código en la PC anfitriona. Aplicar sandbox de rutas, rechazar traversal/junction/symlink que escape, aislar instancias y proteger secretos fuera del alcance.
+
+## 10. OPERACIONES Y FUNCIONES AVANZADAS
+Backups completos e incrementales cuando sea seguro, comprobación de integridad, restauración en staging, rollback. Diagnóstico de crashes y conflictos con hipótesis explicadas y evidencia del log. Java runtime manager. Actualizaciones con comparación, backup, mantenimiento y rollback. Tareas programadas de backup, reinicio y apagado con avisos. Centro de salud CPU/RAM/disco/TPS solo si medibles. Modo mantenimiento, alertas, historial, plantillas, perfiles, invitaciones para jugadores y gestor de mundos.
+
+## 11. EXPERIENCIA VISUAL
+Aplicación moderna, no genérica: paleta neutral cálida, acentos cobre/champagne moderados, jerarquía tipográfica clara, paneles compactos, estados vacíos útiles, skeletons, errores explicados, ayuda contextual, accesibilidad, teclado, escalado DPI, reducción de movimiento. Nada de exceso de neón o dorado. Tutorial inicial opcional y saltables; volver a verlo; tutoriales por módulo que resalten controles reales. Modo principiante/avanzado.
+
+## 12. MODELO COMERCIAL
+MercHosting Free: todas las herramientas esenciales gratuitas.
+Supporter Edition: US$8, pago único, opcional, sin renovación ni suscripción. Beneficios solo cosméticos/sociales: temas extra, insignia de colaborador, marcos/fondos/avatar, fondos de dashboard, iconos, créditos opt-in, votaciones de estética y animaciones opcionales. Free mantiene personalización básica y modo claro/oscuro. No vender RAM, CPU, slots, servidores, mejores túneles, compañeros, backups, seguridad, actualizaciones ni herramientas esenciales.
+Implementar checkout real con proveedor apto para residencia del desarrollador, webhooks verificados, idempotencia, reembolsos, restauración de compra, privacidad y recibos. No guardar tarjetas ni simular pagos. El sitio puede explicar Supporter, pero la compra no debe convertir la web en panel de control.
+
+## 13. WEB OFICIAL
+Sitio separado, ligero, responsive y principalmente estático. ÚNICAS FUNCIONES: presentar MercHosting, mostrar capturas reales, explicar funcionamiento y requisitos, listar funciones, aclarar límites del hosting local, publicar FAQ, versiones/changelog, enlaces oficiales, repositorio, privacidad/licencias y descargar el instalador Windows. No crear login, gestión de cuenta, consola, archivos, servidores ni panel web/móvil. El botón de descarga debe corresponder a una release real, con versión, fecha, hash y estado de firma verificables. No usar capturas conceptuales como si fueran producto real. No inventar URLs sociales.
+
+## 14. IDENTIDAD Y COMUNIDAD
+Nombre oficial: MercHosting. Eslogan oficial: «Tu primer servidor no debería necesitar una mensualidad».
+Sección Acerca de en la app; TikTok y YouTube del creador mediante URLs configurables reales; GitHub, changelog, créditos y apoyo voluntario. No inventar identificadores. La futura aplicación de organización de recursos para creadores (US$10 pago único) es un proyecto separado y no forma parte de MercHosting.
+
+## 15. EXCLUSIONES
+No panel remoto web/móvil. No hosting Minecraft cloud administrado por el desarrollador. No paywall de funciones esenciales. No anuncios obligatorios. No enviar comandos del sistema operativo sin autorización ni permitir ejecución arbitraria por compañeros.
+
+## 16. MÉTODO DE TRABAJO
+Auditar repo y preservar estado; planificar; implementar una fase; compilar; probar; documentar. Cada fase produce cambios concretos, tests, resultados, limitaciones y rollback. No marcar terminado lo no probado. Verificar docs de terceros antes de integrar. Si no se puede automatizar, ofrecer guía transparente.

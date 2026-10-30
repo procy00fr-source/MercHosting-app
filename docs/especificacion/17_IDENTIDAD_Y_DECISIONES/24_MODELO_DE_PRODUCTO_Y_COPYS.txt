@@ -1,0 +1,45 @@
+# IDENTIDAD OFICIAL Y DECISIONES DE PRODUCTO — MERCHOSTING
+Fecha: 30-10-2026
+
+NOMBRE OFICIAL
+MercHosting
+
+ESLOGAN OFICIAL
+«Tu primer servidor no debería necesitar una mensualidad».
+Usarlo en web, instalador, bienvenida de la app, perfiles sociales y materiales de lanzamiento.
+
+PROMESA DE PRODUCTO
+MercHosting ayuda a crear y administrar servidores Minecraft en la propia computadora del usuario. No es hosting cloud gratuito. La PC del anfitrión proporciona RAM, CPU, almacenamiento, electricidad y conexión.
+
+TONO
+Cercano, transparente, útil, no corporativo exagerado. Comunicación principal en español latino. Nunca prometer 24/7, cero lag, compatibilidad universal o «sin límites» si los recursos/proveedores tienen límites.
+
+MODELO COMERCIAL
+Free: gratis, con todas las funciones esenciales.
+Supporter Edition: US$8, pago único, opcional, sin suscripción. Extras cosméticos y reconocimiento voluntario.
+
+BENEFICIOS SUPPORTER
+- Temas visuales adicionales.
+- Insignia discreta de colaborador.
+- Marcos de avatar y detalles de perfil.
+- Fondos opcionales del dashboard.
+- Iconos alternativos.
+- Créditos públicos solo con consentimiento.
+- Encuestas de estética/temas.
+- Animaciones opcionales y desactivables.
+La versión gratuita también tiene una personalización base adecuada. Los cosméticos no afectan el rendimiento del servidor.
+
+COPY PARA SUPPORTER
+«MercHosting es gratuito porque creemos que todos deberían poder crear su propio servidor de Minecraft. Si disfrutas la aplicación y quieres apoyar su desarrollo, puedes hacerlo con un único pago de US$8. Sin suscripciones, sin funciones esenciales bloqueadas y sin obligaciones».
+
+TRANSPARENCIA SOBRE COSTES
+El apoyo puede ayudar al desarrollo, firma digital cuando sea viable, infraestructura de identidad/invitaciones, mantenimiento, documentación y distribución. No prometer que un pago único financia indefinidamente proveedores externos.
+
+REDES
+Añadir botones de TikTok y YouTube del creador con URLs reales configuradas por el propietario. No inventar nombres de usuario. Los enlaces deben abrirse en navegador externo.
+
+PROYECTO SEPARADO
+La futura aplicación de administración y organización de recursos para creadores de contenido, con precio proyectado de US$10 pago único, es un producto distinto. No incluir su código, precio ni promesas dentro de MercHosting, salvo una mención editorial voluntaria y claramente separada.
+
+DIFERENCIACIÓN
+MercHosting no intenta reemplazar todos los hostings profesionales. Es una opción local para jugar con amigos, aprender y probar un servidor sin pagar primero una mensualidad. Para alta disponibilidad, muchas personas o uptime 24/7, un hosting remoto puede ser más adecuado.

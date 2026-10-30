@@ -1,0 +1,83 @@
+# MERCHOSTING — WEB OFICIAL DE PRESENTACIÓN Y DESCARGA
+Versión de directiva: 30-10-2026
+
+## 1. PROPÓSITO Y LÍMITES
+Crear una web oficial de producto para MercHosting. Su función es presentar el proyecto, explicar su funcionamiento, mostrar imágenes/capturas reales, resolver dudas y permitir descargar el instalador de Windows.
+
+La web NO es la aplicación. No debe convertirse en panel de hosting, dashboard remoto ni aplicación de administración. No incluir control de servidores, consola, archivos, gestión de mundos, cuentas administrativas, invitaciones de compañeros ni acceso remoto a la PC.
+
+Eslogan oficial visible en el hero:
+«Tu primer servidor no debería necesitar una mensualidad».
+
+## 2. PÚBLICO Y MENSAJE
+Público: jugadores de Minecraft que desean crear un servidor para sus amigos sin contratar inmediatamente un hosting mensual y usuarios que necesitan una interfaz sencilla para gestionar servidores en su propia PC.
+
+Mensaje central: MercHosting permite crear y administrar servidores Minecraft que se ejecutan en la computadora del usuario. La web debe explicar con honestidad que el equipo anfitrión, su energía, RAM, CPU y conexión a Internet sostienen el servidor. Si el PC se apaga o pierde conexión, el servidor deja de estar disponible.
+
+No afirmar que MercHosting es un servidor en la nube gratuito 24/7 ni que elimina el lag. Playit facilita conectividad en situaciones compatibles, pero no garantiza latencia ni disponibilidad.
+
+## 3. ESTRUCTURA DE LA WEB
+A. Barra superior: logotipo MercHosting, navegación ligera (Funciones, Cómo funciona, Galería, FAQ, Descargas) y CTA Descargar.
+B. Hero: eslogan, frase breve, botón principal «Descargar para Windows», CTA secundario «Ver cómo funciona», etiqueta de versión/canal si está publicada.
+C. Presentación visual: captura real de la aplicación en uso, no mockup inventado.
+D. Cómo funciona: 3–4 pasos (crear servidor, seleccionar software/versión, configurar conexión opcional, invitar amigos y jugar).
+E. Funciones: tarjetas breves para servidores, loaders, mods/modpacks/plugins, consola/archivos, backups, Playit, Simple Voice Chat, compañeros y diagnósticos. Etiquetar BETA/EN DESARROLLO si aún no está disponible.
+F. Galería: imágenes reales, carrusel o mosaico, captions, zoom/lightbox accesible y fecha de versión de la captura. No usar imágenes conceptuales como capturas del producto.
+G. Free vs Supporter: explicar que Free incluye funciones esenciales; Supporter cuesta US$8 una sola vez y añade extras de personalización/agradecimiento, no ventajas de rendimiento o capacidad.
+H. Requisitos y transparencia: Windows compatible, recursos de PC, Java gestionado por app cuando sea posible, conexión, limitaciones de mods/versions, PC encendida y límites de Playit/proveedores externos.
+I. FAQ: ¿es realmente gratuito?, ¿dónde se ejecuta el servidor?, ¿mi PC debe quedarse encendida?, ¿necesitan Playit mis amigos?, ¿qué pasa si tengo CGNAT?, ¿cómo funciona Voice Chat?, ¿puedo administrar con compañeros?, ¿qué datos guarda la cuenta?, ¿cómo desinstalo/exporto mundo?, ¿por qué Windows SmartScreen muestra advertencia?, ¿qué ofrece Supporter?
+J. Descarga: versión estable, fecha, arquitectura, tamaño, hash SHA-256, estado de firma digital y release notes, solo cuando sean datos reales.
+K. Pie: GitHub/repositorio, TikTok, YouTube, política de privacidad, términos/licencias, changelog, contacto/bugs y créditos.
+
+## 4. DISEÑO VISUAL
+Crear una identidad visual propia coherente con la aplicación: interfaz profesional, clara, moderna, neutral y cálida. Evitar la típica landing de hosting con tablas de planes mensuales, servidores ficticios, neón o exceso de gradientes.
+
+Usar tipografía legible, acento cobre/champagne discreto, superficies neutras, capturas destacadas, buen contraste, navegación responsive y animaciones ligeras. Priorizar escritorio, pero adaptar correctamente a móvil. Respetar prefers-reduced-motion, navegación por teclado, foco visible, alt text y contraste WCAG razonable.
+
+La web debe parecer el sitio oficial de una herramienta de escritorio, no un proveedor de hosting tradicional.
+
+## 5. DESCARGAS Y RELEASES
+- Descargar solo desde release oficial (GitHub Releases, storage propio/CDN autorizado o Microsoft Store cuando se elija).
+- No enlazar builds locales, enlaces temporales ni archivos personales.
+- Mostrar versión, fecha, canal (stable/beta), arquitectura/OS y tamaño de archivo.
+- Publicar SHA-256 calculado sobre el binario exacto.
+- Mostrar estado de firma solo tras verificar Authenticode/firma de paquete. No decir «verificado por Microsoft» si no es cierto.
+- Verificar que instalador, hash, changelog y versión de la web coincidan con la release publicada.
+- Si el proyecto no está firmado, decirlo con transparencia y enlazar la información sobre SmartScreen; no pedir a los usuarios desactivar Defender/SmartScreen.
+- Evitar auto-descargas inesperadas; el usuario activa la descarga con un botón.
+- La web puede enlazar a Store o GitHub; no ocultar el origen real.
+
+## 6. MODELO FREE + SUPPORTER
+Free: US$0, funciones esenciales completas.
+Supporter: US$8 pago único, opcional, no suscripción. Explicar beneficios cosméticos: temas, insignia, marcos, fondos, iconos, créditos opt-in y animaciones. Nunca presentar Supporter como la versión «completa» frente a una Free limitada.
+
+La web puede describir beneficios y ofrecer un enlace a un checkout externo confiable si se implementa. No almacenar tarjetas ni recopilar información financiera en la web. La aplicación y el backend validan entitlement; no confiar en parámetros de URL ni en una página de retorno del checkout como prueba de pago. Nunca convertir la web en portal de gestión de usuarios o servidores.
+
+## 7. REDES Y ENLACES
+Incluir TikTok y YouTube del creador, pero usar valores de configuración proporcionados por el propietario. No inventar nombres ni URLs. Si no hay URL configurada, ocultar el botón o mostrarlo deshabilitado solo en entorno de desarrollo; no publicar placeholders. Añadir GitHub solo cuando el repositorio sea público y esté decidido.
+
+## 8. TECNOLOGÍA Y DESPLIEGUE
+Preferir un sitio estático o pre-renderizado (Astro, Next.js exportado u opción equivalente) por rapidez, bajo coste y baja superficie de ataque. Elegir la opción más pequeña que encaje con el repositorio y capacidad de mantenimiento. No introducir backend si no es necesario. Alojamiento estático (por ejemplo, GitHub Pages/Cloudflare Pages u otro proveedor validado) sujeto a decisión del propietario.
+
+No incrustar secretos, API keys privadas ni tokens en JavaScript del cliente. Si se necesita un manifest público de versiones, publicar solo metadatos no sensibles y firmar/verificarlo según arquitectura.
+
+## 9. ANALÍTICA Y PRIVACIDAD
+Por defecto, no instalar trackers invasivos. Si se propone analítica, que sea opcional, respetuosa, documentada y con mínima recopilación. Publicar política de privacidad clara que distinga datos del sitio, cuenta MercHosting y servicios externos. No afirmar que no se recopila ningún dato si hay hosting logs, métricas o formularios.
+
+## 10. SEO Y CONTENIDO
+Título y descripción claros; metadata Open Graph; favicon; sitemap y robots; URLs limpias; textos en español latino; preparar i18n sin retrasar la primera versión. Explicar Minecraft/Mojang/Microsoft como marcas de terceros y aclarar que MercHosting no es un producto oficial de Mojang/Microsoft si corresponde.
+
+## 11. PRUEBAS
+- Responsive desktop/tablet/móvil.
+- Chrome, Edge y navegadores compatibles definidos.
+- Links internos/externos y descarga.
+- Hash que coincide con el binario publicado.
+- Release stable/beta diferenciada.
+- Alt text, teclado, foco, contraste y reduced motion.
+- No capturas rotas ni placeholders.
+- No botones de administración inexistentes.
+- No promesas falsas sobre 24/7, ping, CGNAT o SmartScreen.
+- Política/FAQ/licencias accesibles.
+
+## 12. CRITERIO DE TERMINADO
+La web presenta fielmente MercHosting, muestra la versión y capturas reales, explica límites del hosting local, tiene descarga verificable y funciona en dispositivos comunes. No incluye ninguna capacidad de administración de servidores desde navegador.

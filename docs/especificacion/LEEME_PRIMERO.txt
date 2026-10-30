@@ -1,0 +1,42 @@
+PRIME — FASE 2
+PROYECTO: MERCHOSTING
+PAQUETE MAESTRO DE DESARROLLO PARA CLAUDE
+Versión consolidada: 30 de octubre de 2026
+
+MISIÓN
+Construir MercHosting: una aplicación de escritorio para Windows que permita crear y administrar servidores Minecraft alojados en la computadora del propio usuario. La experiencia debe ser sencilla para principiantes y potente para usuarios avanzados, sin obligarlos a utilizar CMD, editar archivos manualmente ni configurar el router para el flujo habitual cuando una integración compatible esté disponible.
+
+ESLOGAN OFICIAL
+«Tu primer servidor no debería necesitar una mensualidad».
+
+DECISIONES DEFINITIVAS
+1. MercHosting Free: aplicación gratuita con todas las funciones esenciales.
+2. MercHosting Supporter Edition: US$8, pago único, opcional y sin suscripción. Incluye únicamente detalles cosméticos, personalización y reconocimiento voluntario. Nunca dará más RAM, más servidores, más jugadores, mejores túneles, más compañeros ni herramientas esenciales.
+3. Website oficial: solo presentación, capturas reales, explicación, preguntas frecuentes, información de requisitos, novedades y descarga de Windows. No se desarrollará un panel para administrar servidores desde la web.
+4. Compañeros: sí se permite colaboración remota desde otra instalación de escritorio de MercHosting, mediante canal seguro separado del tráfico del servidor Minecraft. No crear dashboard remoto web ni móvil.
+5. Playit: el usuario vincula su propia cuenta. Automatizar solo lo que las APIs, agente y términos oficiales permitan realmente. No inventar endpoints ni credenciales.
+6. Simple Voice Chat: detectar el mod/plugin, identificar su puerto UDP configurado y crear/configurar el túnel de voz automáticamente cuando la integración lo permita. La configuración normal no debe preguntar de nuevo por cada servidor si el usuario ya autorizó esa automatización.
+7. Cuentas: registro con nombre de usuario y contraseña, sin correo obligatorio. Debe existir recuperación real con códigos o mecanismo equivalente bien explicado; no prometer recuperación si no hay un canal verificable.
+8. Archivos compartidos: mostrar advertencia explícita porque son archivos reales de la computadora anfitriona. Aplicar aislamiento técnico estricto y permisos separados de lectura, descarga, edición, subida y eliminación.
+9. Redes sociales: incluir TikTok y YouTube del creador con URLs oficiales configurables. No inventar usuarios ni enlaces; mantener ocultos o deshabilitados los botones hasta configurar los destinos reales.
+10. El producto no alojará servidores Minecraft en infraestructura del desarrollador. El proceso Java se ejecuta en la PC del usuario. Los servicios online mínimos para cuentas, invitaciones y licencias deberán dimensionarse y presupuestarse.
+
+NO INCLUIR
+- Panel remoto web o móvil.
+- Hosting de servidores Minecraft en la nube de MercHosting.
+- Funciones esenciales bloqueadas detrás de Supporter.
+- Suscripción obligatoria, anuncios intrusivos, métricas falsas o botones decorativos.
+- CMD/PowerShell visible como requisito de uso normal.
+
+CÓMO USAR ESTE PAQUETE
+1. Extraer el ZIP.
+2. Abrir ORDEN_DE_CREACION.txt.
+3. Entregar a Claude PROMPT_PARA_INICIAR_CLAUDE.txt junto con el directorio completo extraído o, si el contexto es limitado, con la directiva maestra y la fase actual.
+4. Claude debe auditar primero el repositorio real. No empezar reescribiendo todo.
+5. Desarrollar por fases, probar, documentar y avanzar solo cuando se cumplan los criterios de aceptación.
+
+IMPORTANTE
+Este ZIP es una especificación de producto y desarrollo, no una aplicación terminada ni una garantía de que todas las integraciones externas estén disponibles. Claude debe verificar documentación, API, compatibilidad, licencias, precios y términos actuales antes de integrar proveedores. Toda capacidad debe probarse de extremo a extremo antes de anunciarse como terminada.
+
+PRECEDENCIA
+Las decisiones de este archivo y 00_INICIO/00_DIRECTIVA_MAESTRA.txt prevalecen sobre notas antiguas o instrucciones contradictorias. La web oficial descrita en 16_WEB_OFICIAL es un sitio de presentación/descarga, nunca un panel de control.

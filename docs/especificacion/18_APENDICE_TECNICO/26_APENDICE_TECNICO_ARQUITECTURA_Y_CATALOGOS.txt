@@ -1,0 +1,200 @@
+APÉNDICE TÉCNICO COMPLEMENTARIO — MERCHOSTING
+
+Este archivo contiene directivas técnicas detalladas sobre la aplicación Windows, administración local y catálogo de instalación. Se usa como material de apoyo a la DIRECTIVA MAESTRA DEFINITIVA. Las decisiones más recientes de LEEME_PRIMERO.txt prevalecen si existe cualquier contradicción. El website descrito en 16_WEB_OFICIAL es independiente y no administra servidores.
+
+# MercHosting — DIRECTIVA MAESTRA DE DESARROLLO
+## Panel profesional de hosting Minecraft para Windows · Edición local
+
+### 0. MISIÓN Y REGLAS INNEGOCIABLES
+Construye MercHosting como una aplicación real de escritorio Windows, instalable, que administre servidores Minecraft ejecutados en esta misma PC. No es un mockup, una página decorativa ni un launcher que abra CMD. Debe administrar instancias, procesos, consola, archivos, usuarios, permisos, configuraciones, backups y diagnósticos mediante operaciones reales y verificables.
+
+Trabaja sobre el repositorio existente si lo hay. Inspecciona su arquitectura antes de cambiar nada, documenta lo encontrado, crea una copia de seguridad o commit de referencia y conserva componentes que funcionen. No declares funcionalidad completa sin pruebas. No inventes métricas, compatibilidad ni resultados. Si una capacidad requiere un mod/plugin/agente adicional, indícalo y desarrolla la integración correspondiente; nunca simules datos.
+
+Prioridad: integridad del mundo > seguridad > fiabilidad > claridad > rendimiento > estética. Ningún error visual justifica perder datos. No sobrescribas el servidor ni instales Java/mods sin consentimiento explícito.
+
+### 1. ALCANCE Y SUPUESTOS
+- Plataforma principal: Windows 11, ejecución local, interfaz de escritorio .exe.
+- Objetivo inicial: NeoForge 1.21.1 y Java 21 para MercPrime; arquitectura extensible a Forge, Fabric, Paper y Vanilla.
+- Soportar varias instancias locales independientes, con directorios, puertos, Java y límites de memoria distintos.
+- La PC aloja el proceso Java. No se necesita hosting externo para el núcleo.
+- El usuario puede cerrar la interfaz mientras el servidor continúa funcionando mediante un supervisor persistente.
+- No incluir acceso remoto público en el MVP. Cualquier futura API remota requiere diseño de autenticación, TLS y permisos separado.
+- Distinguir claramente capacidad genérica (consola y archivos) de capacidad dependiente de integración (TPS, inventarios, grupos de LuckPerms, eventos, etc.).
+
+### 2. ARQUITECTURA
+**Frontend:** Tauri 2 + React + TypeScript; estado tipado, navegación modular, accesibilidad y diseño responsive para diferentes resoluciones de Windows.
+**Backend:** Rust con servicios bien separados: InstanceRegistry, ProcessSupervisor, ConsoleService, FileService, BackupService, ConfigService, MetricsService, Scheduler, AuditService, IntegrationManager.
+**Persistencia:** SQLite para instancias, configuración, auditoría, tareas y metadatos; logs rotativos para consola. Migraciones versionadas y transacciones.
+**Supervisor persistente:** proceso o servicio auxiliar Windows independiente del frontend, instalado de forma explícita, con IPC local autenticado y control de permisos. Diseñar recuperación después de reinicios/cierres, y explicar límites de recuperación de stdin/stdout tras fallos del supervisor. No prometer reconexión a streams que no puedan recuperarse: usar un supervisor que posea los pipes y almacene logs, con protocolo de reconexión.
+**IPC:** named pipes de Windows con ACL restringidas al usuario autorizado; protocolo versionado, validación de mensajes, timeouts y autenticación por identidad de proceso/usuario. Evitar HTTP público por defecto.
+**Procesos:** lanzar Java con APIs de creación de procesos y argumentos separados; directorio de trabajo explícito; manejar stdin/stdout/stderr; usar Windows Job Objects donde convenga, cuidando que cerrar el frontend no termine el servidor; no iniciar una ventana CMD.
+**Datos:** separar configuración de MercHosting de archivos de cada instancia. Definir almacenamiento de aplicación bajo rutas de usuario apropiadas; nunca guardar secretos sin protección.
+**Integraciones:** adaptadores por loader; bridge opcional instalado dentro del servidor para telemetría avanzada, eventos de jugadores y permisos, con protocolo autenticado y compatible con cada plataforma. Sin bridge, degradación elegante y honesta.
+
+### 3. DISEÑO VISUAL — IDENTIDAD MercHosting
+Una herramienta profesional de hosting con personalidad visual propia. Estética sobria, moderna y ligeramente inspirada en interfaces RPG, pero priorizando legibilidad y operación. Paleta sugerida: azul petróleo/gris pizarra, marfil cálido, acentos cobre o dorado suave; verde reservado a estados operativos, ámbar a advertencias y rojo a acciones destructivas. Evitar negro/dorado saturado, neón excesivo, gradientes genéricos y pixel art arbitrario.
+
+Estructura:
+- Barra lateral compacta: Resumen, Consola, Archivos, Jugadores, Permisos, Mods/Plugins, Mundos, Backups, Rendimiento, Automatizaciones, Red, Ajustes, Auditoría.
+- Encabezado persistente: selector de instancia, estado real, versión/loader, uptime, acciones rápidas.
+- Dashboard: estado, botón principal, indicadores verificables, gráfico temporal, jugadores y eventos recientes, almacenamiento, últimos backups.
+- Vistas densas y claras, tablas con filtros, búsqueda, acciones contextuales, paneles laterales y diálogos de confirmación.
+- Diseñar componentes SVG propios para iconos, estados y ornamentos; animaciones CSS/Canvas discretas. No depender de generación de imágenes. SVG y CSS deben escalar correctamente.
+- Cada módulo tiene jerarquía visual propia pero comparte tokens, tipografía, espaciados y componentes. Estados vacíos, cargando, error y sin permisos obligatorios.
+- Soportar teclado, foco visible, navegación, reducción de movimiento y escalado DPI.
+- No mostrar valores falsos en tarjetas: usar 'No disponible' y explicar cómo habilitar la métrica.
+
+### 4. ADMINISTRACIÓN DE INSTANCIAS
+- Crear instancia, importar carpeta existente sin mover ni alterar archivos, duplicar configuración, archivar/eliminar con confirmaciones y backups.
+- Detectar loader, versión, método de arranque, Java, propiedades y puertos cuando sea posible; permitir corregir detección.
+- Perfiles de arranque: Vanilla/Paper/Fabric con jar; NeoForge/Forge con argumentos y scripts generados por instaladores; nunca asumir `server.jar` universal.
+- Elegir ejecutable Java por instancia; verificar versión. Configurar Xms/Xmx, flags JVM y variables de entorno con validación.
+- Verificar colisiones de puertos y rutas; impedir dos instancias apuntando simultáneamente al mismo mundo.
+- Permitir importación segura de servidores existentes, preservando rutas, mods, config, mundos y logs.
+
+### 5. CICLO DE VIDA: INICIAR, DETENER, REINICIAR
+Estados: STOPPED, VALIDATING, STARTING, LOADING, ONLINE, STOPPING, CRASHED, ERROR, RECOVERING y UNKNOWN cuando no pueda verificarse.
+- INICIAR: bloqueo transaccional por instancia, validaciones (Java, archivos, permisos, EULA, memoria, disco, puertos, exclusión con backups/restauraciones), lanzamiento real, captura de salida, seguimiento de readiness, timeout y errores accionables.
+- No aceptar EULA automáticamente. No matar procesos desconocidos para liberar puertos. No crear procesos duplicados.
+- ONLINE requiere señales verificables, no solo proceso vivo. Mostrar estado incierto si el detector no puede confirmar readiness.
+- DETENER: enviar `stop` por stdin o protocolo compatible, esperar guardado y terminación, tiempo límite configurable y escalamiento manual informado. Nunca matar forzosamente sin advertencia explícita y riesgos.
+- REINICIAR: apagado limpio, espera de salida y nuevo arranque; no lanzar en paralelo.
+- Supervisor mantiene la instancia aunque se cierre la UI. Reconexión al reabrir y reconciliación por identidad verificable, no solo PID.
+- Crash: registrar exit code, logs, reportes, causa probable y reintento opcional limitado con backoff. Evitar crash loops.
+- Operaciones de mundo y backups deben adquirir bloqueos compatibles con el estado del servidor.
+
+### 6. CONSOLA PROFESIONAL
+- Streaming real de stdout/stderr, timestamps, niveles, filtros, búsqueda, pausa visual sin detener ingestión, autoscroll opcional, copiar, exportar y rotación de logs.
+- Enviar comandos Minecraft al stdin del proceso controlado; validación de permisos y auditoría. Evitar shell del SO.
+- Historial de comandos, favoritos y macros con confirmación para comandos peligrosos.
+- Indicador de desconexión/reconexión y buffers acotados con backpressure.
+- Reconocer logs de inicio, cierre, crashes, jugadores y warnings mediante parsers específicos y tolerantes a cambios.
+
+### 7. EXPLORADOR Y EDITOR DE ARCHIVOS
+- Árbol de directorios, breadcrumbs, búsqueda, subir/importar, descargar/exportar, crear, renombrar, mover, copiar, eliminar a papelera/backup, ZIP y extracción segura.
+- Editor de texto con resaltado para .properties, .toml, .json, .yml, .cfg, .txt y scripts, detección de encoding y aviso de cambios sin guardar.
+- Escrituras atómicas, control de cambios concurrentes, rollback de configuraciones, bloqueo de archivos críticos durante ejecución cuando corresponda.
+- Sandboxing por raíz de instancia; validación de rutas reales, symlinks/junctions, traversal, zip-slip y operaciones TOCTOU. No seguir enlaces fuera de la raíz sin autorización explícita.
+- Previsualización de cambios y confirmaciones reforzadas para mundo, mods y configs críticas.
+
+### 8. JUGADORES Y MODERACIÓN
+- Lista de conectados con nombre, UUID verificado, tiempo de sesión y latencia solo si existe fuente confiable.
+- Kick, ban, pardon, whitelist, op/deop, mensajes, teleport y gamemode mediante comandos reales, con confirmaciones y auditoría.
+- Historial de conexiones y eventos persistido cuando haya datos; indicar límites de logs antiguos.
+- Perfil del jugador: estadísticas disponibles, sanciones, notas privadas, actividad y permisos.
+- Nunca asumir que se pueden consultar inventarios, posiciones o datos de jugadores offline sin bridge o acceso compatible a datos del servidor.
+
+### 9. PERMISOS Y RANGOS
+- Distinguir OP/whitelist vanilla de permisos avanzados de LuckPerms.
+- Para LuckPerms, implementar adaptador compatible y verificable (comandos/bridge/API apropiada) para listar grupos, usuarios, nodos, herencia, contextos y expiraciones según capacidad real.
+- Vista de diferencias antes de aplicar cambios, validación, auditoría, rollback donde sea técnicamente posible.
+- Prohibir elevar permisos sin autorización; confirmar cambios críticos y mostrar resultado real del servidor.
+
+### 10. MODS, PLUGINS Y DEPENDENCIAS
+- Listar archivos instalados, loader, versión detectada, hashes, fecha, estado y compatibilidad conocida, diferenciando inferencias de datos verificados.
+- Importación drag-and-drop, habilitar/deshabilitar mediante operaciones reversibles, backup previo, reinicio requerido y detección de duplicados.
+- Comprobación de dependencias por metadatos disponibles; no prometer resolver todas las incompatibilidades automáticamente.
+- Actualizaciones solo desde fuentes confiables y mediante consentimiento; comprobar checksums cuando se ofrezcan.
+- En NeoForge no presentar plugins Bukkit como instalables de forma nativa sin una plataforma puente compatible y expresamente configurada.
+
+### 11. MUNDOS, BACKUPS Y RESTAURACIÓN
+- Mostrar carpetas de mundo y dimensiones con tamaños reales; no borrar ni mover mundos activos.
+- Backup manual/programado con progreso, retención, checksums, verificación de integridad y destino configurable.
+- Para copias en caliente: coordinación mediante `save-off` / `save-all flush` / `save-on` cuando el servidor lo soporte, con manejo de errores y restauración de save-on en finally; preferir snapshots coherentes o backups en frío para garantías fuertes. No declarar consistente una copia si no puede garantizarse.
+- Restauración: detener servidor, crear backup de seguridad previo, verificar archivo y espacio, previsualizar contenido, bloquear operaciones, restaurar de manera transaccional cuando sea posible y permitir rollback.
+- Protección contra zip bombs, traversal, symlinks peligrosos y restauración en ruta equivocada.
+- Probar restauración en instancia aislada, no solo creación de archivos.
+
+### 12. MÉTRICAS Y DIAGNÓSTICOS
+- CPU, memoria de proceso, disco y red: fuentes del SO, con unidad y frecuencia claras.
+- TPS/MSPT, jugadores y entidades: usar bridge o mecanismo fiable por plataforma; mostrar 'No disponible' cuando falte.
+- Gráficas con retención y límites; alertas configurables por memoria, disco, TPS y crashes.
+- Diagnóstico de logs/crash reports: errores agrupados, evidencias, posibles causas con nivel de confianza y enlaces a líneas; jamás eliminar mods automáticamente.
+- Exportar paquete de soporte con opción de ocultar IPs, tokens y datos personales.
+
+### 13. CONFIGURACIÓN, RED Y AUTOMATIZACIONES
+- Editor guiado de `server.properties` con validación, explicación de campos y aviso de reinicio necesario; editor avanzado de archivos.
+- Estado de puertos locales y conectividad; distinguir LAN, IP pública, firewall, NAT/CGNAT y port forwarding. No afirmar que el servidor es accesible desde Internet por tener el puerto local abierto.
+- No abrir puertos en firewall ni router sin consentimiento explícito.
+- Programador persistente de backups, reinicios, anuncios, comandos y tareas de mantenimiento; zona horaria, reintentos acotados, historial y prevención de solapamientos.
+- Arranque automático con Windows opcional, consentimiento y configuración del supervisor; nunca habilitarlo silenciosamente.
+
+### 14. SEGURIDAD Y PRIVACIDAD
+- Mínimo privilegio; backend valida todas las operaciones y autoriza por identidad local.
+- IPC con ACL y autenticación; no confiar en la UI como frontera de seguridad.
+- Sanitizar entradas y rutas; sin interpolación de shell; bloquear traversal, junction escape y zip-slip.
+- Registro de auditoría inmutable en la medida práctica, rotación y políticas de retención.
+- Secretos protegidos con DPAPI o almacén de credenciales de Windows; no incluirlos en logs.
+- Actualizaciones firmadas/verificadas cuando se implemente distribución; no descargar ni ejecutar código arbitrario.
+- Confirmación explícita para borrados, restauraciones, cambios de permisos y apagados forzosos.
+- Definir claramente límites de seguridad frente a usuarios con privilegios de administrador del mismo Windows.
+
+### 15. CONTRATOS DE DATOS Y ESTADOS
+Definir interfaces tipadas para Instance, LaunchProfile, RuntimeState, ProcessIdentity, ConsoleLine, Player, PermissionChange, BackupJob, ScheduledTask, AuditEvent y MetricSample. Versionar los mensajes IPC. Separar valores medidos, inferidos y no disponibles. Diseñar estados de carga/error/reintento en cada operación. Nunca permitir que el frontend invente un estado ONLINE.
+
+### 16. FASES DE DESARROLLO Y CRITERIOS DE SALIDA
+**Fase 0 — Auditoría y diseño:** inspección de repo y servidores existentes, mapa de riesgos, arquitectura, wireframes, contratos IPC, plan de pruebas. Entregar decisiones y preguntas bloqueantes concretas.
+**Fase 1 — Núcleo ejecutable:** instalador Windows, registro/importación de instancia, perfiles Java/NeoForge, supervisor persistente, estados, iniciar/detener/reiniciar, logs en vivo. Demo real y pruebas de doble inicio, crash y reconexión.
+**Fase 2 — Consola y archivos:** comandos, filtros, editor, operaciones seguras, control de concurrencia, pruebas de traversal y corrupción.
+**Fase 3 — Jugadores y configuración:** moderación, whitelist/OP, editor server.properties, auditoría y adaptadores de integración.
+**Fase 4 — Backups y automatizaciones:** copias verificadas, restauración probada, programador, retención y alertas.
+**Fase 5 — Mods y permisos:** gestor de mods por loader, detección de dependencias, integración LuckPerms cuando esté presente y soportada.
+**Fase 6 — Telemetría y diagnósticos:** métricas reales, bridge opcional, dashboards y análisis de crashes.
+**Fase 7 — Calidad y distribución:** hardening, accesibilidad, rendimiento, empaquetado, firma si procede, documentación y pruebas de actualización.
+
+No avanzar una fase sin demostrar sus criterios de aceptación. Mostrar qué está implementado, probado, pendiente y bloqueado. Entregar commits pequeños, migraciones y notas de prueba.
+
+### 17. MATRIZ MÍNIMA DE PRUEBAS
+- NeoForge 1.21.1 con Java 21 y carpeta real existente.
+- Inicio, apagado limpio, reinicio, crash en arranque, Java incorrecto, EULA no aceptada.
+- Doble clic y solicitudes concurrentes; dos instancias y colisión de puerto/mundo.
+- Cierre/reapertura de UI con servidor vivo; reinicio del supervisor y reconciliación.
+- Logs masivos sin congelar UI; stdin de comandos y errores de encoding.
+- Edición simultánea de archivos, traversal, symlinks/junctions, zip-slip y falta de espacio.
+- Backup con servidor encendido y apagado, restauración íntegra en instancia aislada, interrupción durante restauración.
+- Operaciones de permisos, comandos destructivos y límites de autorización.
+- Instalación/desinstalación y recuperación ante actualizaciones fallidas.
+
+### 18. FORMA DE TRABAJO QUE DEBES SEGUIR
+1. Examina primero el repositorio, herramientas disponibles y la carpeta del servidor sin modificar nada.
+2. Resume arquitectura encontrada, riesgos y diferencias con esta directiva.
+3. Si faltan datos imprescindibles (ruta de instancia, Java, permisos de servicio), solicita solo los mínimos.
+4. Propón estructura de carpetas, contratos y plan de implementación por hitos.
+5. Ejecuta la Fase 1 de extremo a extremo, con código real, pruebas y demostración; no construyas pantallas falsas para módulos futuros.
+6. En cada fase, explica exactamente qué archivos cambiaste, qué pruebas ejecutaste y sus resultados reales.
+7. Mantén la aplicación funcional en todo momento; antes de migraciones o cambios destructivos crea puntos de recuperación.
+8. Si algo no puede hacerse de forma segura o no está soportado por el loader, explica la limitación y ofrece una alternativa técnicamente válida.
+
+### 19. DEFINICIÓN DE TERMINADO
+MercHosting solo estará listo cuando pueda instalarse en Windows, importar un servidor Minecraft existente, arrancarlo y detenerlo sin CMD, mostrar consola real, conservar el servidor al cerrar la UI, recuperar el control al reabrir, editar archivos de forma segura, administrar usuarios y permisos soportados, generar y restaurar backups comprobados, ejecutar automatizaciones, presentar métricas reales y manejar errores sin comprometer mundos.
+
+**INSTRUCCIÓN FINAL:** construye un producto utilizable y mantenible, no una demostración visual. Sé creativo en diseño y experiencia de uso, pero riguroso en procesos, datos, permisos y seguridad. No inventes resultados ni afirmes haber probado funciones que no has ejecutado.
+
+# AMPLIACIÓN — CENTRO DE INSTALACIÓN Y CATÁLOGOS
+
+## Objetivo
+Añadir un centro profesional para instalar versiones de Minecraft, loaders, modpacks, mods y plugins desde fuentes autorizadas. Todo debe operar sobre instancias locales de Windows, con compatibilidad verificada, información real y reversión segura.
+
+## 1. Instalador de versiones y software servidor
+Catálogo de Minecraft Vanilla, Paper, Spigot, Forge, NeoForge, Fabric, Mohist y Arclight, y otros loaders/híbridos solo cuando existan fuentes oficiales y versiones verificables. Mostrar tipo (vanilla, plugins, mods, híbrido), versión de Minecraft, versión/build del loader, Java requerido, fecha, canal, fuente, compatibilidad, changelog y advertencias. Para Spigot respetar BuildTools y sus términos: no redistribuir binarios no autorizados. No asumir que cada proyecto ofrece API de descarga ni builds para cada versión. Instalación con selección explícita de versión y build, hashes y verificación de origen, descarga con progreso, cancelación y reanudación si la fuente lo soporta. NeoForge/Forge requieren ejecutar sus instaladores y usar sus launch args apropiados. Fabric usa instalador de servidor. Los híbridos requieren advertencias por compatibilidad y no deben prometer soporte universal.
+
+## 2. Explorador e instalador de modpacks
+Integrar Modrinth y CurseForge mediante sus APIs oficiales y condiciones vigentes, con credenciales/API key cuando se requieran. Mostrar portada, autor, descripción, categorías, descargas, versión, fecha, changelog, Minecraft/loader compatibles, requisitos Java/RAM, licencia, enlaces y lista de archivos si está disponible. Distinguir cliente, servidor y ambos. Elegir la versión concreta del modpack. Si existe server pack oficial, priorizarlo. Para formatos de manifiesto, resolver los archivos con sus restricciones de distribución y URLs autorizadas; si falta un archivo manual, explicar exactamente cuál y cómo aportarlo. No descargar cliente y declararlo servidor. Instalar en carpeta nueva o con backup, mostrar plan de cambios, validar archivos, generar arranque y ejecutar prueba de inicio. Si el modpack no tiene versión de servidor compatible, informar y bloquear la instalación automática como servidor, salvo modo experimental explícito y sin garantías.
+
+## 3. Catálogo de mods
+Búsqueda unificada Modrinth/CurseForge con filtros por versión Minecraft, loader, versión del mod, categoría, licencia, lado cliente/servidor, autor, popularidad y actualización. Ficha completa con descripción, imágenes si las APIs autorizan, changelog, dependencias, incompatibilidades, enlaces oficiales, versiones y hashes. Seleccionar archivo exacto; no asumir que el último es compatible. Resolver dependencias obligatorias recursivamente, proponer opcionales y advertir incompatibles. Detectar mods ya instalados y sus versiones. Preparar plan transaccional, backup, descargas verificadas, instalación y reinicio controlado. No cambiar mods en caliente sin garantías. Permitir actualizar, desactivar, revertir y comparar cambios. No prometer que un mod solo cliente funcionará en un servidor.
+
+## 4. Catálogo de plugins
+Fuentes: Modrinth, Hangar/PaperMC, SpigotMC y BukkitDev/CurseForge, además de repositorios oficiales que permitan integración. Usar APIs oficiales donde existan; nunca eludir captchas, protecciones anti-bot ni términos de uso. Si una fuente no ofrece descarga automática permitida, mostrar ficha y enlace oficial o permitir importar un JAR descargado por el usuario. Mostrar descripción, autor, versiones, changelog, dependencias, licencia, compatibilidad Bukkit/Spigot/Paper y enlaces. Diferenciar plugins de mods. En híbridos Mohist/Arclight advertir que compatibilidad es experimental y no garantizada. Validar versiones y dependencias antes de copiar archivos a plugins/. Mostrar actualizaciones disponibles y opción de revertir.
+
+## 5. Interfaz y UX
+Nueva sección lateral «Centro de instalación» con pestañas «Servidores», «Modpacks», «Mods», «Plugins», «Instalados», «Actualizaciones» y «Descargas». Cabecera con instancia activa y filtros de compatibilidad. Resultados en tarjetas compactas con icono, nombre, autor, resumen, versión y estado; panel lateral de detalle con descripción, changelog, dependencias, versiones, fuente, licencia, fecha y acciones. Selector de versión/build claro y buscable. Cola de descargas con velocidad, tamaño, progreso y errores; pasos visuales «Analizar → Preparar → Descargar → Verificar → Instalar → Probar». Estados vacíos y errores bien diseñados. No inventar datos ni imágenes; usar assets oficiales autorizados, SVG y componentes de interfaz propios. Estilo sobrio, detallado y consistente con MercHosting.
+
+## 6. Seguridad, fuentes y consistencia
+Solo descargar desde orígenes autorizados y URLs validadas; evitar redirecciones a destinos inseguros, traversal de rutas y zip slip. Verificar hashes cuando estén disponibles; no interpretar un hash como garantía absoluta de seguridad. Tratar JARs como ejecutables de terceros y avisar sobre riesgos; no ejecutar instaladores arbitrarios. Respetar licencias, límites de API, autenticación y distribución. Credenciales en Windows Credential Manager o almacén seguro, nunca incrustadas en el frontend. Implementar cache con expiración y manejo de rate limits. Descargar a staging; validar antes de mover; snapshot y rollback; no sobrescribir mundos sin consentimiento. Bloquear operaciones de instalación incompatibles con el servidor en ejecución; programar para mantenimiento o detener de forma segura. Logs auditables de quién instaló qué, versión, origen, fecha y resultado.
+
+## 7. Arquitectura
+Implementar proveedores por adaptadores (ProviderAdapter) para catálogos, versiones, changelogs, descargas y metadata, con capacidades explícitas por proveedor. Separar resolución de compatibilidad, dependency solver, gestor de descargas, instalador transaccional, snapshots y control de procesos. No inventar endpoints: consultar documentación actual de cada fuente antes de integrar. Versiones/builds no disponibles deben aparecer como no disponibles, no como enlaces fabricados. Añadir tests unitarios para filtros, resolución y validación; integración con API mediante mocks; pruebas end-to-end en instancia desechable para Vanilla, Paper, Fabric, NeoForge y casos de packs con/sin server pack.
+
+## 8. Orden de implementación
+Fase A: catálogo y descarga oficial de Vanilla/Paper/Fabric/NeoForge, con selección de versiones y arranque verificado. Fase B: catálogo de mods Modrinth y dependencias. Fase C: modpacks Modrinth y server packs. Fase D: integración CurseForge autorizada, incluyendo API key y restricciones. Fase E: plugins y fuentes Hangar/Spigot/Bukkit con alternativas manuales. Fase F: Forge, Spigot BuildTools, Mohist, Arclight y otras variantes según disponibilidad oficial. Fase G: actualizaciones, rollback, colas, rendimiento y pruebas de compatibilidad. En cada fase entregar funciones reales y pruebas, no interfaces simuladas.

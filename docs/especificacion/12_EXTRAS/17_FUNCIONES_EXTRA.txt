@@ -1,0 +1,32 @@
+NOTA DE PRECEDENCIA: prevalecen LEEME_PRIMERO.txt y 00_INICIO/00_DIRECTIVA_MAESTRA.txt. NO panel remoto web/móvil; SÍ compañeros desde aplicación de escritorio. Supporter US$8 único, solo cosméticos.
+
+# CATÁLOGO FUNCIONAL COMPLETO — EXTRAS MERCHOSTING
+
+01 Centro de salud: CPU, RAM, uso Java, disco, uptime, TPS/MSPT solo con fuente real y avisos explicados.
+02 Timeline: eventos de jugadores cuando medibles, cambios de mods, acciones de compañeros, backups, inicios y crashes.
+03 Snapshots inteligentes: antes de update, cambios de loader, restauración, instalación de mods; verificación y rollback.
+04 Invitación de jugadores: dirección pública, versión, loader, mods cliente necesarios, whitelist si autorizada; NO equivale a acceso admin.
+05 Detector de conflictos: versiones, dependencias, duplicados, mods cliente/servidor, loader incorrecto, Java; recomendaciones trazables.
+06 Instalador Java: obtener runtime compatible de proveedor confiable, validar hash/firma, aislar versión por instancia si conviene.
+07 Centro de actualizaciones: app, software server, mods, plugins, modpacks; changelog, backups y rollback.
+08 Programador: backups, reinicios, apagado, avisos previos y condiciones seguras para jugadores conectados.
+09 Control de consumo: límites y advertencias para evitar agotar recursos de PC anfitriona.
+10 Perfiles de rendimiento: principiante, equilibrado, modded, personalizado; ajustes transparentes, no promesas de FPS/TPS.
+11 Analizador de crashes: patrones de logs, causas probables con nivel de confianza, sugerencias reversibles.
+12 Datapacks: importar/validar/activar/desactivar, compatibilidad por versión.
+13 Resource packs: URL y hash, configuración de descarga para clientes, derechos de distribución.
+14 Gestor de mundos: crear, importar, duplicar, exportar, backups, seeds, tamaño, restaurar.
+15 Plantillas: survival, creativo, modded, minijuegos, con defaults explicados.
+16 Roles de compañeros: perfiles reutilizables por instancia, no permiso global automático.
+17 Modo mantenimiento: mensajes, bloqueo temporal de conexiones según soporte real, avisos y reanudación.
+18 Notificaciones: crash, disco, RAM, túnel caído, cambios de compañero, actualización y backup fallido.
+19 Asistente reparación: pruebas guiadas, no editar automáticamente datos sensibles, rollback.
+20 Centro jugadores: online, última conexión y tiempo si medible, moderación y whitelist; privacidad y retención.
+21 Pack para amigos: manifiesto cliente con versiones/hash/enlaces oficiales, exportación permitida por licencias; no redistribuir mods prohibidos.
+22 Modo PC compartida: detectar presión de CPU/RAM cuando anfitrión también juega, sugerir cambios sin aplicarlos sin permiso.
+23 Centro de seguridad: online-mode, whitelist, exposición puertos, permisos de compañeros, backups, auditoría, secretos.
+24 Estado/ayuda: FAQ, troubleshooting, tutoriales repetibles, reportes sanitizados, changelog.
+
+EXCLUSIÓN: no crear panel remoto web ni móvil. No afirmar que todos los datos se obtienen sin plugin bridge. No poner funciones esenciales detrás de Supporter.
+
+CRITERIO: cada función debe tener interfaz real, backend real, errores manejados, pruebas y explicación para novatos. Si depende de permisos, licencias o capacidades de terceros, validar antes de implementar.

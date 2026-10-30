@@ -1,0 +1,29 @@
+ÍNDICE DEL PAQUETE MAESTRO — MERCHOSTING
+
+00_INICIO/                Decisiones, directiva maestra e inventario.
+01_ARQUITECTURA/           Arquitectura, supervisor, persistencia e IPC.
+02_EXPERIENCIA/            Diseño de escritorio y tutoriales.
+03_SERVIDORES/             Creación y administración local.
+04_CONTENIDO/              Mods, plugins, modpacks y catálogos.
+05_CONECTIVIDAD/           Playit y Simple Voice Chat.
+06_CUENTAS/                Identidad y compañeros.
+07_OPERACIONES/            Backups, rendimiento, automatizaciones y utilidades.
+08_CALIDAD/                Seguridad y pruebas.
+09_LANZAMIENTO/            Publicación y comunidad.
+10_CONECTIVIDAD/           Diagnóstico avanzado Playit/voz.
+11_COLABORACION/           Permisos, aislamiento, advertencias y canal escritorio.
+12_EXTRAS/                 Funciones avanzadas.
+13_PRODUCTO/               Free + Supporter y redes.
+14_QA/                     Matriz de aceptación y release Windows.
+15_CIERRE/                 Auditoría final.
+16_WEB_OFICIAL/            Sitio de presentación y descarga, nunca un panel.
+17_IDENTIDAD_Y_DECISIONES/ Eslogan, modelo, copys y prompt separado para web.
+18_APENDICE_TECNICO/       Directiva técnica extendida para arquitectura y catálogos.
+
+ARCHIVOS RAÍZ CLAVE
+LEEME_PRIMERO.txt
+ORDEN_DE_CREACION.txt
+PROMPT_PARA_INICIAR_CLAUDE.txt
+INDICE_DEL_PAQUETE.txt
+
+RECOMENDACIÓN: no enviar todos los archivos a Claude en cada turno. Iniciar con prompt + directiva maestra + fase actual. Mantener un archivo de progreso con qué está hecho, probado y pendiente.

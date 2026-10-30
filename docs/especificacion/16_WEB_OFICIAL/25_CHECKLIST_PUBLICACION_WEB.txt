@@ -1,0 +1,39 @@
+CHECKLIST — PUBLICACIÓN DE LA WEB OFICIAL MERCHOSTING
+
+CONTENIDO
+[ ] Eslogan oficial exacto: «Tu primer servidor no debería necesitar una mensualidad».
+[ ] Capturas de una build real y publicada.
+[ ] Funciones marcadas correctamente como disponibles, beta o en desarrollo.
+[ ] Explicación del hosting local y uso de recursos de la PC.
+[ ] FAQ sobre Playit, Voice Chat, compañeros, datos, requisitos y SmartScreen.
+[ ] Free vs Supporter US$8 pago único explicado sin ventajas funcionales.
+[ ] URLs reales de TikTok, YouTube y GitHub configuradas.
+[ ] Privacidad, licencias, atribuciones y términos accesibles.
+
+DESCARGA
+[ ] Existe una release real aprobada.
+[ ] El instalador corresponde a la versión anunciada.
+[ ] Hash SHA-256 generado sobre el binario exacto.
+[ ] Estado de firma Authenticode/MSIX comprobado, no supuesto.
+[ ] Enlace descarga el archivo correcto y el tamaño coincide.
+[ ] Windows/arquitectura/requisitos indicados.
+[ ] Changelog de esa versión publicado.
+[ ] Stable y Beta claramente diferenciadas.
+
+EXPERIENCIA Y SEGURIDAD
+[ ] No existe panel remoto, login web de gestión ni control de servidores.
+[ ] No hay secretos ni credenciales en el frontend.
+[ ] No hay trackers sin declarar.
+[ ] No se insta al usuario a desactivar Defender/SmartScreen.
+[ ] Responsive, accesible, teclado y reduced motion.
+[ ] Todos los botones y enlaces funcionan.
+[ ] No se publican capturas conceptuales como producto real.
+[ ] No se inventa una fecha de lanzamiento ni disponibilidad.
+
+PUBLICACIÓN
+[ ] Dominio, DNS y HTTPS verificados.
+[ ] Página 404 personalizada.
+[ ] Sitemap, robots, metadata y favicon.
+[ ] Política de privacidad y contacto.
+[ ] Verificación final desde una computadora limpia.
+[ ] La versión descargada se instala y abre correctamente.

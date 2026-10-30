@@ -1,0 +1,91 @@
+ORDEN MAESTRO DE DESARROLLO
+PRIME FASE 2 — MERCHOSTING
+Actualizado: 30 de octubre de 2026
+
+REGLA GENERAL
+No ejecutar todo el ZIP en una sola instrucción. Claude debe trabajar fase por fase. En cada fase: auditar → diseñar → implementar → probar → documentar → mostrar resultados → esperar aprobación o pasar a la siguiente según autorización del usuario. No crear pantallas falsas de funciones que todavía no existen.
+
+FASE 0 — PREPARACIÓN Y AUDITORÍA
+Leer:
+- LEEME_PRIMERO.txt
+- PROMPT_PARA_INICIAR_CLAUDE.txt
+- 00_INICIO/00_DIRECTIVA_MAESTRA.txt
+- 00_INICIO/01_INVENTARIO_Y_PLAN.txt
+Acción: inspeccionar todo el repositorio, stack, dependencias, pruebas, build, funciones reales, módulos incompletos y riesgos. Identificar la plataforma y preservar lo que funciona. Crear backup/commit. Entregar inventario HECHO / PARCIAL / PENDIENTE / BLOQUEADO. No programar una reescritura antes de la auditoría.
+
+FASE 1 — ARQUITECTURA, DATOS Y SUPERVISOR
+Leer 01_ARQUITECTURA/02_BASE_TECNICA.txt y el apéndice técnico si aplica.
+Diseñar contratos, base de datos, migraciones, gestión de procesos Java, supervisor persistente, IPC autenticado, almacenamiento, logs y aislamiento de instancias. Si el repositorio ya tiene otra arquitectura válida, justificar conservarla o migrarla.
+
+FASE 2 — DISEÑO DE APLICACIÓN Y ONBOARDING
+Leer 02_EXPERIENCIA/03_DISENO_Y_TUTORIALES.txt.
+Implementar sistema visual, navegación, dashboard, estados, tutorial inicial saltable, ayuda contextual, tutoriales reabribles, accesibilidad y modo principiante/avanzado.
+
+FASE 3 — CREACIÓN E INSTALACIÓN DE SERVIDORES
+Leer 03_SERVIDORES/04_CREACION_Y_CICLO_DE_VIDA.txt.
+Implementar asistente real: software, versión, build, Java, RAM, puerto, mundo, propiedades, EULA, instalación, validación y arranque. No marcar ONLINE solo porque exista el proceso.
+
+FASE 4 — ADMINISTRACIÓN LOCAL
+Leer 03_SERVIDORES/05_ADMINISTRACION_LOCAL.txt.
+Consola real, logs, archivos, propiedades, jugadores, whitelist, OP, mundos, importación, duplicación y eliminación segura.
+
+FASE 5 — MODS, PLUGINS, MODPACKS Y CONTENIDO
+Leer 04_CONTENIDO/06_MODS_PLUGINS_MODPACKS.txt y la ampliación del apéndice técnico.
+Implementar proveedores con APIs autorizadas, compatibilidad, dependencias, server packs, categorías cliente/servidor, backups y rollback.
+
+FASE 6 — BACKUPS, SALUD Y AUTOMATIZACIONES
+Leer 07_OPERACIONES/09_BACKUPS_RENDIMIENTO_AUTOMATIZACION.txt.
+Backups comprobados, restauración, snapshots, métricas reales, alertas, tareas programadas, mantenimiento y modos de rendimiento.
+
+FASE 7 — CONECTIVIDAD PLAYIT Y VOICE CHAT
+Leer 05_CONECTIVIDAD/07_PLAYIT_Y_VOICECHAT.txt y 10_CONECTIVIDAD/15_DIAGNOSTICO_PLAYIT_VOZ.txt.
+Primero conexión Minecraft. Luego UDP de Simple Voice Chat. Separar estado del proveedor, agente local, túnel, servidor Minecraft y túnel de voz. Verificar documentación y capacidades oficiales antes de automatizar.
+
+FASE 8 — CUENTAS, COMPAÑEROS Y ADMINISTRACIÓN ENTRE APPS DE ESCRITORIO
+Leer 06_CUENTAS/08_IDENTIDAD_Y_COMPANEROS.txt y 11_COLABORACION/16_SEGURIDAD_COMPANEROS.txt.
+Crear identidad, sesiones, invitaciones, roles y permisos granulares. Implementar canal remoto seguro entre instalaciones de escritorio; separado del túnel de Minecraft. NO crear panel web ni móvil.
+
+FASE 9 — FUNCIONES AVANZADAS
+Leer 07_OPERACIONES/10_HERRAMIENTAS_AVANZADAS.txt y 12_EXTRAS/17_FUNCIONES_EXTRA.txt.
+Diagnóstico de crashes, detector de conflictos, instalador/actualizador de Java, datapacks, resource packs, perfiles de rendimiento, invitaciones para jugadores, plantillas, mantenimiento y centro de seguridad.
+
+FASE 10 — FREE + SUPPORTER EDITION
+Leer 13_PRODUCTO/18_MODELO_FREE_SUPPORTER_8USD.txt y 17_IDENTIDAD_Y_DECISIONES/24_MODELO_DE_PRODUCTO_Y_COPYS.txt.
+Free con funciones esenciales completas. Supporter US$8 de pago único, cosmética y reconocimiento opt-in. Investigar procesador de pago viable para el país del desarrollador. Nunca simular compras ni almacenar tarjetas.
+
+FASE 11 — WEB OFICIAL DE PRESENTACIÓN Y DESCARGA
+Leer todos los archivos de 16_WEB_OFICIAL.
+Crear sitio separado de la aplicación. Solo presentación, imágenes/capturas reales, funcionamiento, FAQ, requisitos, versión, novedades, links oficiales y descarga. Sin login de usuarios, gestión de instancias ni panel remoto. No lanzar con capturas falsas ni enlace de descarga inventado.
+
+FASE 12 — REDES, REPOSITORIO Y COMUNIDAD
+Leer 09_LANZAMIENTO/12_PUBLICACION_Y_COMUNIDAD.txt y 13_PRODUCTO/19_REDES_Y_COMUNICACION.txt.
+Configurar TikTok y YouTube solo con URLs reales. Sección Acerca de, créditos, código fuente, changelog, privacidad, soporte y agradecimientos opt-in.
+
+FASE 13 — QA, SEGURIDAD Y PRUEBAS MULTI-PC
+Leer 08_CALIDAD/11_SEGURIDAD_Y_PRUEBAS.txt, 14_QA/20_MATRIZ_ACEPTACION.txt y 11_COLABORACION/16_SEGURIDAD_COMPANEROS.txt.
+Pruebas unitarias, integración, extremo a extremo, dos computadoras, dos cuentas, permisos, archivos, túneles, errores, backups, actualización y fallos de red. No exponer servicios administrativos a Internet sin arquitectura segura.
+
+FASE 14 — PUBLICACIÓN WINDOWS Y FIRMA
+Leer 14_QA/21_RELEASE_Y_FIRMA_WINDOWS.txt.
+Instalador, firma si es viable, hashes, actualización segura, licencias, SmartScreen, antivirus, política de privacidad y guía de instalación. No prometer que firmar elimina toda advertencia de SmartScreen.
+
+FASE 15 — PUBLICACIÓN WEB Y CIERRE
+Leer 16_WEB_OFICIAL/25_CHECKLIST_PUBLICACION_WEB.txt y 15_CIERRE/22_AUDITORIA_FINAL.txt.
+Comprobar que el instalador publicado coincide con la versión, hash y firma reportados. Revisar URLs, accesibilidad, dispositivos, capturas, FAQ, enlaces sociales, términos y política de privacidad.
+
+ENTREGABLES OBLIGATORIOS POR FASE
+- Archivos modificados y motivo.
+- Código compilable.
+- Pruebas ejecutadas y resultados reales.
+- Lista HECHO / PARCIAL / PENDIENTE / BLOQUEADO.
+- Riesgos y limitaciones externas.
+- Instrucciones para reproducir pruebas.
+- Backup/rollback cuando se modifican datos o mundos.
+
+REGLAS DE CONFLICTO
+- El eslogan oficial es: «Tu primer servidor no debería necesitar una mensualidad».
+- Supporter Edition cuesta US$8 una sola vez, es opcional y solo añade extras cosméticos/sociales.
+- La futura aplicación para organizar recursos de creadores a US$10 es OTRO PROYECTO y queda fuera del alcance de MercHosting.
+- Website oficial sí; panel remoto web/móvil no.
+- Compañeros desde cliente de escritorio sí.
+- Nunca utilizar el túnel del juego como canal administrativo.

@@ -1,0 +1,15 @@
+[package]
+name = "merc-core"
+description = "Dominio de MercHosting: estados, rutas confinadas, detección de servidores y perfiles de arranque."
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+serde.workspace = true
+thiserror.workspace = true
+uuid.workspace = true
+regex.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+serde_json.workspace = true

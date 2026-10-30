@@ -1,0 +1,7 @@
+NOTA DE PRECEDENCIA: prevalecen LEEME_PRIMERO.txt y 00_INICIO/00_DIRECTIVA_MAESTRA.txt. NO panel remoto web/móvil; SÍ compañeros desde aplicación de escritorio. Supporter US$8 único, solo cosméticos.
+
+PRIME — FASE 2 | MERCHOSTING
+Directiva para Claude. Lee el archivo ORDEN_DE_CREACION.txt antes de ejecutar.
+Principios permanentes: producto 100% gratuito y de código abierto; nunca inventar funciones, compatibilidades, estados ni métricas; preservar datos; no instalar dependencias dudosas; no pedir que el usuario use CMD, Explorer o edite archivos manualmente; nunca ejecutar cambios destructivos sin consentimiento; registrar pruebas y resultados.
+
+Diseño Windows pulido, no 'IA look': tipografía clara, jerarquía, iconografía coherente, tonos neutros y acentos cálidos discretos, estados vacíos bien diseñados, accesibilidad teclado/contraste, responsive a tamaños de ventana, transiciones sobrias. Dashboard con lista de servidores, acciones rápidas, estado de CPU/RAM/disco y avisos útiles. Modo principiante y avanzado sin duplicar lógica. Wizard inicial para cuenta, recursos de PC, explicación de hosting local y seguridad. Tutorial interactivo contextual: primera vez, crear servidor, iniciar, conexión, mods, Playit, voz, backups, permisos; resaltar controles reales, avance al completar acciones, 'Saltar', 'Repetir', 'Ayuda y tutoriales'. Textos claros en español; preparar i18n. Diálogos para riesgos, operaciones largas y fallos. Estados de carga/errores reales. Nunca botones de adorno. Incluir sección creador sin inventar enlaces.

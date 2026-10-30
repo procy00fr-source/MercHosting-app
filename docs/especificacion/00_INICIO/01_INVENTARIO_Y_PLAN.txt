@@ -1,0 +1,10 @@
+NOTA DE PRECEDENCIA: prevalecen LEEME_PRIMERO.txt y 00_INICIO/00_DIRECTIVA_MAESTRA.txt. NO panel remoto web/móvil; SÍ compañeros desde aplicación de escritorio. Supporter US$8 único, solo cosméticos.
+
+PRIME — FASE 2 | MERCHOSTING
+Directiva para Claude. Lee el archivo ORDEN_DE_CREACION.txt antes de ejecutar.
+Principios permanentes: producto 100% gratuito y de código abierto; nunca inventar funciones, compatibilidades, estados ni métricas; preservar datos; no instalar dependencias dudosas; no pedir que el usuario use CMD, Explorer o edite archivos manualmente; nunca ejecutar cambios destructivos sin consentimiento; registrar pruebas y resultados.
+
+Auditar repositorio: lenguaje, framework, ejecutables, proceso Java, instaladores, rutas, bases de datos, tests, licencias, dependencias, seguridad, funcionalidades completas/incompletas, bugs y riesgos. Identificar qué se reutiliza y qué se migra. Generar mapa de arquitectura, requisitos trazables, matriz de compatibilidad, plan por hitos, presupuesto operativo estimado de servicio de identidad, modelo de amenazas, criterios de aceptación. Antes de cambios: git status, backup y rama de trabajo; no borrar trabajo del usuario. No comenzar implementación de otra fase hasta entregar reporte de auditoría.
+
+ÁREA ADICIONAL — WEB OFICIAL
+Inventariar si existe ya un sitio de MercHosting. La web se desarrolla como presentación/descarga independiente, no como panel de servidores. Usar las directivas 16_WEB_OFICIAL. No convertir la web en frontend administrativo ni replicar funcionalidades de la aplicación.

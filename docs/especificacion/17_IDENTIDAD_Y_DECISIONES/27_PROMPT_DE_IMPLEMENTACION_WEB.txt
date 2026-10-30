@@ -1,0 +1,17 @@
+PROMPT — DESARROLLAR LA WEB OFICIAL MERCHOSTING
+
+Lee primero LEEME_PRIMERO.txt, 00_INICIO/00_DIRECTIVA_MAESTRA.txt y toda la carpeta 16_WEB_OFICIAL. Después revisa el repositorio y determina si la web ya existe o debe crearse como proyecto separado.
+
+OBJETIVO: sitio web oficial de MercHosting que solo presente el producto y permita descargar la app Windows. NO crear panel remoto, login de control, consola web, gestión de archivos, servidores o administración móvil.
+
+Antes de desarrollar:
+1. Confirmar nombre, eslogan, identidad visual y URLs oficiales configuradas.
+2. Confirmar si hay una release pública y capturas reales. Si aún no existe, crear estructura de sitio con contenido claramente marcado como pendiente en ambiente de desarrollo; no publicarlo como disponibilidad real.
+3. Elegir stack estático/pre-renderizado ligero compatible con el repositorio.
+4. Proponer sitemap, componentes y tokens visuales.
+
+Implementar secciones: hero/eslogan, CTA descarga, cómo funciona, funciones, galería de capturas reales, Free vs Supporter (US$8 único pago), requisitos y transparencia, FAQ, versión/changelog, links GitHub/TikTok/YouTube, privacidad/licencias y footer.
+
+Las descargas deben enlazar a una release oficial real, mostrar versión/fecha/tamaño/hash/estado de firma verificados. No inventar métricas ni afirmar que la firma evita SmartScreen por completo. No pedir al usuario desactivar Windows Defender. No poner secretos en frontend ni recopilar datos innecesarios.
+
+Al terminar, comprobar responsive, teclado, contraste, links, hash, versión y que el sitio no contiene ninguna capacidad de administración de servidores. Reportar archivos cambiados y pruebas ejecutadas.
