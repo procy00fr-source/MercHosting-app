@@ -2996,7 +2996,7 @@ dependencies = [
 
 [[package]]
 name = "merc-admin"
-version = "0.2.3"
+version = "0.2.4"
 dependencies = [
  "chrono",
  "flate2",
@@ -3015,7 +3015,7 @@ dependencies = [
 
 [[package]]
 name = "merc-content"
-version = "0.2.3"
+version = "0.2.4"
 dependencies = [
  "merc-core",
  "merc-install",
@@ -3030,7 +3030,7 @@ dependencies = [
 
 [[package]]
 name = "merc-core"
-version = "0.2.3"
+version = "0.2.4"
 dependencies = [
  "regex",
  "serde",
@@ -3042,7 +3042,7 @@ dependencies = [
 
 [[package]]
 name = "merc-install"
-version = "0.2.3"
+version = "0.2.4"
 dependencies = [
  "md-5",
  "merc-core",
@@ -3059,7 +3059,7 @@ dependencies = [
 
 [[package]]
 name = "merc-ipc"
-version = "0.2.3"
+version = "0.2.4"
 dependencies = [
  "interprocess",
  "merc-admin",
@@ -3079,7 +3079,7 @@ dependencies = [
 
 [[package]]
 name = "merc-net"
-version = "0.2.3"
+version = "0.2.4"
 dependencies = [
  "interprocess",
  "merc-install",
@@ -3091,7 +3091,7 @@ dependencies = [
 
 [[package]]
 name = "merc-remote"
-version = "0.2.3"
+version = "0.2.4"
 dependencies = [
  "base64 0.22.1",
  "iroh",
@@ -3106,7 +3106,7 @@ dependencies = [
 
 [[package]]
 name = "merc-store"
-version = "0.2.3"
+version = "0.2.4"
 dependencies = [
  "merc-core",
  "rusqlite",
@@ -3118,7 +3118,7 @@ dependencies = [
 
 [[package]]
 name = "merc-supervisor"
-version = "0.2.3"
+version = "0.2.4"
 dependencies = [
  "merc-core",
  "serde",
@@ -3131,7 +3131,7 @@ dependencies = [
 
 [[package]]
 name = "merc-supervisord"
-version = "0.2.3"
+version = "0.2.4"
 dependencies = [
  "base64 0.22.1",
  "chrono",
@@ -3160,7 +3160,7 @@ dependencies = [
 
 [[package]]
 name = "merchosting-app"
-version = "0.2.3"
+version = "0.2.4"
 dependencies = [
  "merc-core",
  "merc-ipc",
