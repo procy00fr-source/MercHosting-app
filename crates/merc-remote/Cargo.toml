@@ -1,0 +1,17 @@
+[package]
+name = "merc-remote"
+description = "Canal cifrado entre PCs con MercHosting para administrar servidores de compañeros (iroh)."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+merc-core = { path = "../merc-core" }
+merc-ipc = { path = "../merc-ipc" }
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+sha2 = "0.10"
+base64 = "0.22"
+iroh = "1.4.1"
+tokio = { version = "1", features = ["rt-multi-thread", "io-util", "time", "sync", "macros"] }

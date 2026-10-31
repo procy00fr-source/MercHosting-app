@@ -7,3 +7,13 @@
 Thumbs.db
 *.bundle
 verificacion-windows.log
+prueba-servidor-real.log
+node_modules/
+app/dist/
+app/src-tauri/gen/
+abrir-app.log
+prueba-creacion.log
+curseforge-api-key.txt
+app/.shot/
+app/src-tauri/binaries/
+__pycache__/

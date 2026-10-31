@@ -1,0 +1,54 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Permisos de la ventana principal: solo lo que la interfaz usa.",
+  "windows": [
+    "main"
+  ],
+  "permissions": [
+    "core:default",
+    "core:window:allow-set-icon",
+    "core:app:allow-default-window-icon",
+    "dialog:allow-open",
+    "dialog:allow-save",
+    "notification:default",
+    {
+      "identifier": "opener:allow-open-url",
+      "allow": [
+        {
+          "url": "https://aka.ms/MinecraftEULA"
+        },
+        {
+          "url": "https://modrinth.com/*"
+        },
+        {
+          "url": "https://www.curseforge.com/*"
+        },
+        {
+          "url": "https://hangar.papermc.io/*"
+        },
+        {
+          "url": "https://playit.gg/*"
+        },
+        {
+          "url": "https://gumroad.com/*"
+        },
+        {
+          "url": "https://*.gumroad.com/*"
+        },
+        {
+          "url": "https://www.youtube.com/@Amercson"
+        },
+        {
+          "url": "https://www.tiktok.com/@amercfr"
+        },
+        {
+          "url": "https://docs.google.com/forms/d/e/*"
+        },
+        {
+          "url": "https://github.com/procy00fr-source/*"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+[package]
+name = "merchosting-app"
+description = "Aplicación de escritorio de MercHosting (Tauri 2)."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+merc-core = { path = "../../crates/merc-core" }
+merc-ipc = { path = "../../crates/merc-ipc" }
+serde.workspace = true
+serde_json.workspace = true
+tauri = { version = "2", features = ["image-png"] }
+tauri-plugin-dialog = "2"
+tauri-plugin-opener = "2"
+tauri-plugin-notification = "2"
+tauri-plugin-updater = { version = "2", optional = true }
+
+[features]
+# Solo en las versiones publicadas (scripts/publicar-version.mjs la activa y pasa la clave
+# pública y la dirección de las releases). Las compilaciones de desarrollo no se actualizan.
+updater = ["dep:tauri-plugin-updater"]
+# La CLI de Tauri activa esta característica en `tauri build`: incrusta la interfaz compilada.
+custom-protocol = ["tauri/custom-protocol"]

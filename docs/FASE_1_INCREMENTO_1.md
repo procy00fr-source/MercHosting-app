@@ -83,6 +83,9 @@ La prueba con un servidor real está pendiente (ver sección 4).
 - 30-10-2026, intento 1: Windows con Rust 1.99.1 y Temurin 21.0.13. **Las pruebas no llegaron a ejecutarse**
   porque el script tenía un error: en Windows PowerShell 5.1, `$ErrorActionPreference = "Stop"` junto con
   `2>&1` convierte la salida normal de cargo en stderr en un error fatal. Script corregido (usa `cmd /c`).
+- 30-10-2026, intento 2: Windows 11 (NT 10.0.26200), PowerShell 5.1, Rust 1.99.1 y Temurin 21.0.13.
+  **43 pruebas pasan y 0 fallan.** Son 43 y no 45 porque las 2 pruebas de symlinks solo existen en Unix;
+  en el incremento 2 se añade una prueba equivalente con junctions de Windows.
 
 ## 5. Riesgos y límites conocidos
 

@@ -1,0 +1,597 @@
+/* Generado por scripts/generar-modo-claro.mjs a partir de styles.css. No editar a mano. */
+
+:root[data-mode="light"] {
+  color-scheme: light;
+  --night-950: #eef1f8;
+  --night-900: #f5f7fc;
+  --night-850: #ffffff;
+  --night-800: #e8ecf6;
+  --glass: rgba(255, 255, 255, 0.72);
+  --glass-strong: rgba(255, 255, 255, 0.94);
+  --line: rgba(20, 35, 90, 0.12);
+  --line-strong: rgba(20, 35, 90, 0.22);
+  --ivory: #141a30;
+  --ivory-2: #39425f;
+  --muted: #5d6886;
+  --copper-2: color-mix(in srgb, var(--copper) 78%, #000);
+  --champagne: color-mix(in srgb, var(--copper) 62%, #000);
+  --ok: #0a8fb5;
+  --busy: #b7770f;
+  --bad: #c9432e;
+  --idle: #7a84a3;
+  --unsure: #6c6390;
+}
+:root[data-mode="light"] .backdrop {
+  --glow-1: color-mix(in srgb, var(--copper) 16%, transparent);
+  --glow-2: color-mix(in srgb, var(--copper) 10%, transparent);
+  --glow-3: color-mix(in srgb, var(--copper) 6%, transparent);
+}
+:root[data-mode="light"] .sidebar {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(246, 248, 253, 0.9));
+  box-shadow: 0 20px 60px rgba(30, 40, 80, 0.12);
+}
+/* La consola se queda oscura, como una terminal: recupera los colores del modo oscuro. */
+:root[data-mode="light"] .console {
+  color-scheme: dark;
+  --ivory: #eef2ff;
+  --ivory-2: #c3cbe6;
+  --muted: #8a95b8;
+  --line: rgba(150, 175, 255, 0.12);
+  --line-strong: rgba(150, 175, 255, 0.22);
+  --glass: rgba(20, 30, 64, 0.55);
+  --glass-strong: rgba(16, 24, 52, 0.85);
+  --copper-2: #8fb0ff;
+  --champagne: #b9ccff;
+  --ok: #3fd2ff;
+  --busy: #f1b85b;
+  --bad: #f0715d;
+  --idle: #5f6b93;
+  background: #0c132b;
+  color: var(--ivory);
+}
+
+:root[data-mode="light"] ::-webkit-scrollbar-thumb {
+  background: rgba(30, 50, 130, 0.2);
+}
+
+:root[data-mode="light"] ::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(30, 50, 130, 0.35);
+}
+
+:root[data-mode="light"] .sidebar {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(255, 255, 255, 0.96));
+  box-shadow: 0 20px 60px rgba(30, 40, 80, 0.105);
+}
+
+:root[data-mode="light"] .server-card:hover {
+  background: rgba(30, 50, 130, 0.075);
+}
+
+:root[data-mode="light"] .server-card[aria-current="true"] {
+  background: linear-gradient(100deg, rgba(79, 125, 255, 0.14), rgba(30, 50, 130, 0.063));
+  border-color: rgba(30, 50, 130, 0.35);
+}
+
+:root[data-mode="light"] .sound-toggle:hover {
+  background: rgba(30, 50, 130, 0.088);
+}
+
+:root[data-mode="light"] .hero {
+  background: radial-gradient(600px 340px at 78% 60%, color-mix(in srgb, var(--accent) 18%, transparent), transparent 70%),
+    linear-gradient(120deg, rgba(255, 255, 255, 0.96), rgba(255, 255, 255, 0.96));
+  box-shadow: 0 24px 70px rgba(30, 40, 80, 0.105);
+}
+
+:root[data-mode="light"] .hero::after {
+  background-image: linear-gradient(rgba(30, 50, 130, 0.056) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(30, 50, 130, 0.056) 1px, transparent 1px);
+}
+
+:root[data-mode="light"] .chip {
+  background: rgba(30, 50, 130, 0.088);
+}
+
+:root[data-mode="light"] .chip-kind {
+  border-color: rgba(30, 50, 130, 0.375);
+}
+
+:root[data-mode="light"] .addr {
+  background: rgba(255, 255, 255, 0.8);
+}
+
+:root[data-mode="light"] .addr:hover {
+  border-color: rgba(30, 50, 130, 0.45);
+}
+
+:root[data-mode="light"] .addr-icon {
+  background: rgba(30, 50, 130, 0.1);
+}
+
+:root[data-mode="light"] .btn::after {
+  background: linear-gradient(100deg, transparent, rgba(20, 30, 70, 0.2), transparent);
+}
+
+:root[data-mode="light"] .btn-quiet:hover:not(:disabled) {
+  background: rgba(30, 50, 130, 0.088);
+}
+
+:root[data-mode="light"] .notice-warn {
+  background: linear-gradient(100deg, rgba(241, 184, 91, 0.1), rgba(255, 255, 255, 0.9));
+}
+
+:root[data-mode="light"] .notice-bad {
+  background: linear-gradient(100deg, rgba(240, 113, 93, 0.12), rgba(255, 255, 255, 0.9));
+}
+
+:root[data-mode="light"] .tabs {
+  background: rgba(255, 255, 255, 0.75);
+}
+
+:root[data-mode="light"] .tab[aria-selected="true"] {
+  box-shadow: 0 0 0 1px rgba(143, 176, 255, 0.18) inset;
+}
+
+:root[data-mode="light"] .card {
+  box-shadow: 0 16px 40px rgba(30, 40, 80, 0.066);
+}
+
+:root[data-mode="light"] .chart-grid {
+  stroke: rgba(22, 28, 52, 0.07);
+}
+
+:root[data-mode="light"] .meter {
+  background: rgba(30, 50, 130, 0.112);
+}
+
+:root[data-mode="light"] .player {
+  background: rgba(30, 50, 130, 0.088);
+}
+
+:root[data-mode="light"] .player-avatar {
+  color: rgb(22, 28, 52);
+}
+
+:root[data-mode="light"] .peek {
+  background: rgba(255, 255, 255, 0.9);
+}
+
+:root[data-mode="light"] .toggle-track {
+  background: rgba(30, 50, 130, 0.188);
+}
+
+:root[data-mode="light"] .ln-stderr,
+:root[data-mode="light"] .ln-error {
+  color: rgb(148, 91, 80);
+}
+
+:root[data-mode="light"] .ln-warn {
+  color: rgb(141, 119, 77);
+}
+
+:root[data-mode="light"] .ln-tag {
+  color: rgb(22, 28, 52);
+}
+
+:root[data-mode="light"] .dialog-backdrop {
+  background: rgba(255, 255, 255, 0.96);
+}
+
+:root[data-mode="light"] .dialog {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(255, 255, 255, 0.96));
+  box-shadow: 0 40px 100px rgba(30, 40, 80, 0.18);
+}
+
+:root[data-mode="light"] .field input[type="text"],
+:root[data-mode="light"] .field input[type="time"],
+:root[data-mode="light"] .field select {
+  background: rgba(255, 255, 255, 0.8);
+}
+
+:root[data-mode="light"] .field input[type="text"]:focus,
+:root[data-mode="light"] .field input[type="time"]:focus,
+:root[data-mode="light"] .field select:focus {
+  border-color: rgba(30, 50, 130, 0.45);
+  box-shadow: 0 0 0 3px rgba(79, 125, 255, 0.084);
+}
+
+:root[data-mode="light"] .detect-box {
+  background: linear-gradient(120deg, rgba(79, 125, 255, 0.1), rgba(255, 255, 255, 0.7));
+  border: 1px solid rgba(30, 50, 130, 0.313);
+}
+
+:root[data-mode="light"] .form-error {
+  color: rgb(148, 91, 80);
+}
+
+:root[data-mode="light"] .wiz-steps li[data-state="current"] {
+  border-color: rgba(30, 50, 130, 0.438);
+}
+
+:root[data-mode="light"] .wiz-dot {
+  background: rgba(30, 50, 130, 0.125);
+}
+
+:root[data-mode="light"] .wiz-steps li[data-state="current"] .wiz-dot {
+  background: linear-gradient(135deg, rgb(108, 155, 255), rgb(59, 91, 255));
+  color: rgb(22, 28, 52);
+  box-shadow: 0 0 14px rgba(79, 125, 255, 0.36);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+:root[data-mode="light"] .flavor-card {
+  background: linear-gradient(150deg, rgba(79, 125, 255, 0.08), rgba(255, 255, 255, 0.75));
+}
+
+:root[data-mode="light"] .flavor-card:hover {
+  border-color: rgba(30, 50, 130, 0.45);
+  box-shadow: 0 18px 40px -18px rgba(79, 125, 255, 0.39);
+}
+
+:root[data-mode="light"] .flavor-card[aria-pressed="true"] {
+  background: linear-gradient(150deg, rgba(79, 125, 255, 0.24), rgba(124, 92, 255, 0.12) 60%, rgba(255, 255, 255, 0.8));
+  box-shadow: 0 0 0 1px rgba(143, 176, 255, 0.3) inset,
+    0 20px 46px -18px rgba(79, 125, 255, 0.48);
+}
+
+:root[data-mode="light"] .flavor-icon {
+  border: 1px solid rgba(30, 50, 130, 0.375);
+}
+
+:root[data-mode="light"] .version-search {
+  background: rgba(255, 255, 255, 0.8);
+}
+
+:root[data-mode="light"] .version-item {
+  background: rgba(30, 50, 130, 0.05);
+}
+
+:root[data-mode="light"] .version-item:hover {
+  border-color: rgba(30, 50, 130, 0.45);
+}
+
+:root[data-mode="light"] .wiz-alert {
+  background: linear-gradient(120deg, rgba(241, 184, 91, 0.14), rgba(255, 255, 255, 0.7));
+  color: rgb(22, 28, 52);
+}
+
+:root[data-mode="light"] .switch-row {
+  background: rgba(30, 50, 130, 0.05);
+}
+
+:root[data-mode="light"] .switch-row input[type="checkbox"] {
+  background: rgba(30, 50, 130, 0.2);
+}
+
+:root[data-mode="light"] .switch-row input[type="checkbox"]:checked {
+  background: linear-gradient(135deg, rgb(108, 155, 255), rgb(59, 91, 255));
+}
+
+:root[data-mode="light"] .switch-row input[type="checkbox"]:checked::before {
+  background: rgb(255, 255, 255);
+}
+
+:root[data-mode="light"] .summary-grid {
+  background: rgba(255, 255, 255, 0.7);
+}
+
+:root[data-mode="light"] .wiz-notes {
+  color: rgb(22, 28, 52);
+}
+
+:root[data-mode="light"] .job-steps li[data-state="stopped"] {
+  color: rgb(148, 91, 80);
+}
+
+:root[data-mode="light"] .job-dot {
+  background: rgba(30, 50, 130, 0.075);
+}
+
+:root[data-mode="light"] .job-steps li[data-state="active"] .job-dot {
+  box-shadow: 0 0 12px rgba(79, 125, 255, 0.33);
+}
+
+:root[data-mode="light"] .dl-bar {
+  background: rgba(30, 50, 130, 0.125);
+}
+
+:root[data-mode="light"] .dl-bar span {
+  background: linear-gradient(90deg, rgb(59, 91, 255), rgb(108, 155, 255), rgb(63, 210, 255));
+  box-shadow: 0 0 16px rgba(63, 210, 255, 0.3);
+}
+
+:root[data-mode="light"] .job-message[data-state="failed"],
+:root[data-mode="light"] .job-message[data-state="cancelled"] {
+  color: rgb(148, 91, 80);
+}
+
+:root[data-mode="light"] .job-log {
+  background: rgba(255, 255, 255, 0.96);
+}
+
+:root[data-mode="light"] .player-add input {
+  background: rgba(255, 255, 255, 0.8);
+}
+
+:root[data-mode="light"] .player-add input:focus,
+:root[data-mode="light"] .file-editor textarea:focus {
+  border-color: rgba(30, 50, 130, 0.45);
+  box-shadow: 0 0 0 3px rgba(79, 125, 255, 0.084);
+}
+
+:root[data-mode="light"] .players-count {
+  background: rgba(30, 50, 130, 0.125);
+}
+
+:root[data-mode="light"] .player-list li:hover {
+  background: rgba(30, 50, 130, 0.075);
+}
+
+:root[data-mode="light"] .save-bar[data-dirty="true"] {
+  border-color: rgba(30, 50, 130, 0.45);
+  box-shadow: 0 0 24px -6px rgba(79, 125, 255, 0.36);
+}
+
+:root[data-mode="light"] .props-card input[type="text"],
+:root[data-mode="light"] .props-card select {
+  background: rgba(255, 255, 255, 0.8);
+}
+
+:root[data-mode="light"] .crumbs {
+  background: rgba(255, 255, 255, 0.75);
+}
+
+:root[data-mode="light"] .crumb:hover {
+  background: rgba(30, 50, 130, 0.125);
+}
+
+:root[data-mode="light"] .file-table td {
+  border-bottom: 1px solid rgba(30, 50, 130, 0.063);
+}
+
+:root[data-mode="light"] .icon-btn:hover:not(:disabled) {
+  background: rgba(30, 50, 130, 0.15);
+}
+
+:root[data-mode="light"] .icon-danger:hover:not(:disabled) {
+  color: rgb(148, 90, 79);
+}
+
+:root[data-mode="light"] .file-editor textarea {
+  background: rgba(255, 255, 255, 0.95);
+}
+
+:root[data-mode="light"] .activity-list li {
+  border-bottom: 1px solid rgba(30, 50, 130, 0.063);
+}
+
+:root[data-mode="light"] .saved-list li {
+  background: rgba(255, 255, 255, 0.65);
+}
+
+:root[data-mode="light"] .saved-kind.trash {
+  color: rgb(148, 91, 80);
+}
+
+:root[data-mode="light"] .toast {
+  background: linear-gradient(120deg, rgba(240, 113, 93, 0.22), rgba(255, 255, 255, 0.96));
+  box-shadow: 0 20px 50px rgba(30, 40, 80, 0.15);
+}
+
+:root[data-mode="light"] .notice-info {
+  background: linear-gradient(100deg, rgba(110, 160, 255, 0.12), rgba(255, 255, 255, 0.9));
+}
+
+:root[data-mode="light"] .seg {
+  background: rgba(30, 50, 130, 0.063);
+}
+
+:root[data-mode="light"] .seg-btn:hover {
+  background: rgba(30, 50, 130, 0.1);
+}
+
+:root[data-mode="light"] .seg-btn[aria-pressed="true"] {
+  box-shadow: inset 0 0 0 1px rgba(143, 176, 255, 0.27);
+}
+
+:root[data-mode="light"] .badge-muted {
+  background: rgba(30, 50, 130, 0.2);
+}
+
+:root[data-mode="light"] .content-icon {
+  background: rgba(30, 50, 130, 0.1);
+}
+
+:root[data-mode="light"] .content-card:hover {
+  border-color: rgba(30, 50, 130, 0.45);
+}
+
+:root[data-mode="light"] .plan-list li {
+  background: rgba(30, 50, 130, 0.063);
+}
+
+:root[data-mode="light"] .md-plain {
+  background: rgba(255, 255, 255, 0.8);
+}
+
+:root[data-mode="light"] .content-search input[type="search"],
+:root[data-mode="light"] .content-search select {
+  background: rgba(255, 255, 255, 0.8);
+}
+
+:root[data-mode="light"] .content-search input[type="search"]:focus,
+:root[data-mode="light"] .content-search select:focus {
+  border-color: rgba(30, 50, 130, 0.45);
+  box-shadow: 0 0 0 3px rgba(79, 125, 255, 0.084);
+}
+
+:root[data-mode="light"] .server-switch:hover {
+  border-color: rgba(30, 50, 130, 0.45);
+}
+
+:root[data-mode="light"] .nav-item:hover {
+  background: rgba(30, 50, 130, 0.088);
+}
+
+:root[data-mode="light"] .nav-item[aria-selected="true"],
+:root[data-mode="light"] .nav-item[aria-current="page"] {
+  box-shadow: inset 0 0 0 1px rgba(143, 176, 255, 0.168);
+}
+
+:root[data-mode="light"] .server-tile:hover {
+  border-color: rgba(30, 50, 130, 0.45);
+}
+
+:root[data-mode="light"] .btn-warn {
+  color: rgb(29, 20, 5);
+}
+
+:root[data-mode="light"] .banner-card {
+  background: radial-gradient(420px 220px at 90% 70%, color-mix(in srgb, var(--accent) 22%, transparent), transparent 70%),
+    linear-gradient(120deg, rgba(255, 255, 255, 0.96), rgba(255, 255, 255, 0.96));
+}
+
+:root[data-mode="light"] .banner-text p {
+  text-shadow: 0 1px 8px rgba(30, 40, 80, 0.27);
+}
+
+:root[data-mode="light"] .health-bar {
+  background: rgba(20, 30, 70, 0.112);
+}
+
+:root[data-mode="light"] .health-bar[data-level="warn"] span {
+  background: rgb(242, 184, 75);
+}
+
+:root[data-mode="light"] .health-bar[data-level="bad"] span {
+  background: rgb(255, 122, 90);
+}
+
+:root[data-mode="light"] .tps-chip[data-level="warn"] strong {
+  color: rgb(140, 107, 44);
+}
+
+:root[data-mode="light"] .tps-chip[data-level="bad"] strong {
+  color: rgb(148, 71, 52);
+}
+
+:root[data-mode="light"] .alert-list li {
+  background: rgba(20, 30, 70, 0.048);
+}
+
+:root[data-mode="light"] .alert-list li[data-level="critical"] {
+  border-left-color: rgb(255, 122, 90);
+}
+
+:root[data-mode="light"] .alert-list li[data-level="warning"] {
+  border-left-color: rgb(242, 184, 75);
+}
+
+:root[data-mode="light"] .bell-count {
+  background: rgb(255, 122, 90);
+}
+
+:root[data-mode="light"] .address {
+  background: rgba(255, 255, 255, 0.8);
+}
+
+:root[data-mode="light"] .tunnel-box,
+:root[data-mode="light"] .claim-box {
+  background: rgba(20, 30, 70, 0.048);
+}
+
+:root[data-mode="light"] .layer-list li {
+  background: rgba(20, 30, 70, 0.048);
+}
+
+:root[data-mode="light"] .layer-list li[data-state="degradado"] .layer-dot {
+  background: rgb(242, 184, 75);
+}
+
+:root[data-mode="light"] .layer-list li[data-state="caido"] .layer-dot {
+  background: rgb(255, 122, 90);
+}
+
+:root[data-mode="light"] .alert-list li[data-level="info"] {
+  border-left-color: rgba(30, 50, 130, 0.45);
+}
+
+:root[data-mode="light"] .row-list li {
+  background: rgba(20, 30, 70, 0.048);
+}
+
+:root[data-mode="light"] .invite-code code {
+  background: rgba(255, 255, 255, 0.65);
+}
+
+:root[data-mode="light"] .role-option[data-on="true"] {
+  background: rgba(30, 50, 130, 0.1);
+}
+
+:root[data-mode="light"] .finding[data-confidence="alta"] {
+  border-left-color: rgb(255, 122, 90);
+}
+
+:root[data-mode="light"] .finding[data-confidence="media"] {
+  border-left-color: rgb(242, 184, 75);
+}
+
+:root[data-mode="light"] .evidence {
+  background: rgba(255, 255, 255, 0.65);
+}
+
+:root[data-mode="light"] .security-check[data-level="peligro"] {
+  border-left-color: rgb(255, 122, 90);
+}
+
+:root[data-mode="light"] .security-check[data-level="aviso"] {
+  border-left-color: rgb(242, 184, 75);
+}
+
+:root[data-mode="light"] .icon-preview img {
+  background: repeating-conic-gradient(rgb(42, 47, 69) 0 25%, rgb(246, 248, 253) 0 50%) 0 0 / 16px 16px;
+}
+
+:root[data-mode="light"] .tour-shade {
+  background: rgba(255, 255, 255, 0.92);
+}
+
+:root[data-mode="light"] .tour-card {
+  box-shadow: 0 24px 60px rgba(30, 40, 80, 0.135);
+}
+
+:root[data-mode="light"] .lp-list button:hover {
+  background: rgba(30, 50, 130, 0.088);
+}
+
+:root[data-mode="light"] .app-update-notes {
+  background: rgba(30, 50, 130, 0.063);
+}
+
+:root[data-mode="light"] .code-editor {
+  background: rgba(255, 255, 255, 0.95);
+}
+
+:root[data-mode="light"] .hl-k {
+  color: rgb(22, 28, 52);
+}
+
+:root[data-mode="light"] .hl-s {
+  color: rgb(22, 28, 52);
+}
+
+:root[data-mode="light"] .hl-n {
+  color: rgb(22, 28, 52);
+}
+
+:root[data-mode="light"] .hl-b {
+  color: rgb(22, 28, 52);
+}
+
+:root[data-mode="light"] .hl-h {
+  color: rgb(37, 122, 148);
+}
+}
+
+:root[data-mode="light"] .sidebar {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(246, 248, 253, 0.9));
+}

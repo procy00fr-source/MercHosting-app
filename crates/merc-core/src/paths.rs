@@ -64,6 +64,19 @@ fn validate_name(name: &str) -> Result<(), PathError> {
     Ok(())
 }
 
+/// Quita el prefijo `\\?\` que `canonicalize` añade en Windows (`\\?\C:\...` → `C:\...`),
+/// solo para rutas de unidad. Las rutas UNC verbatim se dejan tal cual.
+pub fn strip_verbatim(p: &Path) -> PathBuf {
+    let s = p.to_string_lossy();
+    if let Some(rest) = s.strip_prefix(r"\\?\") {
+        let b = rest.as_bytes();
+        if b.len() >= 2 && b[1] == b':' && b[0].is_ascii_alphabetic() {
+            return PathBuf::from(rest);
+        }
+    }
+    p.to_path_buf()
+}
+
 /// Raíz canónica de una instancia.
 #[derive(Debug, Clone)]
 pub struct SandboxRoot {
@@ -173,6 +186,19 @@ mod tests {
     }
 
     #[test]
+    fn strips_verbatim_prefix() {
+        assert_eq!(
+            strip_verbatim(Path::new(r"\\?\C:\Servers\A")),
+            PathBuf::from(r"C:\Servers\A")
+        );
+        assert_eq!(
+            strip_verbatim(Path::new(r"\\?\UNC\srv\x")),
+            PathBuf::from(r"\\?\UNC\srv\x")
+        );
+        assert_eq!(strip_verbatim(Path::new("/srv/a")), PathBuf::from("/srv/a"));
+    }
+
+    #[test]
     fn accepts_normal_paths() {
         let (_d, sb) = sandbox();
         assert!(sb.resolve("server.properties").is_ok());
@@ -228,5 +254,37 @@ mod tests {
         let (d, sb) = sandbox();
         std::os::unix::fs::symlink(d.path().join("world"), d.path().join("alias")).unwrap();
         assert!(matches!(sb.resolve("alias/region"), Err(PathError::LinkNotAllowed(_))));
+    }
+
+    /// En Windows, una junction (`mklink /J`) no necesita permisos de administrador y es la forma
+    /// más común de "enlazar" carpetas. Debe rechazarse igual que un symlink.
+    #[cfg(windows)]
+    #[test]
+    fn rejects_junction_escape() {
+        let (d, sb) = sandbox();
+        let outside = tempfile::tempdir().unwrap();
+        std::fs::write(outside.path().join("secreto.txt"), "x").unwrap();
+        let link = d.path().join("enlace");
+        let status = std::process::Command::new("cmd")
+            .args(["/C", "mklink", "/J"])
+            .arg(&link)
+            .arg(outside.path())
+            .output()
+            .expect("ejecutar mklink");
+        assert!(
+            status.status.success(),
+            "mklink /J falló: {}",
+            String::from_utf8_lossy(&status.stdout)
+        );
+        assert!(
+            std::fs::symlink_metadata(&link).unwrap().file_type().is_symlink(),
+            "std debe ver la junction como enlace"
+        );
+        assert!(matches!(
+            sb.resolve("enlace/secreto.txt"),
+            Err(PathError::LinkNotAllowed(_))
+        ));
+        assert!(matches!(sb.resolve("enlace"), Err(PathError::LinkNotAllowed(_))));
+        std::fs::remove_dir(&link).unwrap();
     }
 }

@@ -1,12 +1,12 @@
 [workspace]
 resolver = "2"
-members = ["crates/merc-core", "crates/merc-store", "crates/merc-supervisor"]
+members = ["crates/merc-core", "crates/merc-store", "crates/merc-supervisor", "crates/merc-ipc", "crates/merc-install", "crates/merc-admin", "crates/merc-content", "crates/merc-supervisord", "crates/merc-net", "crates/merc-remote", "app/src-tauri"]
 
 [workspace.package]
-version = "0.1.0"
+version = "0.2.3"
 edition = "2021"
 license = "GPL-3.0-or-later"
-rust-version = "1.80"
+rust-version = "1.91"
 
 [workspace.dependencies]
 serde = { version = "1", features = ["derive"] }
@@ -16,3 +16,6 @@ uuid = { version = "1", features = ["v4", "serde"] }
 regex = "1"
 rusqlite = { version = "0.32", features = ["bundled"] }
 tempfile = "3"
+interprocess = "2.4"
+sysinfo = { version = "0.40", default-features = false, features = ["system"] }
+widestring = "1"

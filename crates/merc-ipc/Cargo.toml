@@ -1,0 +1,26 @@
+[package]
+name = "merc-ipc"
+description = "Protocolo versionado y canal local autenticado entre la interfaz de MercHosting y su supervisor."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+merc-core = { path = "../merc-core" }
+merc-supervisor = { path = "../merc-supervisor" }
+merc-install = { path = "../merc-install" }
+merc-admin = { path = "../merc-admin" }
+merc-content = { path = "../merc-content" }
+merc-net = { path = "../merc-net" }
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+uuid.workspace = true
+interprocess.workspace = true
+
+[target.'cfg(windows)'.dependencies]
+widestring.workspace = true
+windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_System_Console"] }
+
+[dev-dependencies]
+tempfile.workspace = true

@@ -1,0 +1,2294 @@
+{
+  "all_error_codes": [
+    "auth_failed",
+    "version_mismatch",
+    "bad_request",
+    "not_found",
+    "conflict",
+    "invalid_state",
+    "no_console",
+    "network",
+    "forbidden",
+    "internal"
+  ],
+  "all_states": [
+    "STOPPED",
+    "VALIDATING",
+    "STARTING",
+    "LOADING",
+    "ONLINE",
+    "STOPPING",
+    "CRASHED",
+    "ERROR",
+    "RECOVERING",
+    "UNKNOWN"
+  ],
+  "error_responses": [
+    {
+      "err": {
+        "code": "conflict",
+        "message": "Ya está en marcha"
+      },
+      "seq": 9
+    },
+    {
+      "err": {
+        "code": "no_console",
+        "message": "Sin consola"
+      },
+      "seq": 10
+    }
+  ],
+  "force_kill_confirmation": "ENTIENDO_QUE_PUEDO_PERDER_DATOS",
+  "protocol": 1,
+  "requests": [
+    {
+      "op": "ping"
+    },
+    {
+      "op": "list_instances"
+    },
+    {
+      "op": "detect",
+      "path": "C:\\Servidores\\a"
+    },
+    {
+      "op": "find_java"
+    },
+    {
+      "java": "C:\\Java\\bin\\java.exe",
+      "max_memory_mb": 4096,
+      "min_memory_mb": 0,
+      "name": "Mi servidor",
+      "op": "import_instance",
+      "path": "C:\\Servidores\\a"
+    },
+    {
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "op": "start"
+    },
+    {
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "op": "stop",
+      "timeout_secs": 120
+    },
+    {
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "op": "restart",
+      "stop_timeout_secs": 120
+    },
+    {
+      "confirm": "ENTIENDO_QUE_PUEDO_PERDER_DATOS",
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "op": "force_kill"
+    },
+    {
+      "command": "say hola",
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "op": "send_command"
+    },
+    {
+      "after": 10,
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "limit": 500,
+      "op": "console"
+    },
+    {
+      "accepted": true,
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "op": "accept_eula"
+    },
+    {
+      "delete_files": true,
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "op": "unregister"
+    },
+    {
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "op": "status"
+    },
+    {
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "op": "metrics"
+    },
+    {
+      "op": "system_info"
+    },
+    {
+      "flavor": "paper",
+      "op": "catalog"
+    },
+    {
+      "flavor": "spigot",
+      "op": "catalog"
+    },
+    {
+      "flavor": "arclight",
+      "op": "catalog"
+    },
+    {
+      "flavor": "neo_forge",
+      "loader_version": "26.1.2.76",
+      "mc_version": "26.1.2",
+      "op": "resolve"
+    },
+    {
+      "op": "creation_defaults"
+    },
+    {
+      "op": "check_target",
+      "path": "C:\\Users\\ejemplo\\MercHosting\\Servidores\\Mi servidor"
+    },
+    {
+      "accept_eula": true,
+      "flavor": "paper",
+      "game_rules": {},
+      "java": "C:\\Program Files\\Eclipse Adoptium\\jdk-25\\bin\\java.exe",
+      "loader_version": null,
+      "max_memory_mb": 4096,
+      "mc_version": "26.1.2",
+      "min_memory_mb": 0,
+      "modpack_source": "modrinth",
+      "modpack_version": "packv1",
+      "name": "Mi servidor",
+      "op": "create_server",
+      "path": "C:\\Users\\ejemplo\\MercHosting\\Servidores\\Mi servidor",
+      "properties": {
+        "gamemode": "survival",
+        "server-port": "25565"
+      }
+    },
+    {
+      "after": 12,
+      "job_id": "6b1f0c1e-2a3b-4c5d-8e9f-0a1b2c3d4e5f",
+      "op": "job"
+    },
+    {
+      "job_id": "6b1f0c1e-2a3b-4c5d-8e9f-0a1b2c3d4e5f",
+      "op": "cancel_job"
+    },
+    {
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "op": "properties"
+    },
+    {
+      "changes": {
+        "max-players": "10"
+      },
+      "expected_modified": 1793300000000,
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "op": "set_properties"
+    },
+    {
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "op": "set_resource_pack",
+      "required": false,
+      "url": "https://ejemplo.dev/texturas.zip"
+    },
+    {
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "op": "players"
+    },
+    {
+      "action": "ban",
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "name": "Griefer",
+      "op": "player_action",
+      "reason": "Romper casas"
+    },
+    {
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "op": "list_files",
+      "path": "config"
+    },
+    {
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "op": "read_file",
+      "path": "config/neoforge-server.toml"
+    },
+    {
+      "content": "a = 1\n",
+      "expected_modified": 1793300000000,
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "op": "write_file",
+      "path": "config/neoforge-server.toml"
+    },
+    {
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "op": "make_dir",
+      "path": "mods/extra"
+    },
+    {
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "new_name": "viejo.jar.desactivado",
+      "op": "rename_file",
+      "path": "mods/viejo.jar"
+    },
+    {
+      "dest_dir": "mods-viejos",
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "op": "move_file",
+      "path": "mods/viejo.jar"
+    },
+    {
+      "dest_dir": "copias-config",
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "op": "copy_file",
+      "path": "config/create.toml"
+    },
+    {
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "op": "extract_zip",
+      "path": "descargas/mapa.zip"
+    },
+    {
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "op": "trash_file",
+      "path": "mods/roto.jar"
+    },
+    {
+      "dest_dir": "mods",
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "op": "upload_file",
+      "source": "C:\\Users\\ejemplo\\Downloads\\mod.jar"
+    },
+    {
+      "dest": "C:\\Users\\ejemplo\\Desktop\\latest.log",
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "op": "download_file",
+      "path": "logs/latest.log"
+    },
+    {
+      "dest": "C:\\Users\\ejemplo\\Desktop\\consola.log",
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "op": "export_console"
+    },
+    {
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "op": "worlds"
+    },
+    {
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "name": "world",
+      "new_name": "world-copia",
+      "op": "duplicate_world"
+    },
+    {
+      "dest": "C:\\Users\\ejemplo\\Desktop\\world.zip",
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "name": "world",
+      "op": "export_world"
+    },
+    {
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "new_name": "mapa",
+      "op": "import_world",
+      "source": "C:\\Users\\ejemplo\\Downloads\\mapa.zip"
+    },
+    {
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "name": "mapa",
+      "op": "set_active_world"
+    },
+    {
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "name": "world-copia",
+      "op": "trash_world"
+    },
+    {
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "op": "saved_items"
+    },
+    {
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "item_id": "papelera/20261030-041500-123",
+      "op": "restore_saved"
+    },
+    {
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "item_id": "copias/20261030-041500-123",
+      "op": "purge_saved"
+    },
+    {
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "op": "game_rules"
+    },
+    {
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "key": "keep_inventory",
+      "op": "set_game_rule",
+      "value": "true"
+    },
+    {
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "limit": 100,
+      "op": "activity"
+    },
+    {
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "op": "restart_with_notice",
+      "seconds": 60
+    },
+    {
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "op": "admin_state"
+    },
+    {
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "on": true,
+      "op": "set_maintenance"
+    },
+    {
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "op": "cancel_restart"
+    },
+    {
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "op": "cancel_world_op"
+    },
+    {
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "op": "backups"
+    },
+    {
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "note": "Antes del evento",
+      "op": "create_backup",
+      "scope": "world"
+    },
+    {
+      "backup": "20261030-131500-123-mundo",
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "op": "verify_backup"
+    },
+    {
+      "backup": "20261030-131500-123-mundo",
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "op": "restore_backup"
+    },
+    {
+      "backup": "20261030-131500-123-mundo",
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "op": "delete_backup"
+    },
+    {
+      "backup": "20261030-131500-123-mundo",
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "op": "protect_backup",
+      "protected": true
+    },
+    {
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "keep": 10,
+      "op": "set_backup_settings"
+    },
+    {
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "op": "tasks"
+    },
+    {
+      "op": "playit_status"
+    },
+    {
+      "op": "playit_enable"
+    },
+    {
+      "op": "playit_disable"
+    },
+    {
+      "op": "playit_link"
+    },
+    {
+      "op": "playit_unlink"
+    },
+    {
+      "op": "playit_login_url"
+    },
+    {
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "op": "connection"
+    },
+    {
+      "address": "dark-sea.joinmc.link",
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "op": "test_address"
+    },
+    {
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "op": "set_voice_config",
+      "port": 24455,
+      "voice_host": "147.185.221.181:25732"
+    },
+    {
+      "major": 21,
+      "op": "install_java"
+    },
+    {
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "op": "diagnose"
+    },
+    {
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "op": "server_update_check"
+    },
+    {
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "op": "modpack_status"
+    },
+    {
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "op": "modpack_update_preview",
+      "version_id": "packv2"
+    },
+    {
+      "accept_loader_change": false,
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "op": "modpack_update_apply",
+      "version_id": "packv2"
+    },
+    {
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "op": "modpack_link",
+      "source": "modrinth",
+      "version_id": "packv1"
+    },
+    {
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "op": "modpack_unlink"
+    },
+    {
+      "flavor": "fabric",
+      "mc_version": "1.21.1",
+      "op": "loader_versions"
+    },
+    {
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "name": "Survival (copia)",
+      "op": "clone_server"
+    },
+    {
+      "archived": true,
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "op": "set_archived"
+    },
+    {
+      "command": {
+        "type": "teleport_coords",
+        "x": 10,
+        "y": 64,
+        "z": -3
+      },
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "name": "Alex",
+      "op": "player_command"
+    },
+    {
+      "command": {
+        "mode": "creative",
+        "type": "game_mode"
+      },
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "name": "Alex",
+      "op": "player_command"
+    },
+    {
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "op": "player_history"
+    },
+    {
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "name": "Alex",
+      "note": "Construyó el castillo",
+      "op": "set_player_note"
+    },
+    {
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "op": "clear_player_history"
+    },
+    {
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "op": "luck_perms"
+    },
+    {
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "op": "friend_pack"
+    },
+    {
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "op": "mod_sides"
+    },
+    {
+      "files": [
+        "zoomify-2.14.jar"
+      ],
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "op": "quarantine_mods"
+    },
+    {
+      "files": [
+        "zoomify-2.14.jar"
+      ],
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "op": "restore_mods"
+    },
+    {
+      "dest": "C:/Users/Ana/Desktop/Survival.mrpack",
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "op": "export_friend_pack"
+    },
+    {
+      "change": {
+        "group": "vip",
+        "target": {
+          "kind": "user",
+          "name": "069a79f4-44e9-4726-a5be-fca90e38aaf5"
+        },
+        "type": "add_parent"
+      },
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "op": "luck_perms_preview"
+    },
+    {
+      "change": {
+        "node": "essentials.fly",
+        "target": {
+          "kind": "group",
+          "name": "vip"
+        },
+        "type": "set_permission",
+        "value": true
+      },
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "op": "luck_perms_apply"
+    },
+    {
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "op": "automation"
+    },
+    {
+      "auto_restart": true,
+      "autostart": null,
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "op": "set_automation"
+    },
+    {
+      "enabled": true,
+      "op": "set_startup"
+    },
+    {
+      "op": "supporter"
+    },
+    {
+      "license_key": "ABCD1234-EFGH5678-IJKL9012-MNOP3456",
+      "op": "activate_supporter"
+    },
+    {
+      "op": "refresh_supporter"
+    },
+    {
+      "op": "forget_supporter"
+    },
+    {
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "op": "server_icon"
+    },
+    {
+      "fit": "crop",
+      "op": "preview_server_icon",
+      "source": "C:\\Users\\Alex\\Pictures\\logo.jpg"
+    },
+    {
+      "fit": "contain",
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "op": "set_server_icon",
+      "source": "C:\\Users\\Alex\\Pictures\\logo.jpg"
+    },
+    {
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "op": "remove_server_icon"
+    },
+    {
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "loader_version": "130",
+      "op": "apply_server_update"
+    },
+    {
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "op": "security_report"
+    },
+    {
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "java": "C:\\Program Files\\Eclipse Adoptium\\jdk-21\\bin\\java.exe",
+      "max_memory_mb": 6144,
+      "min_memory_mb": null,
+      "op": "set_launch"
+    },
+    {
+      "op": "companions"
+    },
+    {
+      "enabled": true,
+      "op": "set_companions_enabled"
+    },
+    {
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "minutes": 60,
+      "op": "create_invite",
+      "perms": [
+        "status",
+        "console_read"
+      ]
+    },
+    {
+      "invite_id": "a1b2c3d4e5f6",
+      "op": "cancel_invite"
+    },
+    {
+      "companion": "abababababababababababababababababababababababababababababababab",
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "op": "set_companion_perms",
+      "perms": [
+        "start"
+      ]
+    },
+    {
+      "companion": "abababababababababababababababababababababababababababababababab",
+      "op": "remove_companion"
+    },
+    {
+      "code": "MH1-ABCDEF",
+      "name": "Shandé",
+      "op": "join_with_code"
+    },
+    {
+      "op": "remote_hosts"
+    },
+    {
+      "host": "cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd",
+      "op": "forget_host"
+    },
+    {
+      "host": "cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd",
+      "op": "refresh_host"
+    },
+    {
+      "dest": "C:\\Users\\ejemplo\\Downloads\\world.zip",
+      "host": "cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd",
+      "item": {
+        "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+        "name": "world",
+        "type": "world"
+      },
+      "op": "remote_download"
+    },
+    {
+      "dest_dir": "mods",
+      "host": "cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd",
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "op": "remote_upload",
+      "source": "C:\\Users\\ejemplo\\Downloads\\mod.jar"
+    },
+    {
+      "backup_id": "20261030-153000",
+      "dest": "C:\\Users\\ejemplo\\Downloads\\copia.zip",
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "op": "download_backup"
+    },
+    {
+      "host": "cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd",
+      "op": "remote_call",
+      "request": {
+        "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+        "op": "status"
+      }
+    },
+    {
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "op": "health"
+    },
+    {
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "op": "measure_tps"
+    },
+    {
+      "op": "alerts"
+    },
+    {
+      "ids": [
+        "0a1b2c3d4e5f"
+      ],
+      "op": "mark_alerts_read"
+    },
+    {
+      "op": "set_alert_settings",
+      "settings": {
+        "backups": true,
+        "crash": true,
+        "disk": true,
+        "disk_min_gb": 5,
+        "notify": true,
+        "resources": true,
+        "tasks": true,
+        "tunnel": true,
+        "updates": true
+      }
+    },
+    {
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "op": "save_task",
+      "task": {
+        "action": {
+          "if_players": "notify",
+          "notice_seconds": 300,
+          "type": "restart"
+        },
+        "enabled": true,
+        "id": null,
+        "schedule": {
+          "days": [
+            1,
+            3,
+            5
+          ],
+          "times": [
+            "04:00"
+          ],
+          "type": "daily"
+        }
+      }
+    },
+    {
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "op": "delete_task",
+      "task_id": "a1b2c3d4e5f6"
+    },
+    {
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "op": "run_task_now",
+      "task_id": "a1b2c3d4e5f6"
+    },
+    {
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "op": "content_platforms"
+    },
+    {
+      "offset": 0,
+      "op": "modpack_search",
+      "query": "aventura",
+      "sort": "downloads",
+      "source": "curseforge"
+    },
+    {
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "offset": 0,
+      "op": "resource_pack_search",
+      "query": "faithful",
+      "sort": "downloads"
+    },
+    {
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "op": "resource_pack_project",
+      "project": "faithful-32x"
+    },
+    {
+      "op": "modpack_project",
+      "project": "1KVo5zza",
+      "source": "modrinth"
+    },
+    {
+      "op": "modpack_inspect",
+      "source": "modrinth",
+      "version_id": "packv1"
+    },
+    {
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "kind": "mod",
+      "offset": 20,
+      "op": "content_search",
+      "query": "mapa",
+      "sort": "downloads",
+      "source": "modrinth"
+    },
+    {
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "kind": "mod",
+      "op": "content_project",
+      "project": "AANobbMI",
+      "source": "modrinth"
+    },
+    {
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "kind": "mod",
+      "op": "content_plan",
+      "source": "modrinth",
+      "version_id": "u6dRKJwZ"
+    },
+    {
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "kind": "plugin",
+      "op": "content_install",
+      "source": "hangar",
+      "version_id": "1234"
+    },
+    {
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "kind": "plugin",
+      "op": "content_installed"
+    },
+    {
+      "enabled": false,
+      "file_name": "sodium.jar",
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "kind": "mod",
+      "op": "content_toggle"
+    },
+    {
+      "file_name": "terreno.zip.disabled",
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "kind": "datapack",
+      "op": "content_remove"
+    },
+    {
+      "op": "shutdown"
+    }
+  ],
+  "responses": [
+    {
+      "data": {
+        "server_version": "0.1.0",
+        "supervisor_pid": 1234
+      },
+      "kind": "pong"
+    },
+    {
+      "kind": "ok"
+    },
+    {
+      "data": [
+        {
+          "archived": false,
+          "configured_port": 25565,
+          "eula_accepted": true,
+          "instance": {
+            "created_at_unix": 1793300000,
+            "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+            "imported": true,
+            "kind": "neo_forge",
+            "launch": {
+              "extra_jvm_args": [],
+              "java": "C:\\Program Files\\Eclipse Adoptium\\jdk-21\\bin\\java.exe",
+              "max_memory_mb": 4096,
+              "min_memory_mb": 0,
+              "target": {
+                "args_file": "libraries/net/neoforged/neoforge/21.1.259/win_args.txt",
+                "type": "args_file",
+                "user_jvm_args": "user_jvm_args.txt"
+              }
+            },
+            "loader_version": "21.1.259",
+            "mc_version": "1.21.1",
+            "name": "Mi servidor",
+            "root": "C:\\Users\\ejemplo\\Servidores\\neoforge"
+          },
+          "status": {
+            "has_console": true,
+            "hint": null,
+            "last_exit": null,
+            "log_file": "C:\\Users\\ejemplo\\AppData\\Local\\MercHosting\\logs\\x\\console.log",
+            "online_at_unix_ms": 1793300115000,
+            "pid": 3556,
+            "port": 25565,
+            "started_at_unix_ms": 1793300100000,
+            "state": "ONLINE"
+          }
+        },
+        {
+          "archived": false,
+          "configured_port": null,
+          "eula_accepted": false,
+          "instance": {
+            "created_at_unix": 1793300000,
+            "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+            "imported": true,
+            "kind": "paper",
+            "launch": {
+              "extra_jvm_args": [],
+              "java": "C:\\Program Files\\Eclipse Adoptium\\jdk-21\\bin\\java.exe",
+              "max_memory_mb": 4096,
+              "min_memory_mb": 0,
+              "target": {
+                "jar": "paper-1.21.1-130.jar",
+                "type": "jar"
+              }
+            },
+            "loader_version": "21.1.259",
+            "mc_version": "1.21.1",
+            "name": "Mi servidor",
+            "root": "C:\\Users\\ejemplo\\Servidores\\neoforge"
+          },
+          "status": {
+            "has_console": false,
+            "hint": "El servidor terminó inesperadamente (código 1).",
+            "last_exit": {
+              "at_unix_ms": 2,
+              "code": 1,
+              "forced": false,
+              "requested": false
+            },
+            "log_file": null,
+            "online_at_unix_ms": null,
+            "pid": null,
+            "port": null,
+            "started_at_unix_ms": 1,
+            "state": "CRASHED"
+          }
+        }
+      ],
+      "kind": "instances"
+    },
+    {
+      "data": {
+        "created_at_unix": 1793300000,
+        "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+        "imported": true,
+        "kind": "neo_forge",
+        "launch": {
+          "extra_jvm_args": [],
+          "java": "C:\\Program Files\\Eclipse Adoptium\\jdk-21\\bin\\java.exe",
+          "max_memory_mb": 4096,
+          "min_memory_mb": 0,
+          "target": {
+            "args_file": "libraries/net/neoforged/neoforge/21.1.259/win_args.txt",
+            "type": "args_file",
+            "user_jvm_args": "user_jvm_args.txt"
+          }
+        },
+        "loader_version": "21.1.259",
+        "mc_version": "1.21.1",
+        "name": "Mi servidor",
+        "root": "C:\\Users\\ejemplo\\Servidores\\neoforge"
+      },
+      "kind": "instance"
+    },
+    {
+      "data": {
+        "has_console": true,
+        "hint": null,
+        "last_exit": null,
+        "log_file": "C:\\Users\\ejemplo\\AppData\\Local\\MercHosting\\logs\\x\\console.log",
+        "online_at_unix_ms": 1793300115000,
+        "pid": 3556,
+        "port": 25565,
+        "started_at_unix_ms": 1793300100000,
+        "state": "ONLINE"
+      },
+      "kind": "status"
+    },
+    {
+      "data": {
+        "confidence": "verified",
+        "evidence": [
+          "run.bat apunta a libraries/net/neoforged/neoforge/21.1.259/win_args.txt"
+        ],
+        "kind": "neo_forge",
+        "launch": {
+          "args_file": "libraries/net/neoforged/neoforge/21.1.259/win_args.txt",
+          "type": "args_file",
+          "user_jvm_args": "user_jvm_args.txt"
+        },
+        "loader_version": "21.1.259",
+        "mc_version": "1.21.1",
+        "warnings": []
+      },
+      "kind": "detected"
+    },
+    {
+      "data": [
+        {
+          "description": "openjdk version \"21.0.13\"",
+          "error": null,
+          "jdk": true,
+          "major": 21,
+          "path": "C:\\Java21\\bin\\java.exe"
+        },
+        {
+          "description": "",
+          "error": "Java no respondió a tiempo",
+          "jdk": false,
+          "major": null,
+          "path": "C:\\Roto\\java.exe"
+        }
+      ],
+      "kind": "java_candidates"
+    },
+    {
+      "data": {
+        "lines": [
+          {
+            "at_unix_ms": 1,
+            "seq": 11,
+            "stream": "stdout",
+            "text": "[Server thread/INFO]: Done (3.440s)! For help, type \"help\""
+          },
+          {
+            "at_unix_ms": 2,
+            "seq": 12,
+            "stream": "stderr",
+            "text": "WARN algo"
+          },
+          {
+            "at_unix_ms": 3,
+            "seq": 13,
+            "stream": "system",
+            "text": "> say hola"
+          }
+        ],
+        "next_after": 13
+      },
+      "kind": "console"
+    },
+    {
+      "data": {
+        "max_players": 20,
+        "players": [
+          "Alex",
+          "Steve"
+        ],
+        "samples": [
+          {
+            "at_unix_ms": 1000,
+            "cpu_percent": 12.5,
+            "memory_bytes": 2147483648
+          },
+          {
+            "at_unix_ms": 3000,
+            "cpu_percent": 9.25,
+            "memory_bytes": 2200000000
+          }
+        ]
+      },
+      "kind": "metrics"
+    },
+    {
+      "data": {
+        "lan_ipv4": "192.168.1.20",
+        "logical_cpus": 12,
+        "total_memory_bytes": 17179869184
+      },
+      "kind": "system"
+    },
+    {
+      "data": [
+        {
+          "java_major": 25,
+          "latest": true,
+          "mc_version": "26.1.2"
+        },
+        {
+          "java_major": 21,
+          "latest": false,
+          "mc_version": "1.21.11"
+        }
+      ],
+      "kind": "catalog"
+    },
+    {
+      "data": {
+        "artifact": {
+          "checksum": {
+            "algorithm": "sha256",
+            "hex": "0000000000000000000000000000000000000000000000000000000000000000"
+          },
+          "file_name": "paper-26.1.2-14.jar",
+          "mirrors": [],
+          "size": 52428800,
+          "url": "https://descarga.ejemplo.invalid/paper-26.1.2-14.jar"
+        },
+        "experimental": false,
+        "flavor": "paper",
+        "installer_args": null,
+        "installer_in_cache": false,
+        "java_major": 25,
+        "loader_version": "14",
+        "mc_version": "26.1.2",
+        "needs_jdk": false,
+        "notes": []
+      },
+      "kind": "resolved"
+    },
+    {
+      "data": {
+        "curseforge": false,
+        "servers_dir": "C:\\Users\\ejemplo\\MercHosting\\Servidores",
+        "suggested_port": 25566
+      },
+      "kind": "creation_defaults"
+    },
+    {
+      "data": {
+        "download": {
+          "done": 10485760,
+          "file": "paper-26.1.2-14.jar",
+          "total": 52428800
+        },
+        "error": null,
+        "instance_id": null,
+        "job_id": "6b1f0c1e-2a3b-4c5d-8e9f-0a1b2c3d4e5f",
+        "log": [
+          {
+            "seq": 13,
+            "text": "▸ Descargando paper-26.1.2-14.jar"
+          }
+        ],
+        "message": "Descargando paper-26.1.2-14.jar",
+        "name": "Mi servidor",
+        "next_after": 13,
+        "state": "running",
+        "step": "downloading"
+      },
+      "kind": "job"
+    },
+    {
+      "data": {
+        "entries": [
+          {
+            "key": "motd",
+            "value": "Servidor de Ñandú"
+          },
+          {
+            "key": "max-players",
+            "value": "10"
+          }
+        ],
+        "exists": true,
+        "modified_unix_ms": 1793300000000
+      },
+      "kind": "properties"
+    },
+    {
+      "data": {
+        "can_act": true,
+        "lists": {
+          "banned": [
+            {
+              "expires": "forever",
+              "level": null,
+              "name": "Griefer",
+              "reason": "Romper casas",
+              "uuid": null
+            }
+          ],
+          "banned_ips": [],
+          "ops": [
+            {
+              "expires": null,
+              "level": 4,
+              "name": "Steve",
+              "reason": null,
+              "uuid": "8667ba71-b85a-4004-af54-457a9734eed7"
+            }
+          ],
+          "warnings": [],
+          "whitelist": [
+            {
+              "expires": null,
+              "level": null,
+              "name": "Alex",
+              "reason": null,
+              "uuid": "ec561538-f3fd-461d-aff5-086b22154bce"
+            }
+          ]
+        },
+        "online": [
+          "Alex"
+        ]
+      },
+      "kind": "players"
+    },
+    {
+      "data": {
+        "entries": [
+          {
+            "is_dir": true,
+            "link": false,
+            "modified_unix_ms": 1793300000000,
+            "name": "world",
+            "size": null
+          },
+          {
+            "is_dir": false,
+            "link": false,
+            "modified_unix_ms": 1793300000000,
+            "name": "server.properties",
+            "size": 1234
+          }
+        ],
+        "path": ""
+      },
+      "kind": "files"
+    },
+    {
+      "data": {
+        "content": "motd=Hola\n",
+        "modified_unix_ms": 1793300000000,
+        "path": "server.properties",
+        "size": 10
+      },
+      "kind": "text_file"
+    },
+    {
+      "data": {
+        "path": "mods/viejo.jar.desactivado"
+      },
+      "kind": "file_done"
+    },
+    {
+      "data": {
+        "bytes": 52428800,
+        "files": 412,
+        "folder": "descargas/mapa",
+        "skipped": [
+          "../fuera.txt"
+        ]
+      },
+      "kind": "zip_extracted"
+    },
+    {
+      "data": {
+        "level_name": "world",
+        "worlds": [
+          {
+            "active": true,
+            "companions": [
+              "world_nether",
+              "world_the_end"
+            ],
+            "modified_unix_ms": 1793300000000,
+            "name": "world",
+            "size_bytes": 104857600
+          }
+        ]
+      },
+      "kind": "worlds"
+    },
+    {
+      "data": [
+        {
+          "id": "papelera/20261030-041500-123",
+          "is_dir": false,
+          "kind": "trash",
+          "path": "mods/roto.jar",
+          "saved_unix_ms": 1793300000000,
+          "size_bytes": 52000
+        }
+      ],
+      "kind": "saved_items"
+    },
+    {
+      "data": {
+        "new_names": true,
+        "rules": [
+          {
+            "key": "keep_inventory",
+            "kind": {
+              "type": "bool"
+            },
+            "name": "keep_inventory",
+            "value": "false"
+          },
+          {
+            "key": "random_tick_speed",
+            "kind": {
+              "max": 4096,
+              "min": 0,
+              "type": "int"
+            },
+            "name": "random_tick_speed",
+            "value": null
+          }
+        ]
+      },
+      "kind": "game_rules"
+    },
+    {
+      "data": [
+        {
+          "action": "world.gamerule",
+          "actor": "local:merchosting-app",
+          "at_unix": 1793300000,
+          "detail": "gamerule keep_inventory true"
+        }
+      ],
+      "kind": "activity"
+    },
+    {
+      "data": {
+        "agent": {
+          "account_status": "verified",
+          "message": null,
+          "notices": [
+            {
+              "message": "Verifica tu correo",
+              "priority": "High",
+              "resolve_link": "https://playit.gg/account"
+            }
+          ],
+          "pending": [],
+          "phase": "running",
+          "tunnels": [
+            {
+              "destination": "127.0.0.1:25565",
+              "disabled_reason": null,
+              "display_address": "dark-sea.joinmc.link",
+              "is_disabled": false
+            }
+          ],
+          "version": "1.2.0"
+        },
+        "agent_error": null,
+        "agent_version": "1.2.0",
+        "claim": {
+          "done": false,
+          "error": null,
+          "state": "waiting_for_approval",
+          "url": "https://playit.gg/claim/ab01ff1000"
+        },
+        "enabled": true,
+        "installed": true,
+        "running": true,
+        "supported": true
+      },
+      "kind": "playit"
+    },
+    {
+      "data": "https://playit.gg/login/guest-account/abc",
+      "kind": "playit_login_url"
+    },
+    {
+      "data": {
+        "lan": [
+          "192.168.1.20:25565"
+        ],
+        "layers": [
+          {
+            "checked_at_unix_ms": 1793300300000,
+            "detail": "Escuchando en el puerto UDP 24454.",
+            "key": "voice",
+            "state": "degradado"
+          }
+        ],
+        "port": 25565,
+        "ports_in_use": [
+          {
+            "port": 25566,
+            "server": "Creativo"
+          }
+        ],
+        "tests": [
+          {
+            "address": "dark-sea.joinmc.link",
+            "at_unix_ms": 1793300300000,
+            "error": null,
+            "result": {
+              "latency_ms": 48,
+              "motd": "Survival de Amir",
+              "players_max": 20,
+              "players_online": 2,
+              "tested": "dark-sea.gl.at.ply.gg:41234",
+              "version": "Paper 1.21.1"
+            }
+          }
+        ],
+        "tunnels": [
+          {
+            "destination": "127.0.0.1:25565",
+            "disabled_reason": null,
+            "display_address": "dark-sea.joinmc.link",
+            "is_disabled": false
+          }
+        ],
+        "voice": {
+          "bind_address": "",
+          "config": "config/voicechat/voicechat-server.properties",
+          "enabled": true,
+          "installed": true,
+          "jar": "mods/voicechat-fabric-1.21.1-2.5.32.jar",
+          "listening": 24454,
+          "port": 24454,
+          "port_setting": 24454,
+          "problems": [
+            {
+              "code": "host_missing",
+              "level": "error",
+              "message": "«voice_host» está vacío"
+            }
+          ],
+          "restart_needed": false,
+          "suggested_port": null,
+          "tunnels": [
+            {
+              "destination": "127.0.0.1:24454",
+              "disabled_reason": null,
+              "display_address": "147.185.221.181:25732",
+              "is_disabled": false
+            }
+          ],
+          "voice_host": ""
+        }
+      },
+      "kind": "connection"
+    },
+    {
+      "data": {
+        "checked_at_unix_ms": 1793300300000,
+        "checks": [
+          {
+            "action": {
+              "key": "white-list",
+              "type": "set_property",
+              "value": "true"
+            },
+            "code": "whitelist",
+            "detail": "Activa la lista blanca.",
+            "level": "aviso",
+            "title": "Cualquiera con la dirección puede entrar"
+          },
+          {
+            "action": {
+              "type": "open_companions"
+            },
+            "code": "companion",
+            "detail": "Sin permisos de alto riesgo.",
+            "level": "info",
+            "title": "Shandé puede administrar este servidor"
+          },
+          {
+            "action": {
+              "tab": "backups",
+              "type": "open_tab"
+            },
+            "code": "backups",
+            "detail": "",
+            "level": "bien",
+            "title": "Hay una copia de hoy"
+          }
+        ],
+        "public_addresses": [
+          "dark-sea.joinmc.link"
+        ]
+      },
+      "kind": "security_report"
+    },
+    {
+      "data": {
+        "height": 64,
+        "png_base64": "iVBORw0KGgo=",
+        "present": true,
+        "valid": true,
+        "width": 64
+      },
+      "kind": "server_icon"
+    },
+    {
+      "data": [
+        {
+          "first_seen_unix": 1793300000,
+          "last_seen_unix": 1793303600,
+          "name": "Alex",
+          "note": "Construyó el castillo",
+          "online_since_unix": 1793303600,
+          "sessions": 3,
+          "total_secs": 5400
+        }
+      ],
+      "kind": "player_history"
+    },
+    {
+      "data": {
+        "backups": [
+          "2026-10-30-12-00-00.json.gz"
+        ],
+        "install": {
+          "data_dir": "plugins/LuckPerms",
+          "jar": "LuckPerms-Bukkit-5.5.17.jar"
+        },
+        "online": true,
+        "snapshot": {
+          "generated_at": "2026-10-30 12:00:00 UTC",
+          "groups": [
+            {
+              "name": "vip",
+              "nodes": [
+                {
+                  "context": {},
+                  "expiry": null,
+                  "key": "essentials.fly",
+                  "kind": "permission",
+                  "value": true
+                }
+              ],
+              "parents": [
+                "default"
+              ],
+              "prefix": "&6[VIP] ",
+              "weight": 5
+            }
+          ],
+          "tracks": [
+            {
+              "groups": [
+                "default",
+                "vip"
+              ],
+              "name": "rangos"
+            }
+          ],
+          "users": [
+            {
+              "nodes": [],
+              "parents": [
+                "vip"
+              ],
+              "primary_group": "vip",
+              "username": "Notch",
+              "uuid": "069a79f4-44e9-4726-a5be-fca90e38aaf5"
+            }
+          ]
+        }
+      },
+      "kind": "luck_perms"
+    },
+    {
+      "data": {
+        "catalog_ok": true,
+        "folder": "mods-cuarentena",
+        "items": [
+          {
+            "confidence": "alta",
+            "enabled": true,
+            "evidence": [
+              "Modrinth: el autor indica que no funciona en servidores."
+            ],
+            "file": "zoomify-2.14.jar",
+            "name": "Zoomify",
+            "needed_by": [],
+            "side": "client_only",
+            "suggested": true
+          }
+        ],
+        "quarantined": [
+          {
+            "file": "xaeros-minimap.jar",
+            "moved_at_unix": 1793300000,
+            "reason": "Solo cliente"
+          }
+        ]
+      },
+      "kind": "mod_sides"
+    },
+    {
+      "data": {
+        "blocked": null,
+        "included": [
+          {
+            "file_name": "sodium-0.6.jar",
+            "optional": false,
+            "page_url": "https://modrinth.com/mod/sodium",
+            "size": 1234,
+            "title": "Sodium"
+          }
+        ],
+        "loader": [
+          "neoforge",
+          "21.1.259"
+        ],
+        "manual": [
+          {
+            "file_name": "jei.jar",
+            "page_url": "https://www.curseforge.com/minecraft/mc-mods/jei",
+            "reason": "Es de CurseForge: el formato .mrpack no admite sus descargas. Bájalo de su página.",
+            "title": "JEI"
+          }
+        ],
+        "mc_version": "1.21.1",
+        "server_only": [
+          "Lithium"
+        ]
+      },
+      "kind": "friend_pack"
+    },
+    {
+      "data": {
+        "command": "luckperms group vip permission set essentials.fly true",
+        "summary": "Dar el permiso essentials.fly al grupo «vip»."
+      },
+      "kind": "luck_perms_preview"
+    },
+    {
+      "data": {
+        "backup": "2026-10-30-12-00-00.json.gz",
+        "command": "luckperms group vip permission set essentials.fly true",
+        "snapshot": {
+          "generated_at": "2026-10-30 12:00:00 UTC",
+          "groups": [
+            {
+              "name": "vip",
+              "nodes": [
+                {
+                  "context": {},
+                  "expiry": null,
+                  "key": "essentials.fly",
+                  "kind": "permission",
+                  "value": true
+                }
+              ],
+              "parents": [
+                "default"
+              ],
+              "prefix": "&6[VIP] ",
+              "weight": 5
+            }
+          ],
+          "tracks": [
+            {
+              "groups": [
+                "default",
+                "vip"
+              ],
+              "name": "rangos"
+            }
+          ],
+          "users": [
+            {
+              "nodes": [],
+              "parents": [
+                "vip"
+              ],
+              "primary_group": "vip",
+              "username": "Notch",
+              "uuid": "069a79f4-44e9-4726-a5be-fca90e38aaf5"
+            }
+          ]
+        },
+        "verified": true
+      },
+      "kind": "luck_perms_applied"
+    },
+    {
+      "data": {
+        "auto_restart": true,
+        "autostart": false,
+        "gave_up": false,
+        "max_restarts": 3,
+        "recent_restarts": 1,
+        "startup_available": true,
+        "startup_enabled": false
+      },
+      "kind": "automation"
+    },
+    {
+      "data": [
+        {
+          "recommended": true,
+          "stable": true,
+          "version": "0.16.10"
+        }
+      ],
+      "kind": "loader_versions"
+    },
+    {
+      "data": {
+        "active": true,
+        "available": true,
+        "checked_at_unix_ms": 1793300000000,
+        "checkout_url": "https://example.gumroad.com/l/merchosting",
+        "email_hint": "a•••@gmail.com",
+        "key_hint": "…3456",
+        "last_error": null,
+        "price_usd": 8,
+        "purchased": "2026-10-30",
+        "revoked_reason": null,
+        "stale": false
+      },
+      "kind": "supporter"
+    },
+    {
+      "data": {
+        "format": "JPG",
+        "png_base64": "iVBORw0KGgo=",
+        "source_height": 1080,
+        "source_width": 1920
+      },
+      "kind": "icon_preview"
+    },
+    {
+      "data": {
+        "current": "98",
+        "experimental": false,
+        "latest": "130",
+        "mc_version": "1.21.4",
+        "newer": true,
+        "notes": [],
+        "reason": null,
+        "supported": true
+      },
+      "kind": "server_update"
+    },
+    {
+      "data": {
+        "error": null,
+        "linked": {
+          "files": 212,
+          "installed_at_unix": 1793300000,
+          "loader": "neoforge",
+          "loader_version": "21.1.77",
+          "mc_version": "1.21.1",
+          "project_id": "PACK",
+          "source": "modrinth",
+          "title": "Aventura",
+          "version_id": "packv1",
+          "version_number": "1.0"
+        },
+        "online": true,
+        "versions": [
+          {
+            "compatible": true,
+            "current": false,
+            "date_published": "2026-10-01T00:00:00Z",
+            "game_versions": [
+              "1.21.1"
+            ],
+            "name": "Aventura 2.0",
+            "newer": true,
+            "version_id": "packv2",
+            "version_number": "2.0"
+          }
+        ]
+      },
+      "kind": "modpack_status"
+    },
+    {
+      "data": {
+        "changes": [
+          {
+            "from_override": true,
+            "kind": "keep_modified",
+            "path": "config/create-common.toml"
+          }
+        ],
+        "download_bytes": 52428800,
+        "from_version": "1.0",
+        "loader": "neoforge",
+        "loader_from": "21.1.77",
+        "loader_mismatch": true,
+        "loader_to": "21.1.80",
+        "mc_version": "1.21.1",
+        "notes": [],
+        "to_version": "2.0",
+        "to_version_id": "packv2"
+      },
+      "kind": "modpack_update_plan"
+    },
+    {
+      "data": {
+        "checked_at_unix_ms": 1793300300000,
+        "findings": [
+          {
+            "actions": [
+              {
+                "file": "jei-1.jar",
+                "kind": "mod",
+                "type": "disable_content"
+              },
+              {
+                "port": 25566,
+                "type": "set_port"
+              },
+              {
+                "max_mb": 6144,
+                "type": "set_memory"
+              },
+              {
+                "min_major": 21,
+                "type": "choose_java"
+              },
+              {
+                "kind": "mod",
+                "query": "geckolib",
+                "type": "search_content"
+              },
+              {
+                "tab": "backups",
+                "type": "open_tab"
+              }
+            ],
+            "code": "duplicate",
+            "confidence": "alta",
+            "evidence": [
+              "mods/jei-1.jar (versión 19.1)",
+              "mods/jei-2.jar (versión 19.2)"
+            ],
+            "explanation": "Deja solo uno.",
+            "source": "mods/",
+            "title": "El mod «jei» está 2 veces"
+          }
+        ],
+        "mods_scanned": 42,
+        "plugins_scanned": 0,
+        "sources": [
+          "mods/ (42 archivos)",
+          "logs/latest.log (30/10 16:00)"
+        ]
+      },
+      "kind": "diagnosis"
+    },
+    {
+      "data": {
+        "companions": [
+          {
+            "added_at_unix_ms": 1793300300000,
+            "companion": "abababababababababababababababababababababababababababababababab",
+            "connected": true,
+            "fingerprint": "MNOP-QRST-UVWX",
+            "last_seen_unix_ms": 1793300400000,
+            "name": "Shandé",
+            "servers": [
+              {
+                "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+                "name": "Survival",
+                "perms": [
+                  "status",
+                  "start"
+                ]
+              }
+            ]
+          }
+        ],
+        "enabled": true,
+        "error": null,
+        "fingerprint": "ABCD-EFGH-IJKL",
+        "invites": [
+          {
+            "created_at_unix_ms": 1793300300000,
+            "expires_at_unix_ms": 1793303900000,
+            "invite_id": "a1b2c3d4e5f6",
+            "perms": [
+              "status"
+            ],
+            "server": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+            "server_name": "Survival"
+          }
+        ],
+        "online": true
+      },
+      "kind": "companions"
+    },
+    {
+      "data": {
+        "code": "MH1-ABCDEF",
+        "invite": {
+          "created_at_unix_ms": 1793300300000,
+          "expires_at_unix_ms": 1793303900000,
+          "invite_id": "a1b2c3d4e5f6",
+          "perms": [
+            "status"
+          ],
+          "server": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+          "server_name": "Survival"
+        }
+      },
+      "kind": "invite"
+    },
+    {
+      "data": [
+        {
+          "fingerprint": "ABCD-EFGH-IJKL",
+          "host": "cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd",
+          "last_error": null,
+          "last_ok_unix_ms": 1793300400000,
+          "name": "PC-DE-AMIR",
+          "servers": [
+            {
+              "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+              "name": "Survival",
+              "perms": [
+                "status"
+              ]
+            }
+          ]
+        }
+      ],
+      "kind": "remote_hosts"
+    },
+    {
+      "data": {
+        "disks": [
+          {
+            "free_bytes": 120000000000,
+            "path": "C:\\MercHosting\\Servidores\\Survival",
+            "total_bytes": 500000000000,
+            "what": "server"
+          }
+        ],
+        "max_memory_mb": 4096,
+        "pc_cpu_percent": 23.5,
+        "pc_memory_total_bytes": 17179869184,
+        "pc_memory_used_bytes": 9663676416,
+        "tps_command": "tps"
+      },
+      "kind": "health"
+    },
+    {
+      "data": {
+        "command": "tps",
+        "mspt": null,
+        "raw": "TPS from last 1m, 5m, 15m: 20.0, 19.9, 19.95",
+        "tps": [
+          [
+            "1m",
+            20.0
+          ],
+          [
+            "5m",
+            19.9
+          ],
+          [
+            "15m",
+            19.95
+          ]
+        ]
+      },
+      "kind": "tps"
+    },
+    {
+      "data": {
+        "items": [
+          {
+            "at_unix_ms": 1793300200000,
+            "id": "0a1b2c3d4e5f",
+            "instance_id": "11111111-1111-4111-8111-111111111111",
+            "kind": "crash",
+            "level": "critical",
+            "message": "Código de salida 1.",
+            "read": false,
+            "server_name": "Survival",
+            "title": "«Survival» se cerró inesperadamente"
+          }
+        ],
+        "settings": {
+          "backups": true,
+          "crash": true,
+          "disk": true,
+          "disk_min_gb": 5,
+          "notify": true,
+          "resources": true,
+          "tasks": true,
+          "tunnel": true,
+          "updates": true
+        },
+        "unread": 1
+      },
+      "kind": "alerts"
+    },
+    {
+      "data": {
+        "items": [
+          {
+            "action": {
+              "scope": "world",
+              "type": "backup"
+            },
+            "created_unix_ms": 1793300000000,
+            "enabled": true,
+            "id": "a1b2c3d4e5f6",
+            "last_run": {
+              "at_unix_ms": 1793264400000,
+              "manual": false,
+              "message": "Copia hecha y comprobada (812 archivos).",
+              "outcome": "ok"
+            },
+            "next_run_unix_ms": 1793350800000,
+            "running": false,
+            "schedule": {
+              "days": [],
+              "times": [
+                "04:00"
+              ],
+              "type": "daily"
+            }
+          },
+          {
+            "action": {
+              "message": "¡Evento a las 20:00!",
+              "type": "announce"
+            },
+            "created_unix_ms": 1793300000000,
+            "enabled": false,
+            "id": "f6e5d4c3b2a1",
+            "last_run": null,
+            "next_run_unix_ms": null,
+            "running": false,
+            "schedule": {
+              "minutes": 90,
+              "type": "every"
+            }
+          }
+        ],
+        "now_unix_ms": 1793300100000,
+        "utc_offset_minutes": -300
+      },
+      "kind": "tasks"
+    },
+    {
+      "data": {
+        "folder": "C:\\Users\\amir\\AppData\\Local\\MercHosting\\instancias\\x\\backups",
+        "free_bytes": 120000000000,
+        "items": [
+          {
+            "consistent": true,
+            "content_bytes": 62914560,
+            "created_unix_ms": 1793300100000,
+            "files": 812,
+            "hot": true,
+            "id": "20261030-131500-123-mundo",
+            "mc_version": "1.21.1",
+            "note": "Antes del evento",
+            "problems": [],
+            "protected": false,
+            "reason": "manual",
+            "scope": "world",
+            "size_bytes": 41943040,
+            "verified": true,
+            "verified_unix_ms": 1793300160000,
+            "world": "world"
+          }
+        ],
+        "keep": 10,
+        "restored": null
+      },
+      "kind": "backups"
+    },
+    {
+      "data": {
+        "enforce_whitelist": false,
+        "maintenance": {
+          "previous_whitelist": false,
+          "since_unix": 1793300000
+        },
+        "restart_in_seconds": 45,
+        "whitelist_on": true,
+        "world_op": {
+          "done_bytes": 52428800,
+          "kind": "export",
+          "total_bytes": 125829120,
+          "world": "world"
+        }
+      },
+      "kind": "admin_state"
+    },
+    {
+      "data": {
+        "client_only_files": 12,
+        "download_bytes": 450000000,
+        "flavor": "neo_forge",
+        "java_major": 21,
+        "loader": "neoforge",
+        "loader_version": "21.1.77",
+        "mc_version": "1.21.1",
+        "name": "Aventura",
+        "pack_version": "1.0",
+        "server_files": 180,
+        "source": "modrinth",
+        "warnings": [
+          "Aviso"
+        ]
+      },
+      "kind": "modpack_summary"
+    },
+    {
+      "data": [
+        {
+          "experimental": false,
+          "folder": "mods",
+          "kind": "mod",
+          "loaders": [
+            "neoforge"
+          ],
+          "sources": [
+            "modrinth",
+            "curseforge"
+          ]
+        }
+      ],
+      "kind": "content_platforms"
+    },
+    {
+      "data": {
+        "hits": [
+          {
+            "author": "autora",
+            "categories": [
+              "optimization"
+            ],
+            "client_side": "optional",
+            "date_modified": "2026-10-01T00:00:00Z",
+            "description": "Un mod de ejemplo",
+            "downloads": 1000,
+            "icon_url": "https://cdn.modrinth.com/data/AANobbMI/icon.png",
+            "license": "MIT",
+            "project_id": "AANobbMI",
+            "server_side": "required",
+            "slug": "ejemplo",
+            "title": "Ejemplo"
+          }
+        ],
+        "offset": 0,
+        "total": 1
+      },
+      "kind": "content_search"
+    },
+    {
+      "data": {
+        "project": {
+          "body": "# Ejemplo",
+          "categories": [
+            "optimization"
+          ],
+          "client_side": "optional",
+          "description": "Un mod de ejemplo",
+          "distribution_allowed": true,
+          "downloads": 1000,
+          "icon_url": null,
+          "id": "AANobbMI",
+          "issues_url": null,
+          "license": "MIT",
+          "page_url": "https://modrinth.com/project/ejemplo",
+          "server_side": "required",
+          "slug": "ejemplo",
+          "source_url": "https://github.com/ejemplo/ejemplo",
+          "title": "Ejemplo",
+          "wiki_url": null
+        },
+        "versions": [
+          {
+            "changelog": "Cambios",
+            "date_published": "2026-10-01T00:00:00Z",
+            "dependencies": [
+              {
+                "dependency_type": "required",
+                "file_name": null,
+                "project_id": "P7dR8mSH",
+                "version_id": null
+              }
+            ],
+            "downloads": 10,
+            "files": [
+              {
+                "filename": "ejemplo-1.0.0.jar",
+                "primary": true,
+                "sha1": "0123456789abcdef0123456789abcdef01234567",
+                "sha256": null,
+                "sha512": null,
+                "size": 123456,
+                "url": "https://cdn.modrinth.com/data/AANobbMI/versions/u6dRKJwZ/ejemplo-1.0.0.jar"
+              }
+            ],
+            "game_versions": [
+              "1.21.1"
+            ],
+            "id": "u6dRKJwZ",
+            "loaders": [
+              "neoforge"
+            ],
+            "name": "Ejemplo 1.0",
+            "project_id": "AANobbMI",
+            "server_side": "unknown",
+            "version_number": "1.0.0",
+            "version_type": "release"
+          }
+        ]
+      },
+      "kind": "content_details"
+    },
+    {
+      "data": {
+        "already_installed": [
+          "Librería"
+        ],
+        "blockers": [],
+        "download_bytes": 123456,
+        "items": [
+          {
+            "file_name": "ejemplo-1.0.0.jar",
+            "icon_url": null,
+            "project_id": "AANobbMI",
+            "reason": "Lo elegiste tú",
+            "replaces": "ejemplo-0.9.jar",
+            "sha1": "0123456789abcdef0123456789abcdef01234567",
+            "sha256": null,
+            "size": 123456,
+            "title": "Ejemplo",
+            "url": "https://cdn.modrinth.com/data/AANobbMI/versions/u6dRKJwZ/ejemplo-1.0.0.jar",
+            "version_id": "u6dRKJwZ",
+            "version_number": "1.0.0"
+          }
+        ],
+        "optional": [
+          {
+            "needed_by": "Ejemplo",
+            "project_id": "P7dR8mSH",
+            "title": "Extra"
+          }
+        ],
+        "warnings": [
+          "Aviso"
+        ]
+      },
+      "kind": "content_plan"
+    },
+    {
+      "data": {
+        "items": [
+          {
+            "client_side": null,
+            "enabled": true,
+            "file_name": "ejemplo-1.0.0.jar",
+            "icon_url": null,
+            "other_ids": [
+              "238222"
+            ],
+            "page_url": null,
+            "project_id": "AANobbMI",
+            "server_side": "required",
+            "sha1": "0123456789abcdef0123456789abcdef01234567",
+            "size": 123456,
+            "source": "modrinth",
+            "title": "Ejemplo",
+            "update": {
+              "version_id": "zzzzzzzz",
+              "version_number": "1.1.0"
+            },
+            "version_id": "u6dRKJwZ",
+            "version_number": "1.0.0"
+          }
+        ],
+        "offline_reason": null,
+        "online": true,
+        "platform": {
+          "experimental": false,
+          "folder": "plugins",
+          "kind": "plugin",
+          "loaders": [
+            "paper",
+            "spigot",
+            "bukkit"
+          ],
+          "sources": [
+            "modrinth"
+          ]
+        }
+      },
+      "kind": "content_list"
+    }
+  ]
+}

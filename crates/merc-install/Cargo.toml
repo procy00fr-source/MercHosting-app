@@ -1,0 +1,21 @@
+[package]
+name = "merc-install"
+description = "Catálogo oficial de versiones, descarga verificada e instalación de servidores nuevos."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+merc-core = { path = "../merc-core" }
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+regex.workspace = true
+ureq = { version = "3.5", default-features = false, features = ["rustls", "platform-verifier", "gzip"] }
+sha1 = "0.10"
+sha2 = "0.10"
+md-5 = "0.10"
+zip = { version = "9", default-features = false, features = ["deflate"] }
+
+[dev-dependencies]
+tempfile.workspace = true

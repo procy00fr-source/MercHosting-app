@@ -1,0 +1,16 @@
+[package]
+name = "merc-net"
+description = "Conectividad: agente oficial de Playit.gg (vinculación y estado) y prueba de conexión a servidores de Minecraft."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+merc-install = { path = "../merc-install" }
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+interprocess.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

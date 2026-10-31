@@ -161,6 +161,15 @@ impl Store {
         Ok(n == 1)
     }
 
+    /// Cambia la versión del loader o la compilación registrada (tras actualizar el servidor).
+    pub fn update_loader_version(&mut self, id: InstanceId, loader_version: Option<&str>) -> Result<bool, StoreError> {
+        let n = self.conn.execute(
+            "UPDATE instances SET loader_version=?1 WHERE id=?2",
+            params![loader_version, id.0.to_string()],
+        )?;
+        Ok(n == 1)
+    }
+
     pub fn get_instance(&self, id: InstanceId) -> Result<Option<Instance>, StoreError> {
         let mut stmt = self.conn.prepare(&format!("{SELECT_INSTANCE} WHERE id = ?1"))?;
         let row = stmt.query_row([id.0.to_string()], row_to_raw).optional()?;

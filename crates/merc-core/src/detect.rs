@@ -18,6 +18,11 @@ pub enum ServerKind {
     Fabric,
     Forge,
     NeoForge,
+    Quilt,
+    /// Híbrido Forge + plugins de Bukkit/Spigot (MohistMC).
+    Mohist,
+    /// Híbrido de mods (NeoForge/Forge/Fabric) + plugins de Bukkit (Arclight).
+    Arclight,
     Unknown,
 }
 
@@ -32,7 +37,7 @@ pub enum Confidence {
     Unknown,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct DetectedServer {
     pub kind: ServerKind,
     pub mc_version: Option<String>,
@@ -57,13 +62,25 @@ fn args_file_name() -> &'static str {
 /// NeoForge >= 20.2 usa `<mc_minor>.<mc_patch>.<build>`: 21.1.77 -> 1.21.1, 21.0.x -> 1.21.
 /// NeoForge 47.x (solo 1.20.1) sigue el esquema de Forge y se trata aparte.
 pub fn neoforge_to_mc(version: &str) -> Option<String> {
-    let mut it = version.split(['.', '-']);
-    let major: u32 = it.next()?.parse().ok()?;
-    let minor: u32 = it.next()?.parse().ok()?;
+    let core = version.split('-').next()?;
+    let parts: Vec<u32> = core.split('.').map(|p| p.parse().ok()).collect::<Option<_>>()?;
+    let major = *parts.first()?;
+    let minor = *parts.get(1)?;
     if major == 47 {
         return Some("1.20.1".into());
     }
-    if !(20..=40).contains(&major) {
+    // Desde Minecraft 26.1, NeoForge usa 4 partes: AÑO.DROP.HOTFIX.BUILD
+    // (26.1.0.x → 26.1, 26.1.2.76 → 26.1.2).
+    if (26..=99).contains(&major) && parts.len() == 4 {
+        let hotfix = parts[2];
+        return Some(if hotfix == 0 {
+            format!("{major}.{minor}")
+        } else {
+            format!("{major}.{minor}.{hotfix}")
+        });
+    }
+    // Numeración antigua de 3 partes: 21.1.x → 1.21.1, 21.10.x → 1.21.10, 20.4.x → 1.20.4.
+    if !(20..=25).contains(&major) || parts.len() != 3 {
         return None;
     }
     Some(if minor == 0 {
@@ -95,6 +112,20 @@ fn list_files(p: &Path) -> Vec<String> {
         .collect();
     v.sort();
     v
+}
+
+/// ¿Parece una versión de lanzamiento de Minecraft? (`1.21.1`, `1.21`, `26.1`, `26.1.2`)
+pub fn looks_like_mc(s: &str) -> bool {
+    let parts: Vec<&str> = s.split('.').collect();
+    if !(2..=3).contains(&parts.len())
+        || parts
+            .iter()
+            .any(|p| p.is_empty() || !p.bytes().all(|b| b.is_ascii_digit()))
+    {
+        return false;
+    }
+    let first: u32 = parts[0].parse().unwrap_or(0);
+    first == 1 || (26..=99).contains(&first)
 }
 
 /// Comparación numérica por segmentos ("21.1.10" > "21.1.9").
@@ -164,7 +195,7 @@ fn detect_modern_forge_like(root: &Path, kind: ServerKind, lib: &str, out: &mut 
         _ => version
             .split('-')
             .next()
-            .filter(|s| s.starts_with("1."))
+            .filter(|s| looks_like_mc(s))
             .map(str::to_string),
     };
     out.loader_version = Some(match kind {
@@ -192,6 +223,44 @@ pub fn detect_server(root: &Path) -> DetectedServer {
         evidence: vec![],
         warnings: vec![],
     };
+
+    // Arclight y Mohist descargan librerías del cargador en su primer arranque: su JAR manda
+    // sobre esas carpetas. arclight-neoforge-1.21.1-1.0.1-8ec9529.jar
+    if let Some(j) = list_files(root).into_iter().rev().find(|f| {
+        let l = f.to_ascii_lowercase();
+        l.starts_with("arclight-") && l.ends_with(".jar")
+    }) {
+        let re = Regex::new(r"^arclight-(neoforge|forge|fabric)-([0-9][0-9.]*)-(.+)\.jar$").unwrap();
+        let caps = re
+            .captures(&j.to_ascii_lowercase())
+            .map(|c| (c[1].to_string(), c[2].to_string(), c[3].to_string()));
+        out.kind = ServerKind::Arclight;
+        if let Some((loader, mc, ver)) = caps {
+            out.mc_version = looks_like_mc(&mc).then_some(mc);
+            out.loader_version = Some(format!("{loader} {ver}"));
+        }
+        out.launch = Some(LaunchTarget::Jar { jar: PathBuf::from(&j) });
+        out.confidence = Confidence::Inferred;
+        out.evidence.push(format!("Archivo {j} encontrado"));
+        return out;
+    }
+
+    // Mohist descarga librerías de Forge en su primer arranque: su JAR manda sobre esas carpetas.
+    if let Some(j) = list_files(root).into_iter().rev().find(|f| {
+        let l = f.to_ascii_lowercase();
+        l.starts_with("mohist-") && l.ends_with(".jar")
+    }) {
+        // mohist-1.20.1-123.jar
+        let rest = &j["mohist-".len()..j.len() - 4];
+        let mut parts = rest.splitn(2, '-');
+        out.kind = ServerKind::Mohist;
+        out.mc_version = parts.next().filter(|s| looks_like_mc(s)).map(str::to_string);
+        out.loader_version = parts.next().map(str::to_string);
+        out.launch = Some(LaunchTarget::Jar { jar: PathBuf::from(&j) });
+        out.confidence = Confidence::Inferred;
+        out.evidence.push(format!("Archivo {j} encontrado"));
+        return out;
+    }
 
     if detect_modern_forge_like(root, ServerKind::NeoForge, "libraries/net/neoforged/neoforge", &mut out) {
         return out;
@@ -248,6 +317,13 @@ pub fn detect_server(root: &Path) -> DetectedServer {
         return out;
     }
 
+    // Quilt: lanzador que crea el instalador oficial (`install server … --download-server`).
+    let quilt = pick(&|j| j == "quilt-server-launch.jar");
+    if let Some(j) = quilt.last() {
+        set_jar(&mut out, ServerKind::Quilt, j, None, None);
+        return out;
+    }
+
     for (prefix, kind) in [
         ("paper-", ServerKind::Paper),
         ("purpur-", ServerKind::Purpur),
@@ -258,7 +334,7 @@ pub fn detect_server(root: &Path) -> DetectedServer {
             // paper-1.21.1-123.jar / spigot-1.21.1.jar
             let rest = &j[prefix.len()..j.len() - 4];
             let mut parts = rest.splitn(2, '-');
-            let mc = parts.next().filter(|s| s.starts_with("1.")).map(str::to_string);
+            let mc = parts.next().filter(|s| looks_like_mc(s)).map(str::to_string);
             let build = parts.next().map(str::to_string);
             set_jar(&mut out, kind, j, mc, build);
             multi_warn(&mut out, &list);
@@ -309,7 +385,13 @@ mod tests {
         assert_eq!(neoforge_to_mc("21.0.167").as_deref(), Some("1.21"));
         assert_eq!(neoforge_to_mc("20.4.237").as_deref(), Some("1.20.4"));
         assert_eq!(neoforge_to_mc("47.1.106").as_deref(), Some("1.20.1"));
+        assert_eq!(neoforge_to_mc("21.10.64").as_deref(), Some("1.21.10"));
+        assert_eq!(neoforge_to_mc("26.1.2.76").as_deref(), Some("26.1.2"));
+        assert_eq!(neoforge_to_mc("26.1.0.10-beta").as_deref(), Some("26.1"));
+        assert_eq!(neoforge_to_mc("26.2.0.3").as_deref(), Some("26.2"));
         assert_eq!(neoforge_to_mc("basura"), None);
+        assert!(looks_like_mc("1.21.1") && looks_like_mc("26.1") && looks_like_mc("26.1.2"));
+        assert!(!looks_like_mc("25w14a") && !looks_like_mc("123") && !looks_like_mc("1.21.1.4"));
     }
 
     #[test]
@@ -389,6 +471,55 @@ mod tests {
         assert_eq!(r.kind, ServerKind::Vanilla);
         assert_eq!(r.mc_version, None);
         assert!(!r.warnings.is_empty());
+    }
+
+    #[test]
+    fn year_based_versions() {
+        let d = tempfile::tempdir().unwrap();
+        touch(d.path(), "paper-26.1.2-14.jar", "");
+        let r = detect_server(d.path());
+        assert_eq!((r.kind, r.mc_version.as_deref()), (ServerKind::Paper, Some("26.1.2")));
+
+        let d = tempfile::tempdir().unwrap();
+        touch(d.path(), "fabric-server-mc.26.1-loader.0.18.2-launcher.1.1.0.jar", "");
+        let r = detect_server(d.path());
+        assert_eq!((r.kind, r.mc_version.as_deref()), (ServerKind::Fabric, Some("26.1")));
+
+        let d = tempfile::tempdir().unwrap();
+        touch(d.path(), "minecraft_server.26.1.2.jar", "");
+        let r = detect_server(d.path());
+        assert_eq!((r.kind, r.mc_version.as_deref()), (ServerKind::Vanilla, Some("26.1.2")));
+        assert!(r.warnings.is_empty());
+    }
+
+    #[test]
+    fn arclight_jar() {
+        let d = tempfile::tempdir().unwrap();
+        touch(d.path(), "arclight-neoforge-1.21.1-1.0.1-8ec9529.jar", "");
+        std::fs::create_dir_all(d.path().join("libraries/net/neoforged/neoforge/21.1.192")).unwrap();
+        let r = detect_server(d.path());
+        assert_eq!(
+            (r.kind, r.mc_version.as_deref(), r.loader_version.as_deref()),
+            (ServerKind::Arclight, Some("1.21.1"), Some("neoforge 1.0.1-8ec9529"))
+        );
+    }
+
+    #[test]
+    fn quilt_and_mohist() {
+        let d = tempfile::tempdir().unwrap();
+        touch(d.path(), "quilt-server-launch.jar", "");
+        touch(d.path(), "server.jar", "");
+        let r = detect_server(d.path());
+        assert_eq!(r.kind, ServerKind::Quilt);
+
+        let d = tempfile::tempdir().unwrap();
+        touch(d.path(), "mohist-1.20.1-912.jar", "");
+        std::fs::create_dir_all(d.path().join("libraries/net/minecraftforge/forge/1.20.1-47.2.0")).unwrap();
+        let r = detect_server(d.path());
+        assert_eq!(
+            (r.kind, r.mc_version.as_deref(), r.loader_version.as_deref()),
+            (ServerKind::Mohist, Some("1.20.1"), Some("912"))
+        );
     }
 
     #[test]

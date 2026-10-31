@@ -9,6 +9,9 @@ license.workspace = true
 merc-core = { path = "../merc-core" }
 thiserror.workspace = true
 uuid.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sysinfo.workspace = true
 
 [dev-dependencies]
 tempfile.workspace = true

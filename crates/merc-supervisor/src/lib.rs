@@ -14,8 +14,13 @@
 //! - Java se lanza directamente (sin CMD ni shell) y sin ventana en Windows.
 
 mod log;
+pub mod metrics;
+pub mod runtime;
 
 pub use log::RotatingLog;
+pub use metrics::MetricSample;
+pub use runtime::{RuntimeDir, RuntimeRecord};
+use serde::{Deserialize, Serialize};
 
 use merc_core::java::{probe_java, required_java};
 use merc_core::launch::{LaunchProfile, LaunchTarget};
@@ -23,7 +28,7 @@ use merc_core::paths::SandboxRoot;
 use merc_core::properties::{read_eula, EulaStatus, ServerProperties};
 use merc_core::readiness::{classify_line, LogSignal};
 use merc_core::{InstanceId, RuntimeState};
-use std::collections::{HashMap, VecDeque};
+use std::collections::{BTreeSet, HashMap, VecDeque};
 use std::io::{BufRead, BufReader, Read, Write};
 use std::net::TcpListener;
 use std::path::PathBuf;
@@ -80,9 +85,12 @@ pub enum SupervisorError {
     StopTimeout,
     #[error("instancia desconocida")]
     UnknownInstance,
+    #[error("este servidor sigue en marcha desde una sesión anterior de MercHosting y no tiene consola conectada. Ciérralo desde el juego (/stop como operador) o fuerza el cierre aceptando el riesgo")]
+    NoConsole,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum ConsoleStream {
     Stdout,
     Stderr,
@@ -90,7 +98,7 @@ pub enum ConsoleStream {
     System,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ConsoleLine {
     pub seq: u64,
     pub at_unix_ms: u64,
@@ -98,7 +106,7 @@ pub struct ConsoleLine {
     pub text: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ExitInfo {
     pub code: Option<i32>,
     pub forced: bool,
@@ -106,9 +114,11 @@ pub struct ExitInfo {
     pub at_unix_ms: u64,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct StatusSnapshot {
     pub state: RuntimeState,
+    /// `false` si el proceso es de una sesión anterior del supervisor (sin stdin/stdout).
+    pub has_console: bool,
     pub pid: Option<u32>,
     pub port: Option<u16>,
     pub started_at_unix_ms: Option<u64>,
@@ -143,6 +153,14 @@ struct SlotState {
     next_seq: u64,
     log: Option<Arc<Mutex<RotatingLog>>>,
     log_file: Option<PathBuf>,
+    /// Identidad del proceso (PID + hora de inicio del SO).
+    process_start: Option<u64>,
+    /// `true` si el proceso fue adoptado de una sesión anterior (sin pipes).
+    orphan: bool,
+    /// Muestras de CPU y memoria del proceso actual.
+    metrics: VecDeque<MetricSample>,
+    /// Jugadores conectados según la consola (solo con consola conectada).
+    players: BTreeSet<String>,
 }
 
 struct Slot {
@@ -171,6 +189,10 @@ impl Slot {
                 next_seq: 1,
                 log: None,
                 log_file: None,
+                process_start: None,
+                orphan: false,
+                metrics: VecDeque::new(),
+                players: BTreeSet::new(),
             }),
             changed: Condvar::new(),
         }
@@ -238,6 +260,16 @@ fn root_key(p: &std::path::Path) -> String {
 pub struct Supervisor {
     log_root: PathBuf,
     slots: Arc<Mutex<HashMap<InstanceId, Arc<Slot>>>>,
+    runtime: Option<Arc<RuntimeDir>>,
+}
+
+/// Resultado de la reconciliación al arrancar el supervisor.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum RecoveryOutcome {
+    /// El proceso sigue vivo: se adopta como UNKNOWN sin consola.
+    Adopted { pid: u32 },
+    /// El proceso ya no existe (o el PID pertenece a otro programa): se limpia el registro.
+    Gone { pid: u32 },
 }
 
 impl Supervisor {
@@ -247,7 +279,69 @@ impl Supervisor {
         Self {
             log_root: log_root.into(),
             slots: Arc::new(Mutex::new(HashMap::new())),
+            runtime: None,
         }
+    }
+
+    /// Igual que [`Supervisor::new`], pero registra en disco cada proceso lanzado para poder
+    /// reconciliarlo si el supervisor se reinicia. Ver [`Supervisor::recover`].
+    pub fn with_runtime_dir(log_root: impl Into<PathBuf>, runtime: RuntimeDir) -> Self {
+        let mut s = Self::new(log_root);
+        s.runtime = Some(Arc::new(runtime));
+        s
+    }
+
+    /// Reconciliación al arrancar: adopta procesos vivos de una sesión anterior (verificados por
+    /// PID + hora de inicio) y limpia registros obsoletos. Nunca mata nada.
+    pub fn recover(&self) -> Vec<(InstanceId, RecoveryOutcome)> {
+        let Some(rt) = self.runtime.clone() else { return vec![] };
+        let mut out = vec![];
+        for rec in rt.list() {
+            if !runtime::same_process_alive(rec.pid, rec.process_start_unix) {
+                rt.remove(rec.instance);
+                out.push((rec.instance, RecoveryOutcome::Gone { pid: rec.pid }));
+                continue;
+            }
+            let slot = {
+                let mut map = self.slots.lock().unwrap_or_else(|p| p.into_inner());
+                map.entry(rec.instance).or_insert_with(|| Arc::new(Slot::new())).clone()
+            };
+            let generation = {
+                let mut st = slot.lock();
+                st.state = RuntimeState::Unknown;
+                st.generation += 1;
+                st.pid = Some(rec.pid);
+                st.process_start = Some(rec.process_start_unix);
+                st.orphan = true;
+                st.root_key = Some(root_key(&rec.root));
+                st.port = rec.port;
+                st.started_at = Some(rec.started_at_unix_ms);
+                st.hint = Some(
+                    "Este servidor siguió funcionando mientras MercHosting estaba cerrado. Está activo, pero su consola no se puede recuperar; para detenerlo con guardado usa /stop dentro del juego como operador."
+                        .into(),
+                );
+                push_line(
+                    &mut st,
+                    ConsoleStream::System,
+                    format!(
+                        "Proceso {} de una sesión anterior detectado y adoptado (sin consola)",
+                        rec.pid
+                    ),
+                );
+                st.generation
+            };
+            spawn_metrics(slot.clone(), rec.pid, generation);
+            spawn_orphan_monitor(
+                slot,
+                rec.pid,
+                rec.process_start_unix,
+                rt.clone(),
+                rec.instance,
+                generation,
+            );
+            out.push((rec.instance, RecoveryOutcome::Adopted { pid: rec.pid }));
+        }
+        out
     }
 
     fn slot(&self, id: InstanceId) -> Option<Arc<Slot>> {
@@ -258,6 +352,7 @@ impl Supervisor {
         match self.slot(id) {
             None => StatusSnapshot {
                 state: RuntimeState::Stopped,
+                has_console: false,
                 pid: None,
                 port: None,
                 started_at_unix_ms: None,
@@ -270,6 +365,7 @@ impl Supervisor {
                 let st = slot.lock();
                 StatusSnapshot {
                     state: st.state,
+                    has_console: st.stdin.is_some(),
                     pid: st.pid,
                     port: st.port,
                     started_at_unix_ms: st.started_at,
@@ -280,6 +376,19 @@ impl Supervisor {
                 }
             }
         }
+    }
+
+    /// Muestras de CPU/memoria y jugadores conectados (según la consola).
+    pub fn metrics(&self, id: InstanceId) -> (Vec<MetricSample>, Vec<String>) {
+        self.slot(id)
+            .map(|s| {
+                let st = s.lock();
+                (
+                    st.metrics.iter().cloned().collect(),
+                    st.players.iter().cloned().collect(),
+                )
+            })
+            .unwrap_or_default()
     }
 
     /// Líneas con `seq > after` (para que la UI se reconecte sin perder ni duplicar).
@@ -333,6 +442,8 @@ impl Supervisor {
                 return Err(SupervisorError::AlreadyRunning(st.state));
             }
             st.state = RuntimeState::Validating;
+            st.metrics.clear();
+            st.players.clear();
             st.root_key = Some(key.clone());
             st.hint = None;
             st.port = None;
@@ -472,6 +583,26 @@ impl Supervisor {
         st.child = Some(child.clone());
         set_state(&mut st, RuntimeState::Starting);
         let generation = st.generation;
+        st.orphan = false;
+        let pid = st.pid.unwrap_or(0);
+        st.process_start = runtime::process_start_time(pid);
+        if let (Some(rt), Some(start)) = (&self.runtime, st.process_start) {
+            let rec = RuntimeRecord {
+                instance: spec.id,
+                pid,
+                process_start_unix: start,
+                root: root.clone(),
+                port: Some(port),
+                started_at_unix_ms: st.started_at.unwrap_or(0),
+            };
+            if let Err(e) = rt.write(&rec) {
+                push_line(
+                    &mut st,
+                    ConsoleStream::System,
+                    format!("Aviso: no se pudo registrar el proceso en disco: {e}"),
+                );
+            }
+        }
         drop(st);
         slot.changed.notify_all();
 
@@ -482,8 +613,9 @@ impl Supervisor {
         if let Some(err) = stderr {
             readers.push(spawn_reader(slot.clone(), err, ConsoleStream::Stderr, generation));
         }
-        spawn_waiter(slot.clone(), child, readers, generation);
+        spawn_waiter(slot.clone(), child, readers, generation, self.runtime.clone(), spec.id);
         spawn_readiness_timer(slot.clone(), spec.readiness_timeout, generation);
+        spawn_metrics(slot.clone(), pid, generation);
         Ok(())
     }
 
@@ -505,6 +637,9 @@ impl Supervisor {
         }
         let slot = self.slot(id).ok_or(SupervisorError::NotRunning)?;
         let mut st = slot.lock();
+        if st.orphan {
+            return Err(SupervisorError::NoConsole);
+        }
         if !matches!(
             st.state,
             RuntimeState::Online | RuntimeState::Loading | RuntimeState::Unknown
@@ -522,6 +657,9 @@ impl Supervisor {
         let slot = self.slot(id).ok_or(SupervisorError::NotRunning)?;
         {
             let mut st = slot.lock();
+            if st.orphan {
+                return Err(SupervisorError::NoConsole);
+            }
             match st.state {
                 RuntimeState::Stopping => {} // ya pedido: solo esperar
                 s if s.has_process() => {
@@ -574,6 +712,17 @@ impl Supervisor {
                 ConsoleStream::System,
                 "Cierre forzado solicitado por el usuario".into(),
             );
+            if st.orphan {
+                let (pid, start) = (st.pid.unwrap_or(0), st.process_start.unwrap_or(0));
+                drop(st);
+                return if runtime::kill_verified(pid, start) {
+                    Ok(())
+                } else {
+                    Err(SupervisorError::Spawn(
+                        "no se pudo cerrar el proceso (o ya no es el mismo)".into(),
+                    ))
+                };
+            }
             st.child.clone().ok_or(SupervisorError::NotRunning)?
         };
         let mut c = child.lock().unwrap_or_else(|p| p.into_inner());
@@ -608,11 +757,21 @@ fn spawn_reader<R: Read + Send + 'static>(
                     }
                     let text = String::from_utf8_lossy(&buf).into_owned();
                     let signal = classify_line(&text);
+                    let player = merc_core::readiness::player_event(&text);
                     let mut st = slot.lock();
                     if st.generation != generation {
                         break;
                     }
                     push_line(&mut st, stream, text);
+                    match player {
+                        Some(merc_core::readiness::PlayerEvent::Joined(n)) => {
+                            st.players.insert(n);
+                        }
+                        Some(merc_core::readiness::PlayerEvent::Left(n)) => {
+                            st.players.remove(&n);
+                        }
+                        None => {}
+                    }
                     let changed = match signal {
                         Some(LogSignal::Loading) if st.state == RuntimeState::Starting => {
                             set_state(&mut st, RuntimeState::Loading)
@@ -646,7 +805,14 @@ fn spawn_reader<R: Read + Send + 'static>(
     })
 }
 
-fn spawn_waiter(slot: Arc<Slot>, child: Arc<Mutex<Child>>, readers: Vec<std::thread::JoinHandle<()>>, generation: u64) {
+fn spawn_waiter(
+    slot: Arc<Slot>,
+    child: Arc<Mutex<Child>>,
+    readers: Vec<std::thread::JoinHandle<()>>,
+    generation: u64,
+    runtime: Option<Arc<RuntimeDir>>,
+    id: InstanceId,
+) {
     std::thread::spawn(move || {
         let status = loop {
             {
@@ -662,6 +828,9 @@ fn spawn_waiter(slot: Arc<Slot>, child: Arc<Mutex<Child>>, readers: Vec<std::thr
         // Esperar a que se lean las últimas líneas (crash reports, "Stopping server"…).
         for r in readers {
             let _ = r.join();
+        }
+        if let Some(rt) = &runtime {
+            rt.remove(id);
         }
         let mut st = slot.lock();
         if st.generation != generation {
@@ -679,6 +848,8 @@ fn spawn_waiter(slot: Arc<Slot>, child: Arc<Mutex<Child>>, readers: Vec<std::thr
         st.stdin = None;
         st.child = None;
         st.pid = None;
+        st.process_start = None;
+        st.players.clear();
         st.root_key = None;
         st.port = None;
         // Si el usuario pidió detener (o forzó), el cierre es esperado aunque el código no sea 0:
@@ -742,6 +913,74 @@ fn spawn_readiness_timer(slot: Arc<Slot>, timeout: Duration, generation: u64) {
             );
             drop(st);
             slot.changed.notify_all();
+        }
+    });
+}
+
+fn spawn_orphan_monitor(slot: Arc<Slot>, pid: u32, start: u64, rt: Arc<RuntimeDir>, id: InstanceId, generation: u64) {
+    std::thread::spawn(move || loop {
+        std::thread::sleep(Duration::from_millis(500));
+        if runtime::same_process_alive(pid, start) {
+            if slot.lock().generation != generation {
+                return;
+            }
+            continue;
+        }
+        rt.remove(id);
+        let mut st = slot.lock();
+        if st.generation != generation {
+            return;
+        }
+        let forced = st.force_requested;
+        st.state = RuntimeState::Stopped;
+        st.pid = None;
+        st.process_start = None;
+        st.orphan = false;
+        st.root_key = None;
+        st.port = None;
+        st.last_exit = Some(ExitInfo {
+            code: None,
+            forced,
+            requested: forced,
+            at_unix_ms: now_ms(),
+        });
+        st.hint = if forced {
+            None
+        } else {
+            Some("El servidor de la sesión anterior terminó. El código de salida no está disponible porque no tenía consola conectada.".into())
+        };
+        push_line(
+            &mut st,
+            ConsoleStream::System,
+            format!("El proceso {pid} de la sesión anterior terminó"),
+        );
+        drop(st);
+        slot.changed.notify_all();
+        return;
+    });
+}
+
+fn spawn_metrics(slot: Arc<Slot>, pid: u32, generation: u64) {
+    std::thread::spawn(move || {
+        let Some(mut meter) = metrics::ProcessMeter::new(pid) else {
+            return;
+        };
+        loop {
+            std::thread::sleep(Duration::from_millis(metrics::SAMPLE_INTERVAL_MS));
+            let sample = meter.sample(now_ms());
+            let mut st = slot.lock();
+            if st.generation != generation || !st.state.has_process() {
+                return;
+            }
+            match sample {
+                Some(s) => {
+                    if st.metrics.len() >= metrics::MAX_SAMPLES {
+                        st.metrics.pop_front();
+                    }
+                    st.metrics.push_back(s);
+                }
+                None => return,
+            }
         }
     });
 }

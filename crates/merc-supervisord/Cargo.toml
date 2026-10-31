@@ -1,0 +1,47 @@
+[package]
+name = "merc-supervisord"
+description = "Supervisor persistente de MercHosting (sin ventana) y herramienta de desarrollo `merc`."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "merc-supervisord"
+path = "src/main.rs"
+
+[[bin]]
+name = "merc"
+path = "src/bin/merc.rs"
+
+[dependencies]
+merc-core = { path = "../merc-core" }
+merc-store = { path = "../merc-store" }
+merc-supervisor = { path = "../merc-supervisor" }
+merc-ipc = { path = "../merc-ipc" }
+merc-install = { path = "../merc-install" }
+merc-admin = { path = "../merc-admin" }
+merc-content = { path = "../merc-content" }
+merc-net = { path = "../merc-net" }
+merc-remote = { path = "../merc-remote" }
+sha2 = "0.10"
+base64 = "0.22"
+serde.workspace = true
+serde_json.workspace = true
+uuid.workspace = true
+interprocess.workspace = true
+# Mandar a la Papelera de reciclaje (MIT). Nada se borra definitivamente desde MercHosting.
+trash = "5"
+chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
+sysinfo.workspace = true
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_Security", "Win32_System_Registry"] }
+
+[dev-dependencies]
+tempfile.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sha2 = "0.10"
+sha1 = "0.10"
+zip = { version = "9", default-features = false, features = ["deflate"] }
+image = { version = "0.25", default-features = false, features = ["png", "jpeg"] }

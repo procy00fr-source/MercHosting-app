@@ -1,0 +1,20 @@
+[package]
+name = "merc-content"
+description = "Mods y plugins de un servidor: catálogo de Modrinth, dependencias, instalación verificada y desactivación reversible."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+merc-core = { path = "../merc-core" }
+merc-install = { path = "../merc-install" }
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+sha1 = "0.10"
+sha2 = "0.10"
+zip = { version = "9", default-features = false, features = ["deflate"] }
+
+[dev-dependencies]
+tempfile.workspace = true
+serde_json.workspace = true

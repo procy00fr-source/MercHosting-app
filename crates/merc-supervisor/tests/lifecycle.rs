@@ -356,3 +356,30 @@ fn restart_is_sequential() {
     assert_ne!(s.status(id).pid.unwrap(), pid1);
     s.stop(id, WAIT).unwrap();
 }
+
+#[test]
+fn real_metrics_and_players() {
+    let (_l, s) = sup();
+    let f = server_dir(true);
+    let id = InstanceId::new();
+    s.start(spec(id, &f.root, "normal", WAIT)).unwrap();
+    expect(&s, id, RuntimeState::Online);
+    s.send_command(id, "fakejoin Steve").unwrap();
+    s.send_command(id, "fakejoin Alex").unwrap();
+    s.send_command(id, "fakeleave Steve").unwrap();
+    s.send_command(id, "say <Troll> Bob joined the game").unwrap();
+    std::thread::sleep(Duration::from_millis(4500));
+    let (samples, players) = s.metrics(id);
+    assert_eq!(players, vec!["Alex".to_string()], "solo Alex sigue conectado");
+    assert!(!samples.is_empty(), "debe haber muestras reales tras 4,5 s");
+    let last = samples.last().unwrap();
+    assert!(
+        last.memory_bytes > 10 * 1024 * 1024,
+        "un proceso Java usa más de 10 MB: {}",
+        last.memory_bytes
+    );
+    assert!((0.0..=100.0).contains(&last.cpu_percent));
+    s.stop(id, WAIT).unwrap();
+    let (_, players) = s.metrics(id);
+    assert!(players.is_empty(), "al detener no quedan jugadores");
+}
