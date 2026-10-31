@@ -15,9 +15,8 @@ describe("Acerca de", () => {
     const page = within(await screen.findByRole("region", { name: "Acerca de" }));
     expect(await page.findByText(/^Versión /)).toBeInTheDocument();
     expect(page.getByText("GPL-3.0-or-later")).toBeInTheDocument();
-    // Sin repositorio configurado: botón desactivado con explicación.
-    expect(page.getByRole("button", { name: /Código fuente/ })).toBeDisabled();
-    expect(page.getByText(/el enlace aparecerá aquí/)).toBeInTheDocument();
+    await user.click(page.getByRole("button", { name: /Código fuente/ }));
+    expect(fake.openedUrls).toContain("https://github.com/procy00fr-source/MercHosting-app");
 
     await user.click(page.getByRole("button", { name: "Ver la licencia" }));
     expect(await screen.findByText(/GNU GENERAL PUBLIC LICENSE/)).toBeInTheDocument();

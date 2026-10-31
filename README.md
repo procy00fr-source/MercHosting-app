@@ -4,7 +4,7 @@
 
 **MercHosting** es una app gratuita y de código abierto para **Windows 10/11** que crea y administra servidores de Minecraft **en tu propia PC**: sin cuotas mensuales, sin cuentas y sin telemetría.
 
-**Descargar:** [última versión](https://github.com/procy00fr-source/MercHosting-releases/releases/latest) · Guía: [docs/INSTALACION.md](docs/INSTALACION.md)
+**Código:** este repositorio · **Descargar:** [última versión](https://github.com/procy00fr-source/MercHosting-releases/releases/latest) · Guía: [docs/INSTALACION.md](docs/INSTALACION.md)
 
 ## Qué hace
 
