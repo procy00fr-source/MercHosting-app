@@ -132,11 +132,6 @@ fn clean_name(name: &str) -> Result<String, PhoneError> {
     merc_core::instance::validate_instance_name(name).map_err(|e| PhoneError::Invalid(e.into()))
 }
 
-/// El proceso con ese PID existe (mismo usuario de la app).
-fn alive(pid: u32) -> bool {
-    Path::new(&format!("/proc/{pid}")).exists()
-}
-
 impl Phone {
     pub fn new(data: PathBuf, arch: &str, total_ram_mb: u64, native_dir: Option<PathBuf>) -> Self {
         Self {
@@ -477,10 +472,15 @@ impl Phone {
         Ok(())
     }
 
+    /// PID del servidor si sigue encendido: su proceso mantiene un candado sobre el archivo.
+    #[cfg(unix)]
     pub(crate) fn pid(&self, id: &str) -> Option<u32> {
-        let t = std::fs::read_to_string(self.run_dir(id).join("servidor.pid")).ok()?;
-        let pid: u32 = t.trim().parse().ok()?;
-        alive(pid).then_some(pid)
+        crate::jli::pid_if_running(&self.run_dir(id).join("servidor.pid"))
+    }
+
+    #[cfg(not(unix))]
+    pub(crate) fn pid(&self, _id: &str) -> Option<u32> {
+        None
     }
 
     pub fn log_path(&self, id: &str) -> PathBuf {
@@ -866,8 +866,8 @@ mod tests {
         .unwrap();
         let run = d.path().join("ejecucion/s1");
         std::fs::create_dir_all(&run).unwrap();
-        // Un PID vivo: el de esta prueba.
-        std::fs::write(run.join("servidor.pid"), std::process::id().to_string()).unwrap();
+        // Encendido = alguien tiene el candado del archivo (aquí, esta prueba).
+        let lock = crate::jli::lock_pid_file(&run.join("servidor.pid")).unwrap();
         std::fs::write(
             run.join("consola.log"),
             "[x] [Server thread/INFO]: Starting minecraft server version 1.21.1\n",
@@ -881,7 +881,9 @@ mod tests {
         .unwrap();
         assert_eq!(p.status("s1").unwrap().state, LocalState::Online);
         assert_eq!(p.console("s1", 1024).len(), 1);
-        std::fs::write(run.join("servidor.pid"), "999999999").unwrap();
+        // Proceso muerto = candado suelto, aunque el archivo siga ahí.
+        drop(lock);
+        assert!(run.join("servidor.pid").exists());
         assert_eq!(p.status("s1").unwrap().state, LocalState::Stopped);
     }
 
@@ -906,7 +908,7 @@ mod tests {
         assert!(p.command("s2", "say hola").is_err(), "apagado");
         let run = d.path().join("ejecucion/s2");
         std::fs::create_dir_all(&run).unwrap();
-        std::fs::write(run.join("servidor.pid"), std::process::id().to_string()).unwrap();
+        let _lock = crate::jli::lock_pid_file(&run.join("servidor.pid")).unwrap();
         let fifo = std::ffi::CString::new(run.join("entrada").to_str().unwrap()).unwrap();
         assert_eq!(unsafe { libc::mkfifo(fifo.as_ptr(), 0o600) }, 0);
         // Lector abierto (como el servidor).

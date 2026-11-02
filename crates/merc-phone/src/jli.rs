@@ -195,7 +195,8 @@ mod imp {
                 return Err(LaunchError::Io("no se pudo entrar en la carpeta del servidor".into()));
             }
         }
-        std::fs::write(&spec.pid_file, std::process::id().to_string()).map_err(io)?;
+        // El candado vive mientras viva este proceso (el sistema lo suelta al morir).
+        std::mem::forget(crate::jli::lock_pid_file(&spec.pid_file).map_err(io)?);
         if let Some(c) = &spec.companion {
             use std::io::Write;
             let line = match spawn_companion(c) {
@@ -268,6 +269,44 @@ mod imp {
 
 #[cfg(unix)]
 pub use imp::launch_in_process;
+
+/// Escribe el PID de este proceso en `path` y toma un candado exclusivo (`flock`) sobre él.
+/// Mientras el archivo devuelto siga abierto (o el proceso viva), [`pid_if_running`] lo ve.
+///
+/// Así se sabe si el servidor sigue vivo sin mirar `/proc/<pid>`: en Android la app no siempre
+/// puede ver el proceso `:server`, aunque sea suyo.
+#[cfg(unix)]
+pub fn lock_pid_file(path: &std::path::Path) -> std::io::Result<std::fs::File> {
+    use std::io::Write;
+    use std::os::unix::io::AsRawFd;
+    let mut f = std::fs::OpenOptions::new()
+        .create(true)
+        .write(true)
+        .truncate(false)
+        .open(path)?;
+    // SAFETY: descriptor válido de `f`.
+    if unsafe { libc::flock(f.as_raw_fd(), libc::LOCK_EX | libc::LOCK_NB) } != 0 {
+        return Err(std::io::Error::last_os_error());
+    }
+    f.set_len(0)?;
+    write!(f, "{}", std::process::id())?;
+    f.flush()?;
+    Ok(f)
+}
+
+/// PID del servidor si su proceso tiene el candado del archivo (sigue encendido).
+#[cfg(unix)]
+pub fn pid_if_running(path: &std::path::Path) -> Option<u32> {
+    use std::os::unix::io::AsRawFd;
+    let f = std::fs::File::open(path).ok()?;
+    // SAFETY: descriptor válido de `f`. Si se puede tomar el candado, nadie lo tiene: apagado.
+    let free = unsafe { libc::flock(f.as_raw_fd(), libc::LOCK_SH | libc::LOCK_NB) } == 0;
+    if free {
+        // Se suelta al cerrar `f`.
+        return None;
+    }
+    std::fs::read_to_string(path).ok()?.trim().parse().ok()
+}
 
 /// Entrada del servicio de Android (por JNI): lee la especificación en JSON y lanza. Si algo
 /// falla antes de la JVM, lo escribe en la consola del servidor para que la app lo muestre.
