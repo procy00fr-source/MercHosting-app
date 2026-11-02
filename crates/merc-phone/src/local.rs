@@ -522,6 +522,13 @@ impl Phone {
             "-Dlog4j2.formatMsgNoLookups=true".to_string(),
         ];
         args.extend(merc_core::launch::ENCODING_ARGS.iter().map(|a| a.to_string()));
+        // El Java para Android se identifica como «21.0.1-internal» y Paper (y Purpur, que es
+        // un fork) se niega a arrancar con versiones que no son de disponibilidad general. Paper
+        // documenta esta propiedad para saltarse ese chequeo (docs.papermc.io, «System
+        // properties» › Paper.IgnoreJavaVersion).
+        if matches!(s.flavor, Flavor::Paper | Flavor::Purpur) {
+            args.push("-DPaper.IgnoreJavaVersion=true".to_string());
+        }
         args.extend(["-jar".to_string(), s.jar.clone(), "nogui".to_string()]);
         Ok(LaunchSpec {
             jre: self.jre_dir(s.java_major),
@@ -803,6 +810,10 @@ mod tests {
         assert_eq!(spec.jre, p.jre_dir(21));
         assert!(spec.companion.is_none());
         assert!(spec.args.contains(&"-XX:-UsePerfData".to_string()));
+        assert!(
+            spec.args.contains(&"-DPaper.IgnoreJavaVersion=true".to_string()),
+            "Paper con el Java «internal» de Android"
+        );
         assert!(spec
             .args
             .iter()

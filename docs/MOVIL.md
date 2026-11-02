@@ -139,6 +139,13 @@ manifiesto del plugin pone `android:allowNativeHeapPointerTagging="false"` en `<
 une al manifiesto de la app al compilar). Es lo mismo que hacen los lanzadores de Minecraft Java
 para Android.
 
+### Paper y el Java «internal»
+
+El Java para Android dice ser `21.0.1-internal` (no es una versión de disponibilidad general) y
+Paper se cierra con «Unsupported Java detected». En Paper y Purpur se añade
+`-DPaper.IgnoreJavaVersion=true`, la propiedad que documenta Paper para saltarse ese chequeo (Paper
+avisa de que entonces no da soporte). Vanilla y Fabric no hacen ese chequeo.
+
 ### De dónde sale cada cosa (verificado)
 
 | Qué | Origen | Huella / versión | Licencia |
