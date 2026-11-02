@@ -513,6 +513,10 @@ impl Phone {
             "java".to_string(),
             format!("-Xms{}M", (s.heap_mb / 2).max(512)),
             format!("-Xmx{}M", s.heap_mb),
+            // Android no tiene /tmp: sin esto la JVM intenta crear ahí sus datos de rendimiento.
+            "-XX:-UsePerfData".to_string(),
+            // Si la JVM se cae, su informe queda junto a la consola y la app lo muestra.
+            format!("-XX:ErrorFile={}", run.join("fallo_java_%p.log").display()),
             format!("-Djava.io.tmpdir={}", tmp.display()),
             format!("-Duser.home={}", work.display()),
             "-Dlog4j2.formatMsgNoLookups=true".to_string(),
@@ -552,7 +556,49 @@ impl Phone {
         if start > 0 && !lines.is_empty() {
             lines.remove(0);
         }
+        lines.extend(self.java_crash_report(id));
         lines
+    }
+
+    /// Informes de fallo de la JVM (`fallo_java_<pid>.log`) de este encendido.
+    fn crash_reports(&self, id: &str) -> Vec<PathBuf> {
+        let mut v: Vec<PathBuf> = std::fs::read_dir(self.run_dir(id))
+            .into_iter()
+            .flatten()
+            .flatten()
+            .map(|e| e.path())
+            .filter(|p| {
+                p.file_name()
+                    .and_then(|n| n.to_str())
+                    .is_some_and(|n| n.starts_with("fallo_java_") && n.ends_with(".log"))
+            })
+            .collect();
+        v.sort();
+        v
+    }
+
+    /// Primeras líneas del informe de fallo de la JVM, para verlo en la consola.
+    fn java_crash_report(&self, id: &str) -> Vec<String> {
+        let Some(p) = self.crash_reports(id).pop() else {
+            return vec![];
+        };
+        let text = std::fs::read_to_string(&p).unwrap_or_default();
+        let mut out =
+            vec!["[MercHosting] Java se cerró por un fallo interno. Primeras líneas del informe:".to_string()];
+        out.extend(
+            text.lines()
+                .filter(|l| !l.trim().is_empty())
+                .take(30)
+                .map(|l| format!("[MercHosting] {l}")),
+        );
+        out
+    }
+
+    /// Borra los informes de fallo de la vez anterior (se llama al encender).
+    pub(crate) fn clear_crash_reports(&self, id: &str) {
+        for p in self.crash_reports(id) {
+            let _ = std::fs::remove_file(p);
+        }
     }
 
     pub fn status(&self, id: &str) -> Result<LocalStatus, PhoneError> {
@@ -756,6 +802,24 @@ mod tests {
         assert_eq!(spec.work, p.server_dir("abc"));
         assert_eq!(spec.jre, p.jre_dir(21));
         assert!(spec.companion.is_none());
+        assert!(spec.args.contains(&"-XX:-UsePerfData".to_string()));
+        assert!(spec
+            .args
+            .iter()
+            .any(|a| a.starts_with("-XX:ErrorFile=") && a.ends_with("fallo_java_%p.log")));
+        // Si la JVM se cae, su informe aparece al final de la consola y se borra al encender.
+        std::fs::write(spec.log.clone(), "[Server thread/INFO]: Starting\n").unwrap();
+        std::fs::write(
+            p.run_dir("abc").join("fallo_java_77.log"),
+            "#\n# A fatal error has been detected\n# SIGSEGV\n",
+        )
+        .unwrap();
+        let con = p.console("abc", 64 * 1024);
+        assert_eq!(con[0], "[Server thread/INFO]: Starting");
+        assert!(con.iter().any(|l| l.contains("fallo interno")));
+        assert!(con.iter().any(|l| l.contains("SIGSEGV")));
+        p.clear_crash_reports("abc");
+        assert_eq!(p.console("abc", 64 * 1024).len(), 1);
         // Con Playit activado y el agente dentro de la app, va como acompañante.
         let native = d.path().join("lib");
         std::fs::create_dir_all(&native).unwrap();

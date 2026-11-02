@@ -279,6 +279,12 @@ pub fn launch_from_json(json: &str) -> i32 {
     };
     match launch_in_process(&spec) {
         Ok(code) => {
+            use std::io::Write;
+            let _ = std::fs::OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open(&spec.log)
+                .and_then(|mut f| writeln!(f, "[MercHosting] El servidor terminó (código {code})."));
             let _ = std::fs::remove_file(&spec.pid_file);
             code
         }

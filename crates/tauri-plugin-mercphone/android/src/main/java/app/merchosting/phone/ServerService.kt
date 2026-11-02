@@ -72,6 +72,7 @@ class ServerService : Service() {
                 code = MercNative.launch(spec)
             } catch (e: Throwable) {
                 android.util.Log.e("MercHosting", "no se pudo lanzar el servidor", e)
+                appendToConsole(spec, "[MercHosting] Android no pudo lanzar el servidor: $e")
             }
             android.util.Log.i("MercHosting", "el servidor terminó ($code)")
             finish()
@@ -126,6 +127,17 @@ class ServerService : Service() {
         wifi = wm.createWifiLock(WifiManager.WIFI_MODE_FULL_HIGH_PERF, "MercHosting:servidor").apply {
             setReferenceCounted(false)
             acquire()
+        }
+    }
+
+    /** Escribe una línea en la consola del servidor (la ruta va en la especificación JSON). */
+    private fun appendToConsole(spec: String, line: String) {
+        try {
+            val log = org.json.JSONObject(spec).optString("log")
+            if (log.isNotEmpty()) {
+                FileOutputStream(File(log), true).use { it.write("$line\n".toByteArray()) }
+            }
+        } catch (_: Exception) {
         }
     }
 

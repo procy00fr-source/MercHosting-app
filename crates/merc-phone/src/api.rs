@@ -250,6 +250,7 @@ impl Api {
                 let json = serde_json::to_string(&spec).map_err(|e| err("internal", e.to_string()))?;
                 // Consola nueva: el estado no debe leer el «Done» de la vez anterior.
                 let _ = std::fs::write(&spec.log, "");
+                p.clear_crash_reports(&id);
                 host.start_service(&id, &s.name, &json, &spec.fifo.display().to_string())
                     .map_err(|e| err("android", e))?;
                 Value::Null
