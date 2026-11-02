@@ -3,7 +3,7 @@
 //! Se comparte para que todos los clientes lancen el supervisor de la misma forma (con las
 //! correcciones específicas de Windows probadas en el incremento 2).
 
-use crate::{Client, ClientError};
+use crate::{Client, ClientError, RequestBody, ResponseBody, PROTOCOL_ID};
 use std::io;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
@@ -133,6 +133,48 @@ pub fn connect_or_spawn(data_dir: &Path, client_name: &str, timeout: Duration) -
             Err(_) => std::thread::sleep(Duration::from_millis(150)),
         }
     }
+}
+
+/// Resultado de comprobar que el supervisor en marcha es de esta misma versión.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum SupervisorCheck {
+    /// Es el de esta versión (o se acaba de iniciar).
+    Current,
+    /// Era de una versión anterior y se cambió por el de esta (no había servidores encendidos).
+    Replaced,
+    /// Es de una versión anterior y no se pudo cambiar (por ejemplo, hay servidores encendidos).
+    OutdatedBusy(String),
+}
+
+/// Se conecta (o inicia) el supervisor y, si el que está en marcha es de otra versión de
+/// MercHosting (otra huella de protocolo), le pide cerrarse y arranca el de esta versión. El
+/// supervisor viejo se niega a cerrarse si tiene servidores encendidos: nunca se corta nada.
+pub fn ensure_current(data_dir: &Path, client_name: &str, timeout: Duration) -> Result<SupervisorCheck, LaunchError> {
+    let mut c = connect_or_spawn(data_dir, client_name, timeout)?;
+    let same = match c.call(RequestBody::Ping) {
+        Ok(ResponseBody::Pong { protocol_id, .. }) => protocol_id == PROTOCOL_ID,
+        // Si ni siquiera entiende la respuesta, tampoco es de esta versión.
+        _ => false,
+    };
+    if same {
+        return Ok(SupervisorCheck::Current);
+    }
+    if let Err(e) = c.call(RequestBody::Shutdown) {
+        return Ok(SupervisorCheck::OutdatedBusy(e.to_string()));
+    }
+    drop(c);
+    // Espera a que el viejo suelte su canal antes de iniciar el nuevo.
+    let deadline = Instant::now() + Duration::from_secs(15);
+    while Client::connect(data_dir, client_name).is_ok() {
+        if Instant::now() >= deadline {
+            return Ok(SupervisorCheck::OutdatedBusy(
+                "el supervisor anterior no terminó de cerrarse".into(),
+            ));
+        }
+        std::thread::sleep(Duration::from_millis(200));
+    }
+    connect_or_spawn(data_dir, client_name, timeout)?;
+    Ok(SupervisorCheck::Replaced)
 }
 
 #[cfg(all(test, unix))]

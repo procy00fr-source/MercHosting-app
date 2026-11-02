@@ -15,6 +15,10 @@ use std::path::{Path, PathBuf};
 
 pub const TOKEN_FILE: &str = "supervisor.token";
 
+/// Huella de los mensajes del protocolo (ver build.rs). Un supervisor con otra huella es de
+/// otra versión de MercHosting: la app lo reinicia con el suyo si no hay servidores encendidos.
+pub const PROTOCOL_ID: &str = env!("MERC_PROTOCOL_ID");
+
 // ---------------------------------------------------------------------------------------------
 // Token de sesión
 // ---------------------------------------------------------------------------------------------

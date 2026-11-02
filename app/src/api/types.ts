@@ -1292,7 +1292,7 @@ export type RequestBody =
   | { op: "shutdown" };
 
 export type ResponseBody =
-  | { kind: "pong"; data: { server_version: string; supervisor_pid: number } }
+  | { kind: "pong"; data: { server_version: string; supervisor_pid: number; protocol_id?: string } }
   | { kind: "detected"; data: DetectedServer }
   | { kind: "java_candidates"; data: JavaCandidate[] }
   | { kind: "instance"; data: Instance }
@@ -1361,6 +1361,9 @@ export interface SupervisorInfo {
   server_version: string;
   supervisor_pid: number;
   data_dir: string;
+  /** Sigue en marcha un supervisor de una versión anterior (no se pudo cambiar: hay servidores encendidos). */
+  outdated?: boolean;
+  outdated_reason?: string | null;
 }
 
 export interface JavaChoice {

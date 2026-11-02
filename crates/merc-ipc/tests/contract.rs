@@ -650,6 +650,7 @@ fn examples() -> Value {
         ResponseBody::Pong {
             server_version: "0.1.0".into(),
             supervisor_pid: 1234,
+            protocol_id: "0123456789abcdef".into(),
         },
         ResponseBody::Ok,
         ResponseBody::Instances(vec![

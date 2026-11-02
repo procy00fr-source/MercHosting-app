@@ -933,6 +933,7 @@
   "responses": [
     {
       "data": {
+        "protocol_id": "0123456789abcdef",
         "server_version": "0.1.0",
         "supervisor_pid": 1234
       },

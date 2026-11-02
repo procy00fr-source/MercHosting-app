@@ -309,3 +309,21 @@ describe("navegación: Servidores y barra lateral", () => {
     expect(localStorage.getItem("merchosting.navSide")).toBe("left");
   });
 });
+
+describe("supervisor de una versión anterior", () => {
+  it("avisa y reintenta el cambio con «Actualizar ahora»", async () => {
+    const fake = new FakeApi();
+    fake.servers.push(makeSummary({ kind: "paper" }));
+    let calls = 0;
+    fake.info = async () => {
+      calls++;
+      const i = { server_version: "1.0.0", supervisor_pid: 42, data_dir: "C:\\datos" };
+      return calls === 1 ? { ...i, outdated: true, outdated_reason: "hay servidores encendidos" } : i;
+    };
+    const { user } = setup(fake);
+    expect(await screen.findByText(/Termina de actualizar MercHosting/)).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Actualizar ahora" }));
+    await waitFor(() => expect(screen.queryByText(/Termina de actualizar MercHosting/)).not.toBeInTheDocument());
+    expect(calls).toBe(2);
+  });
+});

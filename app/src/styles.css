@@ -5988,3 +5988,20 @@ html[data-mobile] .btn-sm {
   border-radius: 8px;
   background: rgba(4, 7, 20, 0.35);
 }
+
+.outdated-bar {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 8px 12px 0;
+  padding: 10px 14px;
+  border-radius: var(--r-md);
+  border: 1px solid rgba(239, 166, 114, 0.5);
+  background: rgba(239, 166, 114, 0.1);
+}
+
+.outdated-bar p {
+  margin: 0;
+  flex: 1;
+}

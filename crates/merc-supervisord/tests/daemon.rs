@@ -3450,3 +3450,17 @@ fn bedrock_native_server_runs_without_java_and_takes_addons() {
     assert!(!server.join("behavior_packs/Dragones_11111111").exists());
     assert_eq!(activity_has(&mut c, id, "addons.remove"), 1);
 }
+
+#[test]
+fn supervisor_reports_its_protocol_id_and_is_current() {
+    let e = env();
+    let _d = spawn_daemon(&e.data);
+    let mut c = client(&e.data);
+    let ResponseBody::Pong { protocol_id, .. } = c.call(RequestBody::Ping).unwrap() else {
+        panic!()
+    };
+    assert_eq!(protocol_id, merc_ipc::PROTOCOL_ID);
+    assert_eq!(protocol_id.len(), 16);
+    let check = merc_ipc::launcher::ensure_current(&e.data, "prueba", Duration::from_secs(5)).unwrap();
+    assert_eq!(check, merc_ipc::launcher::SupervisorCheck::Current);
+}

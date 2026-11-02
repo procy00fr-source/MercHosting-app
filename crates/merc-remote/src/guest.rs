@@ -409,6 +409,7 @@ mod tests {
                     RequestBody::Ping => WireResponse::Result(Box::new(ResponseResult::Ok(ResponseBody::Pong {
                         server_version: "1.0.0".into(),
                         supervisor_pid: 7,
+                        protocol_id: String::new(),
                     }))),
                     _ => WireResponse::Denied("No tienes permiso para esto.".into()),
                 },

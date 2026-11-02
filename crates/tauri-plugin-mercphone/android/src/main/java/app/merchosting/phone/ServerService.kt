@@ -14,7 +14,6 @@ import android.os.IBinder
 import android.os.PowerManager
 import android.os.Process
 import androidx.core.app.NotificationCompat
-import androidx.core.app.ServiceCompat
 import java.io.File
 import java.io.FileOutputStream
 
@@ -106,8 +105,14 @@ class ServerService : Service() {
             .setContentIntent(open)
             .addAction(0, "Detener", stop)
             .build()
-        val type = if (Build.VERSION.SDK_INT >= 34) ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE else 0
-        ServiceCompat.startForeground(this, NOTIFICATION_ID, n, type)
+        // Android 14+ exige declarar el tipo de servicio en primer plano; desde Android 10 existe
+        // la versión con tipo. Antes, la llamada clásica.
+        when {
+            Build.VERSION.SDK_INT >= 34 ->
+                startForeground(NOTIFICATION_ID, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
+            Build.VERSION.SDK_INT >= 29 -> startForeground(NOTIFICATION_ID, n, 0)
+            else -> startForeground(NOTIFICATION_ID, n)
+        }
     }
 
     @Suppress("DEPRECATION")
@@ -138,7 +143,12 @@ class ServerService : Service() {
         running = false
         try { wake?.release() } catch (_: Exception) {}
         try { wifi?.release() } catch (_: Exception) {}
-        ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
+        if (Build.VERSION.SDK_INT >= 24) {
+            stopForeground(Service.STOP_FOREGROUND_REMOVE)
+        } else {
+            @Suppress("DEPRECATION")
+            stopForeground(true)
+        }
         stopSelf()
         // La JVM no se puede crear dos veces en el mismo proceso: se cierra entero.
         Process.killProcess(Process.myPid())

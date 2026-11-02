@@ -2058,6 +2058,7 @@ impl Daemon {
             R::Ping => ResponseBody::Pong {
                 server_version: VERSION.into(),
                 supervisor_pid: std::process::id(),
+                protocol_id: merc_ipc::PROTOCOL_ID.into(),
             },
             R::Detect { path } => {
                 if !path.is_absolute() || !path.is_dir() {

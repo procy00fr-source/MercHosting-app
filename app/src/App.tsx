@@ -323,6 +323,18 @@ export function App({
         </div>
       ) : (
         <div className="shell" data-side={side}>
+          {info.outdated && (
+            <div className="outdated-bar" role="alert">
+              <p>
+                <strong>Termina de actualizar MercHosting.</strong> Sigue en marcha el supervisor de la versión anterior porque
+                tienes servidores encendidos, y algunas funciones nuevas no aparecerán hasta cambiarlo. Detén tus servidores y
+                pulsa «Actualizar ahora»: no se pierde nada.
+              </p>
+              <button type="button" className="btn btn-sm btn-go" onClick={connect}>
+                Actualizar ahora
+              </button>
+            </div>
+          )}
           {view === "remote" && remote ? (
             <RemoteServerView
               key={`${remote.host.host}-${remote.id}`}

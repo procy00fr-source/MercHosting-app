@@ -1388,6 +1388,9 @@ pub enum ResponseBody {
     Pong {
         server_version: String,
         supervisor_pid: u32,
+        /// Huella del protocolo del supervisor (vacía en versiones anteriores a la 1.0.0).
+        #[serde(default)]
+        protocol_id: String,
     },
     Detected(DetectedServer),
     JavaCandidates(Vec<JavaCandidate>),

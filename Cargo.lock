@@ -3021,7 +3021,7 @@ dependencies = [
 
 [[package]]
 name = "merc-admin"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "chrono",
  "flate2",
@@ -3040,7 +3040,7 @@ dependencies = [
 
 [[package]]
 name = "merc-content"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "merc-core",
  "merc-install",
@@ -3055,7 +3055,7 @@ dependencies = [
 
 [[package]]
 name = "merc-core"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "regex",
  "serde",
@@ -3067,7 +3067,7 @@ dependencies = [
 
 [[package]]
 name = "merc-install"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "flate2",
  "lzma-rs",
@@ -3087,7 +3087,7 @@ dependencies = [
 
 [[package]]
 name = "merc-ipc"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "interprocess",
  "merc-admin",
@@ -3107,7 +3107,7 @@ dependencies = [
 
 [[package]]
 name = "merc-net"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "interprocess",
  "merc-install",
@@ -3119,7 +3119,7 @@ dependencies = [
 
 [[package]]
 name = "merc-phone"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "libc",
  "merc-admin",
@@ -3135,7 +3135,7 @@ dependencies = [
 
 [[package]]
 name = "merc-remote"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "base64 0.22.1",
  "iroh",
@@ -3151,7 +3151,7 @@ dependencies = [
 
 [[package]]
 name = "merc-store"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "merc-core",
  "rusqlite",
@@ -3163,7 +3163,7 @@ dependencies = [
 
 [[package]]
 name = "merc-supervisor"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "merc-core",
  "serde",
@@ -3176,7 +3176,7 @@ dependencies = [
 
 [[package]]
 name = "merc-supervisord"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "base64 0.22.1",
  "chrono",
@@ -3207,7 +3207,7 @@ dependencies = [
 
 [[package]]
 name = "merchosting-app"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "jni 0.21.1",
  "merc-core",
@@ -5799,7 +5799,7 @@ dependencies = [
 
 [[package]]
 name = "tauri-plugin-mercphone"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "serde",
  "serde_json",

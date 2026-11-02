@@ -223,6 +223,7 @@ fn main() {
             if let ResponseBody::Pong {
                 server_version,
                 supervisor_pid,
+                ..
             } = call(&mut c, RequestBody::Ping)
             {
                 println!("Supervisor {server_version} activo (pid {supervisor_pid}).");

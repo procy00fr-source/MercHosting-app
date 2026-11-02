@@ -2568,7 +2568,10 @@
 "Esta versión de la app no trae Playit.": "This version of the app doesn't include Playit.",
 "Playit incluido.": "Playit included.",
 "← En este celular": "← On this phone",
-"(la más nueva)": " (newest)"
+"(la más nueva)": " (newest)",
+"Termina de actualizar MercHosting.": "Finish updating MercHosting.",
+"Sigue en marcha el supervisor de la versión anterior porque tienes servidores encendidos, y algunas funciones nuevas no aparecerán hasta cambiarlo. Detén tus servidores y pulsa «Actualizar ahora»: no se pierde nada.": "The previous version’s supervisor is still running because you have servers on, and some new features won’t show up until it’s replaced. Stop your servers and press “Update now”: nothing is lost.",
+"Actualizar ahora": "Update now"
 },
 "patterns": [
 [

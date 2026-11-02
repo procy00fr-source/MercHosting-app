@@ -74,18 +74,38 @@ pub struct SupervisorInfo {
     pub server_version: String,
     pub supervisor_pid: u32,
     pub data_dir: PathBuf,
+    /// Sigue en marcha el supervisor de una versión anterior (no se pudo cambiar).
+    pub outdated: bool,
+    /// Por qué no se pudo cambiar (lo que respondió el supervisor viejo).
+    pub outdated_reason: Option<String>,
 }
 
 #[tauri::command]
 pub async fn supervisor_info() -> Result<SupervisorInfo, UiError> {
+    // Tras actualizar la app puede seguir en marcha el supervisor anterior (mantiene los
+    // servidores aunque se cierre la ventana). Si no tiene servidores encendidos se cambia por el
+    // de esta versión; si los tiene, se avisa y se sigue con él hasta que se detengan.
+    let check = tauri::async_runtime::spawn_blocking(|| {
+        merc_ipc::launcher::ensure_current(&data_dir(), CLIENT_NAME, Duration::from_secs(20))
+    })
+    .await
+    .map_err(|e| UiError::new("internal", e.to_string()))?
+    .map_err(ui_error_from_launch)?;
+    let (outdated, outdated_reason) = match check {
+        merc_ipc::launcher::SupervisorCheck::OutdatedBusy(r) => (true, Some(r)),
+        _ => (false, None),
+    };
     match call(RequestBody::Ping).await? {
         ResponseBody::Pong {
             server_version,
             supervisor_pid,
+            ..
         } => Ok(SupervisorInfo {
             server_version,
             supervisor_pid,
             data_dir: data_dir(),
+            outdated,
+            outdated_reason,
         }),
         _ => Err(UiError::new("internal", "Respuesta inesperada del supervisor")),
     }
