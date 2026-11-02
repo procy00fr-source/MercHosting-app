@@ -35,6 +35,8 @@ pub struct StartRequest {
     pub fifo: String,
 }
 
+/// Petición sin datos. Las respuestas sin datos (`invoke.resolve()` en Kotlin) llegan como
+/// `null`, así que esas se leen como `serde_json::Value`, no como `Empty`.
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct Empty {}
 
@@ -57,14 +59,14 @@ impl<R: Runtime> Phone<R> {
 
     pub fn start_server(&self, req: StartRequest) -> Result<(), String> {
         self.0
-            .run_mobile_plugin::<Empty>("startServer", req)
+            .run_mobile_plugin::<serde_json::Value>("startServer", req)
             .map(|_| ())
             .map_err(|e| e.to_string())
     }
 
     pub fn force_stop(&self) -> Result<(), String> {
         self.0
-            .run_mobile_plugin::<Empty>("forceStop", Empty {})
+            .run_mobile_plugin::<serde_json::Value>("forceStop", Empty {})
             .map(|_| ())
             .map_err(|e| e.to_string())
     }

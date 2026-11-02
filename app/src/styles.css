@@ -5815,7 +5815,11 @@ select {
 .mobile-root {
   position: relative;
   z-index: 1;
-  min-height: 100vh;
+  /* El body no se desplaza (la app de escritorio usa paneles fijos): en el celular desplaza esto. */
+  height: 100%;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 .mobile-head {
@@ -5904,7 +5908,10 @@ select {
   bottom: 0;
   z-index: 20;
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  /* 3 o 4 secciones (la de «En este celular» solo en Android), siempre en una fila. */
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  gap: 4px;
   padding: 6px 8px calc(6px + env(safe-area-inset-bottom, 0px));
   background: rgba(9, 14, 34, 0.94);
   border-top: 1px solid var(--line);
@@ -5923,6 +5930,13 @@ select {
   font: inherit;
   font-size: 12px;
   cursor: pointer;
+}
+
+html[data-mobile] .toast {
+  left: 12px;
+  right: 12px;
+  bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+  max-width: none;
 }
 
 .mobile-nav button[aria-current="page"] {
