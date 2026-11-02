@@ -62,6 +62,8 @@ pub struct PlayitInfo {
     pub claim: Option<ClaimInfo>,
     /// Dirección pública del túnel que lleva al puerto del servidor de este celular.
     pub address: Option<String>,
+    /// Dirección del túnel UDP hacia Geyser (jugadores de Bedrock), si existe.
+    pub bedrock_address: Option<String>,
     pub error: Option<String>,
 }
 
@@ -89,6 +91,7 @@ impl Playit {
                 .as_ref()
                 .is_some_and(|a| !matches!(a.phase, AgentPhase::WaitingForSecret | AgentPhase::InvalidSecret)),
             address: agent.as_ref().and_then(|a| tunnel_for(a, server_port?)),
+            bedrock_address: None,
             agent,
             claim: self.claim.lock().unwrap_or_else(|p| p.into_inner()).clone(),
             // Si el agente no está en marcha no es un error: se arranca con el servidor.

@@ -1,6 +1,7 @@
 // «En este celular» (fase 2): un servidor de Minecraft JAVA que corre dentro del propio celular
 // Android, en un servicio en primer plano con notificación. Antes de crear nada hay que aceptar
-// uno por uno los avisos de riesgo. Bedrock no se puede aquí (solo en una PC con Windows o Linux).
+// uno por uno los avisos de riesgo. El servidor oficial de Bedrock no existe para Android: para
+// jugadores de Bedrock se crea un Paper con Geyser y Floodgate. Mods y plugins de Modrinth.
 
 import { AlertTriangle, ExternalLink, HardDriveDownload, Link2, Play, Plus, Power, RefreshCw, Send, Square, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
@@ -10,6 +11,7 @@ import type { CatalogEntry } from "../api/types";
 import type { CreateProgress, LocalServer, LocalStatus, PhoneApi, PhoneFlavor, PhoneInfo, PhonePlayit, PhoneWarning } from "../api/phone";
 import { PHONE_FLAVORS, PHONE_WARNINGS } from "../api/phone";
 import { Dialog } from "./Dialog";
+import { PhoneContent } from "./PhoneContent";
 
 const EULA_URL = "https://aka.ms/MinecraftEULA";
 
@@ -44,8 +46,13 @@ export const WARNING_TEXT: Record<PhoneWarning, { title: string; text: string }>
   },
 };
 
-const FLAVOR_LABEL: Record<PhoneFlavor, string> = {
+/** Lo que se elige al crear: un tipo de Java o «Java + Bedrock» (Paper con Geyser y Floodgate). */
+type PhoneChoice = PhoneFlavor | "bedrock";
+const CHOICES: PhoneChoice[] = ["paper", "bedrock", ...PHONE_FLAVORS.filter((f) => f !== "paper")];
+
+const CHOICE_LABEL: Record<PhoneChoice, string> = {
   paper: "Paper (plugins, recomendado)",
+  bedrock: "Java + Bedrock (Paper con Geyser)",
   vanilla: "Vanilla (oficial de Mojang)",
   purpur: "Purpur (plugins)",
   fabric: "Fabric (mods)",
@@ -117,12 +124,14 @@ export function PhoneHost({ phone, api, onError }: Props) {
       </div>
       <div className="card props-card">
         <p>
-          Puedes encender un servidor de Minecraft <strong>Java</strong> dentro de este celular para jugar con pocos amigos.
+          Puedes encender un servidor de Minecraft dentro de este celular para jugar con pocos amigos, de <strong>Java</strong> o
+          también de <strong>Bedrock</strong>.
         </p>
         <p className="field-help">
-          <strong>Bedrock no se puede dentro del celular</strong>: el servidor oficial de Bedrock solo existe para PC (Windows y
-          Linux de 64 bits x86). Para Bedrock usa «Mis PCs». Forge y NeoForge tampoco: necesitan ejecutar su instalador de Java,
-          que Android no deja.
+          Para Bedrock se crea un servidor Java con <strong>Geyser y Floodgate</strong>: entran jugadores de Java y de Bedrock
+          (celular, consola, Windows) al mismo mundo. El servidor oficial de Bedrock solo existe para PC (Windows y Linux x86),
+          así que aquí no hay addons .mcpack; para eso usa «Mis PCs». Forge y NeoForge tampoco: necesitan ejecutar su
+          instalador de Java, que Android no deja.
         </p>
       </div>
 
@@ -142,7 +151,7 @@ export function PhoneHost({ phone, api, onError }: Props) {
             {info.playit_available ? " Playit incluido." : " Esta versión de la app no trae Playit."}
           </p>
           <button type="button" className="btn btn-go" onClick={() => setCreating(true)}>
-            <Plus size={15} aria-hidden="true" /> Crear servidor Java en este celular
+            <Plus size={15} aria-hidden="true" /> Crear servidor en este celular
           </button>
           {servers === null ? null : servers.length === 0 ? (
             <p className="field-help">Todavía no hay servidores en este celular.</p>
@@ -155,7 +164,8 @@ export function PhoneHost({ phone, api, onError }: Props) {
                     <span>
                       <strong translate="no">{s.name}</strong>
                       <span className="field-help">
-                        {s.flavor} {s.mc_version} · {s.heap_mb} MB
+                        {s.flavor} {s.mc_version}
+                        {s.bedrock ? " + Bedrock" : ""} · {s.heap_mb} MB
                       </span>
                     </span>
                   </button>
@@ -199,7 +209,9 @@ function PhoneCreate({
   const heap = info.heap!;
   const [step, setStep] = useState<"warnings" | "form">("warnings");
   const [accepted, setAccepted] = useState<Set<PhoneWarning>>(new Set());
-  const [flavor, setFlavor] = useState<PhoneFlavor>("paper");
+  const [choice, setChoice] = useState<PhoneChoice>("paper");
+  const bedrock = choice === "bedrock";
+  const flavor: PhoneFlavor = bedrock ? "paper" : choice;
   const [versions, setVersions] = useState<CatalogEntry[] | null>(null);
   const [version, setVersion] = useState("");
   const [name, setName] = useState("Mi servidor");
@@ -244,6 +256,7 @@ function PhoneCreate({
         heap_mb: ram,
         accept_eula: eula,
         warnings_accepted: [...accepted],
+        bedrock,
       });
       onCreated(s);
     } catch (e) {
@@ -327,13 +340,20 @@ function PhoneCreate({
           </label>
           <label className="field">
             <span className="field-title">Tipo</span>
-            <select value={flavor} onChange={(e) => setFlavor(e.target.value as PhoneFlavor)} disabled={busy}>
-              {PHONE_FLAVORS.map((f) => (
+            <select value={choice} onChange={(e) => setChoice(e.target.value as PhoneChoice)} disabled={busy}>
+              {CHOICES.map((f) => (
                 <option key={f} value={f}>
-                  {FLAVOR_LABEL[f]}
+                  {CHOICE_LABEL[f]}
                 </option>
               ))}
             </select>
+            {bedrock && (
+              <span className="field-help">
+                Se instalan Geyser y Floodgate (de GeyserMC, gratis y de código abierto) desde Modrinth. Entran jugadores de Java y de
+                Bedrock, y los de Bedrock no necesitan cuenta de Java. Antes de descargar se comprueba que existan para la versión
+                elegida.
+              </span>
+            )}
           </label>
           <label className="field">
             <span className="field-title">Versión de Minecraft</span>
@@ -466,8 +486,14 @@ function PhoneServerView({
         </div>
         <p role="status">
           <span className={status?.state === "online" ? "badge" : "badge badge-muted"}>{status ? STATE_LABEL[status.state] : "…"}</span>
-          {status?.port ? <span className="field-help"> · puerto {status.port} (wifi de tu casa)</span> : null}
+          {status?.port ? <span className="field-help"> · Java: puerto {status.port} (wifi de tu casa)</span> : null}
         </p>
+        {status?.bedrock_port ? (
+          <p className="field-help">
+            Jugadores de Bedrock: agrega un servidor con la IP de este celular en tu wifi y el puerto{" "}
+            <strong>{status.bedrock_port}</strong> (UDP).
+          </p>
+        ) : null}
         {status?.problem && <p className="warn-text">{status.problem}</p>}
         {status && !status.eula_accepted && (
           <div className="detect-box">
@@ -596,6 +622,19 @@ function PhoneServerView({
                 {server.playit ? "Playit arranca cuando enciendes el servidor." : "Playit está apagado para este servidor."}
               </p>
             )}
+            {playit.running && playit.linked && status?.bedrock_port ? (
+              playit.bedrock_address ? (
+                <p className="ok-text">
+                  Dirección para Bedrock: <code translate="no">{playit.bedrock_address}</code>
+                </p>
+              ) : (
+                <p className="field-help">
+                  Para Bedrock crea un segundo túnel en playit.gg, de tipo «Minecraft Bedrock» (UDP), hacia el puerto{" "}
+                  {status.bedrock_port}; aparecerá aquí. Pruébalo primero en tu wifi: hay reportes de túneles UDP de Playit que fallan
+                  con Bedrock.
+                </p>
+              )
+            ) : null}
             {playit.running && playit.linked && (
               <button type="button" className="btn btn-sm btn-quiet" disabled={busy !== null} onClick={() => act("unlink", () => phone.playitUnlink())}>
                 Desvincular Playit
@@ -604,6 +643,8 @@ function PhoneServerView({
           </>
         )}
       </div>
+
+      <PhoneContent phone={phone} api={api} id={server.id} running={on} onError={onError} />
 
       <div className="card props-card" aria-label="Consola" role="region">
         <h2 className="panel-title">Consola</h2>

@@ -2,7 +2,8 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { MercApi } from "./api/client";
-import type { CreateRequest, LocalServer, LocalStatus, PhoneApi, PhoneInfo, PhonePlayit } from "./api/phone";
+import type { CreateRequest, LocalServer, LocalStatus, PhoneApi, PhoneContentInfo, PhoneInfo, PhonePlayit } from "./api/phone";
+import type { InstalledItem, SearchPage } from "./api/types";
 import { PHONE_WARNINGS, phoneApiFrom } from "./api/phone";
 import { MobileApp } from "./components/MobileApp";
 import { setPlatformForTests } from "./platform";
@@ -29,6 +30,8 @@ class FakePhone implements PhoneApi {
   commands: string[] = [];
   asked = 0;
   linked = false;
+  installedItems: InstalledItem[] = [];
+  contentCalls: string[] = [];
   async info() {
     return this.info_;
   }
@@ -50,6 +53,7 @@ class FakePhone implements PhoneApi {
       jar: "paper.jar",
       created_unix_ms: 1,
       playit: false,
+      bedrock: req.bedrock,
     };
     this.list.push(s);
     return s;
@@ -118,6 +122,103 @@ class FakePhone implements PhoneApi {
     return { url: "https://playit.gg/claim/abcdef0123", state: "waiting_for_visit" as const, done: false, error: null };
   }
   async playitUnlink() {}
+  async contentInfo(id: string): Promise<PhoneContentInfo> {
+    const s = this.list.find((x) => x.id === id)!;
+    const platform =
+      s.flavor === "vanilla"
+        ? null
+        : { kind: "plugin" as const, folder: "plugins", loaders: ["paper", "spigot", "bukkit"], experimental: false, sources: ["modrinth" as const] };
+    return { platform, mc_version: s.mc_version, running: this.state !== "stopped" };
+  }
+  async contentSearch(_id: string, query: string): Promise<SearchPage> {
+    this.contentCalls.push(`search:${query}`);
+    return {
+      total: 1,
+      offset: 0,
+      hits: [
+        {
+          project_id: "essx",
+          slug: "essentialsx",
+          title: "EssentialsX",
+          author: "EssentialsX",
+          description: "Comandos básicos",
+          icon_url: null,
+          downloads: 1000,
+          categories: [],
+          client_side: "unsupported",
+          server_side: "required",
+          date_modified: "",
+          license: "GPL-3.0",
+        },
+      ],
+    };
+  }
+  async contentInstalled() {
+    return this.installedItems;
+  }
+  async contentPlan(_id: string, project: string) {
+    this.contentCalls.push(`plan:${project}`);
+    return {
+      version_id: "v1",
+      plan: {
+        items: [
+          {
+            project_id: project,
+            title: "EssentialsX",
+            icon_url: null,
+            version_id: "v1",
+            version_number: "2.21",
+            file_name: "EssentialsX.jar",
+            url: "https://cdn.modrinth.com/x.jar",
+            sha1: "0".repeat(40),
+            sha256: null,
+            size: 1024,
+            reason: "Lo elegiste tú",
+            replaces: null,
+          },
+        ],
+        already_installed: [],
+        optional: [],
+        warnings: [],
+        blockers: [],
+        download_bytes: 1024,
+      },
+    };
+  }
+  async contentInstall(_id: string, versionId: string) {
+    this.contentCalls.push(`install:${versionId}`);
+    this.installedItems = [
+      {
+        file_name: "EssentialsX.jar",
+        enabled: true,
+        size: 1024,
+        sha1: "0".repeat(40),
+        project_id: "essx",
+        version_id: "v1",
+        title: "EssentialsX",
+        version_number: "2.21",
+        icon_url: null,
+        server_side: "required",
+        update: null,
+        source: "modrinth",
+        other_ids: [],
+      },
+    ];
+    return { installed: ["EssentialsX.jar"] };
+  }
+  async contentProgress() {
+    return { running: false, done: 0, total: 0 };
+  }
+  async contentCancel() {}
+  async contentSetEnabled(_id: string, file: string, enabled: boolean) {
+    this.contentCalls.push(`enabled:${file}:${enabled}`);
+    this.installedItems = this.installedItems.map((i) => (i.file_name === file ? { ...i, enabled } : i));
+    return { file };
+  }
+  async contentRemove(_id: string, file: string) {
+    this.contentCalls.push(`remove:${file}`);
+    this.installedItems = this.installedItems.filter((i) => i.file_name !== file);
+  }
   async askNotifications() {
     this.asked += 1;
     return true;
@@ -151,8 +252,8 @@ describe("Servidor dentro del celular", () => {
     render(<MobileApp api={app(new FakeApi())} phone={phone} />);
     await user.click(await screen.findByRole("button", { name: "En este celular" }));
     const here = within(await screen.findByRole("region", { name: "En este celular" }));
-    expect(here.getByText(/Bedrock no se puede dentro del celular/)).toBeInTheDocument();
-    await user.click(await here.findByRole("button", { name: /Crear servidor Java en este celular/ }));
+    expect(here.getByText(/Geyser y Floodgate/)).toBeInTheDocument();
+    await user.click(await here.findByRole("button", { name: /Crear servidor en este celular/ }));
     const d = within(screen.getByRole("dialog", { name: "Crear un servidor en este celular" }));
     const go = d.getByRole("button", { name: /Entiendo los riesgos/ });
     const boxes = within(d.getByRole("group", { name: "Avisos de riesgo" })).getAllByRole("checkbox");
@@ -162,9 +263,9 @@ describe("Servidor dentro del celular", () => {
     await user.click(boxes[6]);
     expect(go).toBeEnabled();
     await user.click(go);
-    // Bedrock no aparece entre los tipos.
+    // Bedrock va como «Java + Bedrock» (Paper con Geyser); Forge no aparece.
     const tipo = d.getByLabelText("Tipo");
-    expect(within(tipo).queryByRole("option", { name: /Bedrock/ })).toBeNull();
+    expect(within(tipo).getByRole("option", { name: /Java \+ Bedrock/ })).toBeInTheDocument();
     expect(within(tipo).queryByRole("option", { name: /Forge/ })).toBeNull();
     await waitFor(() => expect(d.getByLabelText(/^Versión de Minecraft/)).toHaveValue("1.21.1"));
     const crear = d.getByRole("button", { name: "Crear servidor" });
@@ -172,7 +273,7 @@ describe("Servidor dentro del celular", () => {
     await user.click(d.getByRole("checkbox", { name: /acepto la EULA/ }));
     await user.click(crear);
     await waitFor(() =>
-      expect(phone.created).toMatchObject({ flavor: "paper", mc_version: "1.21.1", heap_mb: 2048, accept_eula: true }),
+      expect(phone.created).toMatchObject({ flavor: "paper", mc_version: "1.21.1", heap_mb: 2048, accept_eula: true, bedrock: false }),
     );
     expect([...phone.created!.warnings_accepted].sort()).toEqual([...PHONE_WARNINGS].sort());
     // Se abre el servidor recién creado.
@@ -186,7 +287,7 @@ describe("Servidor dentro del celular", () => {
     render(<MobileApp api={app(new FakeApi())} phone={phone} />);
     await user.click(await screen.findByRole("button", { name: "En este celular" }));
     expect(await screen.findByText(/solo arm64/)).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /Crear servidor Java/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /Crear servidor en este celular/ })).toBeNull();
   });
 
   it("enciende (pidiendo el permiso de notificación), manda comandos, vincula Playit y detiene", async () => {
@@ -227,6 +328,57 @@ describe("Servidor dentro del celular", () => {
     expect(await view.findByText("Apagado")).toBeInTheDocument();
   }, 20_000);
 
+  it("«Java + Bedrock» crea un Paper con Geyser y muestra el puerto de Bedrock", async () => {
+    const phone = new FakePhone();
+    phone.status = async () => ({ state: "stopped", pid: null, eula_accepted: true, port: 25565, problem: null, bedrock_port: 19132 });
+    const user = userEvent.setup();
+    render(<MobileApp api={app(new FakeApi())} phone={phone} />);
+    await user.click(await screen.findByRole("button", { name: "En este celular" }));
+    await user.click(await screen.findByRole("button", { name: /Crear servidor en este celular/ }));
+    const d = within(screen.getByRole("dialog", { name: "Crear un servidor en este celular" }));
+    for (const b of within(d.getByRole("group", { name: "Avisos de riesgo" })).getAllByRole("checkbox")) await user.click(b);
+    await user.click(d.getByRole("button", { name: /Entiendo los riesgos/ }));
+    await user.selectOptions(d.getByLabelText("Tipo"), "bedrock");
+    expect(d.getByText(/Se instalan Geyser y Floodgate/)).toBeInTheDocument();
+    await waitFor(() => expect(d.getByLabelText(/^Versión de Minecraft/)).toHaveValue("1.21.1"));
+    await user.click(d.getByRole("checkbox", { name: /acepto la EULA/ }));
+    await user.click(d.getByRole("button", { name: "Crear servidor" }));
+    await waitFor(() => expect(phone.created).toMatchObject({ flavor: "paper", bedrock: true }));
+    const view = within(await screen.findByRole("region", { name: "Mi servidor" }));
+    expect(await view.findByText("19132")).toBeInTheDocument();
+  });
+
+  it("catálogo de Modrinth: busca, instala con su plan, desactiva y quita; CurseForge está en Próximamente", async () => {
+    const phone = new FakePhone();
+    phone.list.push(
+      { id: "s1", name: "Survival", flavor: "paper", mc_version: "1.21.1", java_major: 21, heap_mb: 2048, jar: "paper.jar", created_unix_ms: 1, playit: false },
+      { id: "s2", name: "Puro", flavor: "vanilla", mc_version: "1.21.1", java_major: 21, heap_mb: 2048, jar: "server.jar", created_unix_ms: 1, playit: false },
+    );
+    const user = userEvent.setup();
+    render(<MobileApp api={app(new FakeApi())} phone={phone} />);
+    await user.click(await screen.findByRole("button", { name: "En este celular" }));
+    await user.click(await screen.findByRole("button", { name: /Survival/ }));
+    const plugins = within(await screen.findByRole("region", { name: "Plugins" }));
+    const cf = plugins.getByRole("button", { name: /CurseForge/ });
+    expect(cf).toBeDisabled();
+    expect(within(cf).getByText("Próximamente")).toBeInTheDocument();
+    await user.click(await plugins.findByRole("button", { name: "Instalar EssentialsX" }));
+    const d = within(await screen.findByRole("dialog", { name: "Instalar EssentialsX" }));
+    expect(d.getByText(/Lo elegiste tú/)).toBeInTheDocument();
+    await user.click(d.getByRole("button", { name: "Instalar" }));
+    await waitFor(() => expect(phone.contentCalls).toContain("install:v1"));
+    await plugins.findByRole("list", { name: "Plugins instalados" });
+    await user.click(plugins.getByRole("checkbox", { name: "Activado" }));
+    await waitFor(() => expect(phone.contentCalls).toContain("enabled:EssentialsX.jar:false"));
+    await user.click(plugins.getByRole("button", { name: "Quitar EssentialsX" }));
+    await waitFor(() => expect(phone.contentCalls).toContain("remove:EssentialsX.jar"));
+    expect(phone.contentCalls[0]).toBe("search:");
+
+    await user.click(screen.getByRole("button", { name: "← En este celular" }));
+    await user.click(await screen.findByRole("button", { name: /Puro/ }));
+    expect(await screen.findByText(/Vanilla no admite mods ni plugins/)).toBeInTheDocument();
+  }, 20_000);
+
   it("las peticiones salen con la forma que entiende merc_phone::api", async () => {
     const sent: unknown[] = [];
     const p = phoneApiFrom(
@@ -239,10 +391,16 @@ describe("Servidor dentro del celular", () => {
     await p.setHeap("a", 2048);
     await p.command("a", "say x");
     await p.playit(null);
+    await p.contentSearch("a", "ess", 20);
+    await p.contentInstall("a", "v1");
+    await p.contentSetEnabled("a", "x.jar", false);
     expect(sent).toEqual([
       { op: "set_heap", id: "a", heap_mb: 2048 },
       { op: "command", id: "a", text: "say x" },
       { op: "playit", id: null },
+      { op: "content_search", id: "a", query: "ess", offset: 20 },
+      { op: "content_install", id: "a", version_id: "v1" },
+      { op: "content_set_enabled", id: "a", file: "x.jar", enabled: false },
     ]);
   });
 });

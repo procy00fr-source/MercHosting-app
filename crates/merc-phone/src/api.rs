@@ -3,6 +3,8 @@
 
 use crate::local::{CreateRequest, Phone, PhoneError};
 use crate::playit::Playit;
+use merc_content::local::InstallProgress;
+use merc_content::modrinth::Modrinth;
 use merc_install::{Flavor, Http, Sources};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -19,26 +21,92 @@ pub trait Host: Send + Sync {
 #[serde(tag = "op", rename_all = "snake_case")]
 pub enum Op {
     Info,
-    Versions { flavor: Flavor },
-    Create { req: CreateRequest },
+    Versions {
+        flavor: Flavor,
+    },
+    Create {
+        req: CreateRequest,
+    },
     Progress,
     Cancel,
     Servers,
-    Status { id: String },
-    Console { id: String },
-    Start { id: String },
-    Stop { id: String },
-    ForceStop { id: String },
-    Command { id: String, text: String },
-    AcceptEula { id: String },
-    SetPlayit { id: String, on: bool },
-    SetHeap { id: String, heap_mb: u32 },
-    Backup { id: String },
-    Backups { id: String },
-    Remove { id: String },
-    Playit { id: Option<String> },
+    Status {
+        id: String,
+    },
+    Console {
+        id: String,
+    },
+    Start {
+        id: String,
+    },
+    Stop {
+        id: String,
+    },
+    ForceStop {
+        id: String,
+    },
+    Command {
+        id: String,
+        text: String,
+    },
+    AcceptEula {
+        id: String,
+    },
+    SetPlayit {
+        id: String,
+        on: bool,
+    },
+    SetHeap {
+        id: String,
+        heap_mb: u32,
+    },
+    Backup {
+        id: String,
+    },
+    Backups {
+        id: String,
+    },
+    Remove {
+        id: String,
+    },
+    Playit {
+        id: Option<String>,
+    },
     PlayitLink,
     PlayitUnlink,
+    /// Mods o plugins que admite el servidor (catálogo de Modrinth).
+    ContentInfo {
+        id: String,
+    },
+    ContentSearch {
+        id: String,
+        #[serde(default)]
+        query: String,
+        #[serde(default)]
+        offset: u64,
+    },
+    ContentInstalled {
+        id: String,
+    },
+    ContentPlan {
+        id: String,
+        project: String,
+    },
+    ContentInstall {
+        id: String,
+        version_id: String,
+    },
+    ContentProgress,
+    ContentCancel,
+    ContentSetEnabled {
+        id: String,
+        file: String,
+        enabled: bool,
+    },
+    ContentRemove {
+        id: String,
+        file: String,
+    },
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize)]
@@ -86,6 +154,9 @@ pub struct Api {
     progress: Mutex<Progress>,
     cancel: AtomicBool,
     playit_api: String,
+    modrinth_api: String,
+    content_progress: InstallProgress,
+    content_busy: AtomicBool,
 }
 
 fn to_value<T: Serialize>(v: T) -> Value {
@@ -102,7 +173,14 @@ impl Api {
             progress: Mutex::new(Progress::default()),
             cancel: AtomicBool::new(false),
             playit_api: merc_net::playit::API_BASE.to_string(),
+            modrinth_api: merc_content::modrinth::MODRINTH_API.to_string(),
+            content_progress: InstallProgress::default(),
+            content_busy: AtomicBool::new(false),
         }
+    }
+
+    fn modrinth(&self) -> Modrinth<'_> {
+        Modrinth::new(&self.http, self.modrinth_api.clone())
     }
 
     fn set_progress(&self, f: impl FnOnce(&mut Progress)) {
@@ -137,9 +215,11 @@ impl Api {
                     };
                 }
                 self.cancel.store(false, Ordering::SeqCst);
+                let catalog = self.modrinth();
                 let r = p.create(
                     &self.http,
                     &self.src,
+                    &catalog,
                     &req,
                     &mut |step, done, total| {
                         self.set_progress(|g| {
@@ -205,11 +285,18 @@ impl Api {
             Op::Backups { id } => to_value(p.backups(&id)),
             Op::Remove { id } => json!({ "moved_to": p.remove(&id)?.display().to_string() }),
             Op::Playit { id } => {
-                let port = match id {
-                    Some(id) => p.status(&id)?.port,
-                    None => None,
+                let (port, bedrock) = match id {
+                    Some(id) => {
+                        let st = p.status(&id)?;
+                        (st.port, st.bedrock_port)
+                    }
+                    None => (None, None),
                 };
-                to_value(self.playit.info(&p.playit_paths(), p.playit_exe().is_some(), port))
+                let mut info = self.playit.info(&p.playit_paths(), p.playit_exe().is_some(), port);
+                if let (Some(agent), Some(bp)) = (info.agent.as_ref(), bedrock) {
+                    info.bedrock_address = crate::playit::tunnel_for(agent, bp);
+                }
+                to_value(info)
             }
             Op::PlayitLink => {
                 if p.playit_exe().is_none() {
@@ -226,6 +313,43 @@ impl Api {
             }
             Op::PlayitUnlink => {
                 self.playit.unlink(&p.playit_paths()).map_err(|e| err("playit", e))?;
+                Value::Null
+            }
+            Op::ContentInfo { id } => to_value(p.content_info(&id)?),
+            Op::ContentSearch { id, query, offset } => {
+                to_value(p.content_search(&self.modrinth(), &id, &query, offset)?)
+            }
+            Op::ContentInstalled { id } => to_value(p.content_installed(Some(&self.modrinth()), &id)?),
+            Op::ContentPlan { id, project } => {
+                let (version_id, plan) = p.content_plan(&self.modrinth(), &id, &project)?;
+                json!({ "version_id": version_id, "plan": plan })
+            }
+            Op::ContentInstall { id, version_id } => {
+                if self.content_busy.swap(true, Ordering::SeqCst) {
+                    return Err(err("busy", "Ya se está instalando algo."));
+                }
+                let pr = &self.content_progress;
+                pr.done.store(0, Ordering::Relaxed);
+                pr.total.store(0, Ordering::Relaxed);
+                pr.cancel.store(false, Ordering::Relaxed);
+                let r = p.content_install(&self.http, &self.modrinth(), &id, &version_id, pr);
+                self.content_busy.store(false, Ordering::SeqCst);
+                json!({ "installed": r? })
+            }
+            Op::ContentProgress => json!({
+                "running": self.content_busy.load(Ordering::SeqCst),
+                "done": self.content_progress.done.load(Ordering::Relaxed),
+                "total": self.content_progress.total.load(Ordering::Relaxed),
+            }),
+            Op::ContentCancel => {
+                self.content_progress.cancel.store(true, Ordering::Relaxed);
+                Value::Null
+            }
+            Op::ContentSetEnabled { id, file, enabled } => {
+                json!({ "file": p.content_set_enabled(&id, &file, enabled)? })
+            }
+            Op::ContentRemove { id, file } => {
+                p.content_remove(&id, &file)?;
                 Value::Null
             }
         })
@@ -272,6 +396,19 @@ mod tests {
             "accept_eula": true, "warnings_accepted": ["bateria"]
         }}));
         assert!(matches!(c, Op::Create { .. }));
+        assert!(matches!(
+            op(json!({"op": "content_search", "id": "a"})),
+            Op::ContentSearch { offset: 0, .. }
+        ));
+        assert!(matches!(
+            op(json!({"op": "content_set_enabled", "id": "a", "file": "x.jar", "enabled": false})),
+            Op::ContentSetEnabled { enabled: false, .. }
+        ));
+        let b = op(json!({"op": "create", "req": {
+            "name": "S", "flavor": "paper", "mc_version": "1.21.1", "heap_mb": 2048,
+            "accept_eula": true, "warnings_accepted": [], "bedrock": true
+        }}));
+        assert!(matches!(b, Op::Create { req } if req.bedrock));
     }
 
     #[test]
@@ -306,6 +443,7 @@ mod tests {
                 jar: "paper.jar".into(),
                 created_unix_ms: 0,
                 playit: false,
+                bedrock: false,
             })
             .unwrap();
         std::fs::create_dir_all(api.phone.server_dir("x")).unwrap();
@@ -354,6 +492,7 @@ mod tests {
             heap_mb: 2_048,
             accept_eula: true,
             warnings_accepted: vec![],
+            bedrock: false,
         };
         let e = api.handle(&host, Op::Create { req }).unwrap_err();
         assert_eq!(e.code, "invalid_request");

@@ -611,6 +611,10 @@
   background: rgba(20, 30, 70, 0.064);
 }
 
+:root[data-mode="light"] .mobile-servers .content-row {
+  background: rgba(20, 30, 70, 0.064);
+}
+
 :root[data-mode="light"] .mobile-nav {
   background: rgba(255, 255, 255, 0.96);
 }

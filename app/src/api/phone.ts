@@ -3,7 +3,7 @@
 
 import { invoke } from "@tauri-apps/api/core";
 import { isPermissionGranted, requestPermission } from "@tauri-apps/plugin-notification";
-import type { BackupInfo, CatalogEntry, Flavor } from "./types";
+import type { BackupInfo, CatalogEntry, ContentPlan, Flavor, InstalledItem, Platform, SearchPage } from "./types";
 import { MercError } from "./types";
 
 /** Tipos que se pueden crear en el celular (no necesitan ejecutar un instalador de Java). */
@@ -40,6 +40,8 @@ export interface LocalServer {
   jar: string;
   created_unix_ms: number;
   playit: boolean;
+  /** Lleva Geyser y Floodgate: entran también jugadores de Bedrock. */
+  bedrock?: boolean;
 }
 
 export type LocalState = "stopped" | "starting" | "online" | "stopping";
@@ -50,6 +52,8 @@ export interface LocalStatus {
   eula_accepted: boolean;
   port: number | null;
   problem: string | null;
+  /** Puerto UDP de Geyser (jugadores de Bedrock), si está instalado. */
+  bedrock_port?: number | null;
 }
 
 export interface CreateProgress {
@@ -69,6 +73,8 @@ export interface PhonePlayit {
   agent: { phase: string; message: string | null; tunnels: { display_address: string; destination: string }[] } | null;
   claim: { url: string; state: ClaimState; done: boolean; error: string | null } | null;
   address: string | null;
+  /** Túnel UDP hacia Geyser, si existe. */
+  bedrock_address?: string | null;
   error: string | null;
 }
 
@@ -79,6 +85,21 @@ export interface CreateRequest {
   heap_mb: number;
   accept_eula: boolean;
   warnings_accepted: string[];
+  /** Instalar Geyser y Floodgate (solo Paper o Purpur). */
+  bedrock: boolean;
+}
+
+/** Mods o plugins que admite un servidor del celular (`null` en Vanilla). */
+export interface PhoneContentInfo {
+  platform: Platform | null;
+  mc_version: string;
+  running: boolean;
+}
+
+export interface PhoneContentProgress {
+  running: boolean;
+  done: number;
+  total: number;
 }
 
 export type PhoneOp =
@@ -102,7 +123,16 @@ export type PhoneOp =
   | { op: "remove"; id: string }
   | { op: "playit"; id: string | null }
   | { op: "playit_link" }
-  | { op: "playit_unlink" };
+  | { op: "playit_unlink" }
+  | { op: "content_info"; id: string }
+  | { op: "content_search"; id: string; query: string; offset: number }
+  | { op: "content_installed"; id: string }
+  | { op: "content_plan"; id: string; project: string }
+  | { op: "content_install"; id: string; version_id: string }
+  | { op: "content_progress" }
+  | { op: "content_cancel" }
+  | { op: "content_set_enabled"; id: string; file: string; enabled: boolean }
+  | { op: "content_remove"; id: string; file: string };
 
 export interface PhoneApi {
   info(): Promise<PhoneInfo>;
@@ -126,6 +156,15 @@ export interface PhoneApi {
   playit(id: string | null): Promise<PhonePlayit>;
   playitLink(): Promise<PhonePlayit["claim"]>;
   playitUnlink(): Promise<void>;
+  contentInfo(id: string): Promise<PhoneContentInfo>;
+  contentSearch(id: string, query: string, offset: number): Promise<SearchPage>;
+  contentInstalled(id: string): Promise<InstalledItem[]>;
+  contentPlan(id: string, project: string): Promise<{ version_id: string; plan: ContentPlan }>;
+  contentInstall(id: string, versionId: string): Promise<{ installed: string[] }>;
+  contentProgress(): Promise<PhoneContentProgress>;
+  contentCancel(): Promise<void>;
+  contentSetEnabled(id: string, file: string, enabled: boolean): Promise<{ file: string }>;
+  contentRemove(id: string, file: string): Promise<void>;
   /** Pide permiso de notificaciones (la del servidor encendido, con su botón Detener). */
   askNotifications(): Promise<boolean>;
 }
@@ -163,6 +202,15 @@ export function phoneApiFrom(send: (op: PhoneOp) => Promise<unknown>, askNotific
     playit: (id) => c({ op: "playit", id }),
     playitLink: () => c({ op: "playit_link" }),
     playitUnlink: () => c({ op: "playit_unlink" }),
+    contentInfo: (id) => c({ op: "content_info", id }),
+    contentSearch: (id, query, offset) => c({ op: "content_search", id, query, offset }),
+    contentInstalled: (id) => c({ op: "content_installed", id }),
+    contentPlan: (id, project) => c({ op: "content_plan", id, project }),
+    contentInstall: (id, version_id) => c({ op: "content_install", id, version_id }),
+    contentProgress: () => c({ op: "content_progress" }),
+    contentCancel: () => c({ op: "content_cancel" }),
+    contentSetEnabled: (id, file, enabled) => c({ op: "content_set_enabled", id, file, enabled }),
+    contentRemove: (id, file) => c({ op: "content_remove", id, file }),
     askNotifications,
   };
 }

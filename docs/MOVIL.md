@@ -29,7 +29,8 @@ Lo que **todavía no** hace:
   celular, y el celular rechaza esas peticiones. Hazlo desde MercHosting en una PC.
 - Escanear un código QR: el código se pega. Un lector QR necesitaría un complemento de terceros que
   no está verificado.
-- Hospedar un servidor **Bedrock** en el propio celular (ver abajo por qué).
+- Hospedar el servidor **oficial** de Bedrock en el propio celular (ver abajo por qué). Para
+  jugadores de Bedrock se crea un servidor «Java + Bedrock» con Geyser.
 - iOS: queda para el futuro. Hace falta una Mac, una cuenta de Apple Developer y pruebas en un iPhone.
 
 ## Seguridad
@@ -55,8 +56,25 @@ Lo que **todavía no** hace:
 
 ### Qué se puede
 
-- Tipos: **Paper** (recomendado), **Vanilla**, **Purpur** y **Fabric**, de Minecraft **1.18 en
-  adelante** (Java 17 para 1.18–1.20.4 y Java 21 para 1.20.5 en adelante).
+- Tipos: **Paper** (recomendado), **Java + Bedrock**, **Vanilla**, **Purpur** y **Fabric**, de
+  Minecraft **1.18 en adelante** (Java 17 para 1.18–1.20.4 y Java 21 para 1.20.5 en adelante).
+- **Java + Bedrock**: un Paper con **Geyser** y **Floodgate** (de GeyserMC, licencia MIT), instalados
+  desde Modrinth (proyectos `geyser` y `floodgate`) con la huella que publica Modrinth. Entran
+  jugadores de Java y de Bedrock (celular, consola, Windows) al mismo mundo; los de Bedrock no
+  necesitan cuenta de Java. **Antes de descargar nada** se comprueba que Geyser y Floodgate tengan
+  versión para el Minecraft elegido; si no, no se crea el servidor. Si falla la instalación de
+  Geyser, el servidor recién creado (vacío) se quita. Los jugadores de Bedrock entran por la IP del
+  celular y el puerto **UDP 19132** (o el de la configuración de Geyser). Por Internet hace falta un
+  segundo túnel en playit.gg, de tipo «Minecraft Bedrock» (UDP), hacia ese puerto. No hay addons
+  `.mcpack`: eso solo existe en el servidor oficial de Bedrock.
+- **Mods y plugins de Modrinth** (Paper y Purpur: plugins; Fabric: mods; Vanilla: nada). Buscar
+  (sin texto muestra lo más descargado para esa versión), instalar la versión estable más nueva que
+  sirva con sus dependencias obligatorias, activar/desactivar (renombra a `.disabled`) y quitar (va
+  a la papelera de la app). Se usa el mismo plan verificado que en la PC: todo se descarga a una
+  carpeta aparte, se comprueba con su huella y solo entonces se pone en `plugins/` o `mods/`; lo que
+  se reemplaza va a la papelera. Con el servidor encendido se puede buscar pero no cambiar nada.
+  **CurseForge** aparece desactivado con «Próximamente»: necesita una clave de API oficial, que no
+  va en la app.
 - Celulares **Android arm64** (casi todos los actuales) con **al menos 3 GB de memoria**. La memoria
   del servidor se limita según el celular: como mucho el 45 % de la memoria total y siempre dejando
   2 GB para Android (máximo 6 GB). Por defecto, un cuarto de la memoria.
@@ -70,8 +88,10 @@ Lo que **todavía no** hace:
 
 ### Qué NO se puede, y por qué
 
-- **Bedrock**: Mojang solo publica el servidor de Bedrock para Windows y Linux de 64 bits x86. No hay
-  versión para ARM ni para Android. Para Bedrock usa «Mis PCs».
+- **Servidor oficial de Bedrock**: Mojang solo lo publica para Windows y Linux de 64 bits x86. No hay
+  versión para ARM ni para Android. Correrlo con un emulador de x86 (Box64/QEMU) es lento e
+  inestable, así que no se ofrece. Para un Bedrock oficial con addons usa «Mis PCs»; en el celular
+  usa «Java + Bedrock».
 - **Forge, NeoForge, Quilt, Spigot y Arclight**: necesitan ejecutar un instalador o compilador de Java
   aparte (otro programa), y Android no deja ejecutar programas descargados (ver abajo).
 - **Minecraft 1.17 o anteriores**: necesitan Java 8 o 16; solo se ofrecen 17 y 21 para Android.
@@ -116,6 +136,7 @@ Además hay que aceptar la **EULA de Minecraft** (MercHosting nunca la acepta po
 |---|---|---|---|
 | Java 21 para Android | `https://github.com/AngelAuraMC/angelauramc-openjdk-build/releases/download/download_jre21/jre21-android-arm64.tar.xz` (el mismo que usa el lanzador Amethyst; su `release` dice `JAVA_VERSION="21.0.1"`, `OS_ARCH="aarch64"`) | SHA-256 `8d41ec401ee59f7722df60ed991f81ad146e130452804bfdd8a05d3436f7bbfe`, 28 675 516 bytes | GPLv2 con Classpath Exception (`legal/java.base/LICENSE` en el paquete) |
 | Java 17 para Android | `…/download_jre17/jre17-android-arm64.tar.xz` | SHA-256 `e162c860fe05ee4a4e4af7606437419879f6c748386a7b09fa77d10db6a64091`, 26 900 804 bytes | ídem |
+| Geyser y Floodgate | Catálogo de Modrinth (`api.modrinth.com/v2`, proyectos `geyser` y `floodgate`), la versión estable más nueva para Paper/Purpur y esa versión de Minecraft | SHA-1 que publica Modrinth para cada archivo | MIT (GeyserMC) |
 | Agente de Playit | Código oficial `https://github.com/playit-cloud/playit-agent`, etiqueta `v1.2.0`, commit `7acf13568a99707dda73028234fdb376e45b15da` (el workflow comprueba el commit), compilado para `aarch64-linux-android` con el NDK | — | BSD-2-Clause, © 2022 Developed Methods LLC (texto completo en la app › Ayuda) |
 
 - El Java **no va dentro del APK**: se descarga la primera vez que creas un servidor, se comprueba su
@@ -237,7 +258,12 @@ El workflow:
    Comprueba que el SHA-256 coincide con `SHA256SUMS.txt` antes de instalar.
 4. Para actualizar, instala el APK nuevo encima. Tiene que estar firmado con la misma clave.
 
-Requiere Android 7.0 (API 24) o superior.
+Requiere Android 7.0 (API 24) o superior y un celular de **64 bits (arm64)**.
+
+Si Android dice **«Se produjo un error durante el análisis del paquete»**, casi siempre el archivo
+no es el APK o llegó incompleto: descomprime primero el .zip del artefacto, pásalo por cable USB (o
+por WhatsApp como **Documento**, nunca como foto/video) y comprueba que pese lo mismo que en la PC.
+También sale en celulares con Android 6 o anterior, o de 32 bits.
 
 ## Qué no está probado todavía
 
@@ -266,6 +292,11 @@ Comprobado en Linux (no en Android):
 - Los dos Java para Android descargados se descomprimen con las reglas de seguridad y traen
   `libjli.so`, `libjvm.so` y las demás bibliotecas que se cargan.
 - `playitd` v1.2.0 compila desde su código con `--locked` (en Linux x86_64).
+
+- Catálogo y Geyser: la lógica (tipo → plugins/mods, Geyser obligatorio para la versión, quitar a
+  la papelera, plan con dependencias) se probó con un catálogo de prueba. **No** se probó contra la
+  API real de Modrinth desde este entorno (sin acceso a la red), ni que Geyser arranque dentro del
+  celular.
 
 **No** comprobado (no hay SDK/NDK de Android ni un celular en este entorno):
 

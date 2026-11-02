@@ -53,6 +53,9 @@ pub struct LocalServer {
     /// Si Playit se arranca junto con el servidor.
     #[serde(default)]
     pub playit: bool,
+    /// Lleva Geyser y Floodgate: entran también jugadores de Minecraft Bedrock.
+    #[serde(default)]
+    pub bedrock: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -74,6 +77,9 @@ pub struct LocalStatus {
     pub port: Option<u16>,
     /// Último problema reconocido en la consola (puerto ocupado, EULA…).
     pub problem: Option<String>,
+    /// Puerto UDP de Geyser para los jugadores de Bedrock (si Geyser está instalado).
+    #[serde(default)]
+    pub bedrock_port: Option<u16>,
 }
 
 /// Lo que se ve de este celular antes de crear nada.
@@ -101,6 +107,9 @@ pub struct CreateRequest {
     pub accept_eula: bool,
     /// Identificadores de [`warnings::REQUIRED`] que la persona marcó.
     pub warnings_accepted: Vec<String>,
+    /// Instalar Geyser y Floodgate (solo Paper o Purpur) para que entren jugadores de Bedrock.
+    #[serde(default)]
+    pub bedrock: bool,
 }
 
 pub struct Phone {
@@ -111,7 +120,7 @@ pub struct Phone {
     native_dir: Option<PathBuf>,
 }
 
-fn now_ms() -> i64 {
+pub(crate) fn now_ms() -> i64 {
     std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .map(|d| d.as_millis() as i64)
@@ -142,11 +151,16 @@ impl Phone {
         self.data.join("servidores.json")
     }
 
+    /// Carpeta privada de la app con todos los datos.
+    pub(crate) fn data(&self) -> &Path {
+        &self.data
+    }
+
     pub fn server_dir(&self, id: &str) -> PathBuf {
         self.data.join("servidores").join(id)
     }
 
-    fn run_dir(&self, id: &str) -> PathBuf {
+    pub(crate) fn run_dir(&self, id: &str) -> PathBuf {
         self.data.join("ejecucion").join(id)
     }
 
@@ -282,7 +296,12 @@ impl Phone {
         }
         if !flavor_allowed(req.flavor) {
             return Err(PhoneError::Unsupported(
-                "En el celular se pueden crear Vanilla, Paper, Purpur o Fabric. Bedrock solo funciona en una PC con Windows o Linux, y Forge, NeoForge y los demás necesitan ejecutar su instalador de Java, que aquí no se puede.".into(),
+                "En el celular se pueden crear Vanilla, Paper, Purpur o Fabric (y Java + Bedrock con Geyser). El servidor oficial de Bedrock solo existe para PC con Windows o Linux, y Forge, NeoForge y los demás necesitan ejecutar su instalador de Java, que aquí no se puede.".into(),
+            ));
+        }
+        if req.bedrock && !matches!(req.flavor, Flavor::Paper | Flavor::Purpur) {
+            return Err(PhoneError::Invalid(
+                "Para que entren jugadores de Bedrock el servidor tiene que ser Paper o Purpur (Geyser va como plugin).".into(),
             ));
         }
         let name = clean_name(&req.name)?;
@@ -301,11 +320,23 @@ impl Phone {
         &self,
         http: &Http,
         src: &Sources,
+        catalog: &dyn merc_content::modrinth::Source,
         req: &CreateRequest,
         progress: &mut dyn FnMut(&str, u64, Option<u64>),
         cancel: &AtomicBool,
     ) -> Result<LocalServer, PhoneError> {
         let (name, major, heap) = self.check_create(req)?;
+        // Antes de descargar nada: Geyser y Floodgate tienen que existir para esta versión.
+        let crossplay = if req.bedrock {
+            progress("Buscando Geyser y Floodgate", 0, None);
+            Some(crate::content::crossplay_versions(
+                catalog,
+                req.flavor,
+                &req.mc_version,
+            )?)
+        } else {
+            None
+        };
         progress("Descargando Java para Android", 0, None);
         self.ensure_jre(
             http,
@@ -347,6 +378,23 @@ impl Phone {
                 return Err(PhoneError::Io("No se encontró el .jar del servidor.".into()));
             }
         };
+        if let Some(versions) = crossplay {
+            progress("Instalando Geyser y Floodgate", 0, None);
+            if let Err(e) = crate::content::install_crossplay(
+                self,
+                http,
+                catalog,
+                &dir,
+                req.flavor,
+                &req.mc_version,
+                &versions,
+                cancel,
+            ) {
+                // Servidor recién creado y vacío: se quita para no dejar uno a medias.
+                let _ = std::fs::remove_dir_all(&dir);
+                return Err(e);
+            }
+        }
         let s = LocalServer {
             id,
             name,
@@ -357,6 +405,7 @@ impl Phone {
             jar,
             created_unix_ms: now_ms(),
             playit: false,
+            bedrock: req.bedrock,
         };
         let mut list = self.list();
         list.push(s.clone());
@@ -424,7 +473,7 @@ impl Phone {
         Ok(())
     }
 
-    fn pid(&self, id: &str) -> Option<u32> {
+    pub(crate) fn pid(&self, id: &str) -> Option<u32> {
         let t = std::fs::read_to_string(self.run_dir(id).join("servidor.pid")).ok()?;
         let pid: u32 = t.trim().parse().ok()?;
         alive(pid).then_some(pid)
@@ -534,6 +583,7 @@ impl Phone {
             eula_accepted: self.eula_accepted(id),
             port,
             problem,
+            bedrock_port: crate::content::bedrock_port(&self.server_dir(id)),
         })
     }
 
@@ -630,6 +680,7 @@ mod tests {
             heap_mb: 99_999,
             accept_eula: true,
             warnings_accepted: all_warnings(),
+            bedrock: false,
         }
     }
 
@@ -683,6 +734,7 @@ mod tests {
             jar: "paper.jar".into(),
             created_unix_ms: 0,
             playit: false,
+            bedrock: false,
         };
         p.register(s).unwrap();
         std::fs::create_dir_all(p.server_dir("abc")).unwrap();
@@ -730,6 +782,7 @@ mod tests {
             jar: "server.jar".into(),
             created_unix_ms: 0,
             playit: false,
+            bedrock: false,
         })
         .unwrap();
         let run = d.path().join("ejecucion/s1");
@@ -768,6 +821,7 @@ mod tests {
             jar: "server.jar".into(),
             created_unix_ms: 0,
             playit: false,
+            bedrock: false,
         })
         .unwrap();
         assert!(p.command("s2", "say hola").is_err(), "apagado");
@@ -804,6 +858,7 @@ mod tests {
             jar: "server.jar".into(),
             created_unix_ms: 0,
             playit: false,
+            bedrock: false,
         })
         .unwrap();
         let dir = p.server_dir("s3");
@@ -836,7 +891,14 @@ mod tests {
         let mut r = req(Flavor::Vanilla, "1.21.1");
         r.heap_mb = 1_024;
         let s = p
-            .create(&http, &src, &r, &mut |_, _, _| {}, &AtomicBool::new(false))
+            .create(
+                &http,
+                &src,
+                &merc_content::modrinth::Modrinth::new(&http, merc_content::modrinth::MODRINTH_API),
+                &r,
+                &mut |_, _, _| {},
+                &AtomicBool::new(false),
+            )
             .unwrap();
         assert_eq!(s.java_major, 21);
         assert!(p.eula_accepted(&s.id));
@@ -903,6 +965,7 @@ mod tests {
             jar: "falso.jar".into(),
             created_unix_ms: 0,
             playit: false,
+            bedrock: false,
         })
         .unwrap();
         let dir = p.server_dir("f1");

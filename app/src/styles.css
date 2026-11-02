@@ -5879,6 +5879,24 @@ select {
   gap: 2px;
 }
 
+/* Mods y plugins de un servidor del celular: nombre arriba, acciones debajo si no caben. */
+.mobile-servers .content-row {
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px 12px;
+  padding: 10px 12px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--line-strong);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.mobile-servers .content-row > span:first-child {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  flex: 1 1 200px;
+}
+
 .mobile-nav {
   position: fixed;
   left: 0;
