@@ -136,6 +136,11 @@ pub fn extract_tar_gz(file: &Path, dest: &Path) -> Result<PathBuf, InstallError>
 /// extrae con las mismas reglas. No busca `bin/java`: quien llama comprueba lo que necesita.
 pub fn extract_tar_xz(file: &Path, dest: &Path) -> Result<(), InstallError> {
     let io = |e: std::io::Error| InstallError::Io(e.to_string());
+    // La carpeta de destino puede no existir todavía (la primera vez en el celular, `jre/`): el
+    // tar temporal va a su lado, así que se crea antes.
+    if let Some(parent) = dest.parent() {
+        std::fs::create_dir_all(parent).map_err(|e| InstallError::Io(format!("{}: {e}", parent.display())))?;
+    }
     let tmp = dest.with_extension("tar.tmp");
     let result = (|| {
         let mut input = std::io::BufReader::new(std::fs::File::open(file).map_err(io)?);
@@ -272,6 +277,31 @@ mod tests {
     use super::*;
     use serde_json::json;
     use std::io::Write;
+
+    #[test]
+    fn extracts_tar_xz_into_a_folder_that_does_not_exist_yet() {
+        let d = tempfile::tempdir().unwrap();
+        let mut tar_bytes = vec![];
+        {
+            let mut b = tar::Builder::new(&mut tar_bytes);
+            let data = b"hola";
+            let mut h = tar::Header::new_gnu();
+            h.set_size(data.len() as u64);
+            h.set_mode(0o644);
+            h.set_cksum();
+            b.append_data(&mut h, "lib/libjli.so", &data[..]).unwrap();
+            b.finish().unwrap();
+        }
+        let mut xz = vec![];
+        lzma_rs::xz_compress(&mut &tar_bytes[..], &mut xz).unwrap();
+        let file = d.path().join("jre21.tar.xz");
+        std::fs::write(&file, xz).unwrap();
+        // Ni `jre/` ni `jre/21.nuevo` existen, como la primera vez en el celular.
+        let dest = d.path().join("jre").join("21.nuevo");
+        extract_tar_xz(&file, &dest).unwrap();
+        assert_eq!(std::fs::read(dest.join("lib/libjli.so")).unwrap(), b"hola");
+        assert!(!d.path().join("jre/21.tar.tmp").exists());
+    }
 
     #[test]
     fn picks_the_windows_jre_zip() {

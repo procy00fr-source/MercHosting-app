@@ -57,7 +57,7 @@ Lo que **todavía no** hace:
 ### Qué se puede
 
 - Tipos: **Paper** (recomendado), **Java + Bedrock**, **Vanilla**, **Purpur** y **Fabric**, de
-  Minecraft **1.18 en adelante** (Java 17 para 1.18–1.20.4 y Java 21 para 1.20.5 en adelante).
+  Minecraft **de la 1.18 a la 1.21** (Java 17 para 1.18–1.20.4 y Java 21 para 1.20.5–1.21.x). Las 26.x piden Java 25 y todavía no hay uno verificado para Android.
 - **Java + Bedrock**: un Paper con **Geyser** y **Floodgate** (de GeyserMC, licencia MIT), instalados
   desde Modrinth (proyectos `geyser` y `floodgate`) con la huella que publica Modrinth. Entran
   jugadores de Java y de Bedrock (celular, consola, Windows) al mismo mundo; los de Bedrock no

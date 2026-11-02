@@ -369,7 +369,10 @@ function PhoneCreate({
                 ))}
               </select>
             )}
-            <span className="field-help">En el celular se ofrecen de la 1.18 en adelante (Java 17 y 21 para Android).</span>
+            <span className="field-help">
+              En el celular se ofrecen de la 1.18 a la 1.21 (Java 17 y 21 para Android). Las 26.x piden Java 25, que todavía no
+              hay verificado para Android.
+            </span>
           </label>
           <label className="field">
             <span className="field-title">Memoria para el servidor: {ram} MB</span>

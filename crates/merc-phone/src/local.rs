@@ -278,7 +278,11 @@ impl Phone {
             ));
         }
         let _ = std::fs::remove_dir_all(&dest);
-        std::fs::rename(&tmp, &dest)?;
+        if let Some(parent) = dest.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+        std::fs::rename(&tmp, &dest)
+            .map_err(|e| PhoneError::Io(format!("{} → {}: {e}", tmp.display(), dest.display())))?;
         Ok(dest)
     }
 
@@ -307,7 +311,7 @@ impl Phone {
         let name = clean_name(&req.name)?;
         let major = assets::jre_major_for(&req.mc_version).ok_or_else(|| {
             PhoneError::Unsupported(format!(
-                "Minecraft {} necesita un Java que no está disponible en el celular (se ofrecen de la 1.18 en adelante).",
+                "Minecraft {} necesita un Java que no está disponible en el celular (se ofrecen de la 1.18 a la 1.21; las 26.x piden Java 25, que todavía no hay verificado para Android).",
                 req.mc_version
             ))
         })?;

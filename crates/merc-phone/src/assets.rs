@@ -49,12 +49,13 @@ pub fn supported_arch(arch: &str) -> bool {
     matches!(arch, "aarch64" | "arm64" | "arm64-v8a")
 }
 
-/// Java que necesita una versión de Minecraft en el celular: 21 (1.20.5 en adelante) o 17
-/// (1.18 a 1.20.4). Las anteriores piden Java 8 o 16 y no se ofrecen en el celular.
+/// Java que necesita una versión de Minecraft en el celular: 21 (1.20.5 a 1.21.x) o 17
+/// (1.18 a 1.20.4). Las anteriores piden Java 8 o 16, y las 26.x piden Java 25: ninguno de
+/// esos tiene un Java para Android verificado, así que no se ofrecen en el celular.
 pub fn jre_major_for(mc_version: &str) -> Option<u32> {
     let req = merc_core::java::required_java(mc_version)?;
     match req.min_major {
-        21.. => Some(21),
+        21..=24 => Some(21),
         17..=20 => Some(17),
         _ => None,
     }
@@ -84,6 +85,7 @@ mod tests {
         assert_eq!(jre_major_for("1.18.2"), Some(17));
         assert_eq!(jre_major_for("1.17.1"), None);
         assert_eq!(jre_major_for("1.12.2"), None);
+        assert_eq!(jre_major_for("26.3"), None, "las 26.x piden Java 25");
     }
 
     #[test]
