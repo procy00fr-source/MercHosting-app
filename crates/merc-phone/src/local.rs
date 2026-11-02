@@ -563,6 +563,11 @@ impl Phone {
         // properties» › Paper.IgnoreJavaVersion).
         if matches!(s.flavor, Flavor::Paper | Flavor::Purpur) {
             args.push("-DPaper.IgnoreJavaVersion=true".to_string());
+            // Paper comprime y cifra la conexión con las bibliotecas nativas de Velocity (hechas
+            // para Linux de PC). En Android el jugador se quedaba en «Joining world» con Paper y
+            // no con Vanilla: se usan las de Java, como Vanilla (docs.papermc.io, Velocity ›
+            // System properties › velocity.natives-disabled).
+            args.push("-Dvelocity.natives-disabled=true".to_string());
         }
         args.extend(["-jar".to_string(), s.jar.clone(), "nogui".to_string()]);
         Ok(LaunchSpec {
@@ -873,6 +878,7 @@ mod tests {
             spec.args.contains(&"-DPaper.IgnoreJavaVersion=true".to_string()),
             "Paper con el Java «internal» de Android"
         );
+        assert!(spec.args.contains(&"-Dvelocity.natives-disabled=true".to_string()));
         assert!(spec
             .args
             .iter()

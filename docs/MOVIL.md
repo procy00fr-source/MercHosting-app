@@ -153,6 +153,11 @@ Paper se cierra con «Unsupported Java detected». En Paper y Purpur se añade
 `-DPaper.IgnoreJavaVersion=true`, la propiedad que documenta Paper para saltarse ese chequeo (Paper
 avisa de que entonces no da soporte). Vanilla y Fabric no hacen ese chequeo.
 
+Además, con Paper el jugador se quedaba en «Joining world» (Vanilla entraba bien y el servidor
+respondía a `list`). Paper comprime y cifra la conexión con las bibliotecas nativas de Velocity,
+hechas para Linux de PC; en Paper y Purpur se añade `-Dvelocity.natives-disabled=true` para usar
+las de Java, como Vanilla.
+
 ### De dónde sale cada cosa (verificado)
 
 | Qué | Origen | Huella / versión | Licencia |
