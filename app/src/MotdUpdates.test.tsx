@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { App } from "./App";
@@ -23,6 +23,10 @@ describe("MOTD e icono", () => {
     await user.clear(l1);
     await user.click(w.getByRole("button", { name: "Color Dorado" }));
     await user.click(w.getByRole("button", { name: "Negrita" }));
+    // El editor coloca el cursor tras «&6&l» en el siguiente cuadro (requestAnimationFrame). Si
+    // ese cuadro llega mientras se escribe (pasa en máquinas lentas), devuelve el cursor atrás y
+    // las letras quedan fuera de orden: se espera un cuadro antes de escribir.
+    await act(() => new Promise<void>((r) => requestAnimationFrame(() => r())));
     await user.type(l1, "Mi Server");
     expect(l1).toHaveValue("&6&lMi Server");
     await user.type(w.getByLabelText("Línea 2"), "&7Entra ya");
