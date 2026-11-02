@@ -45,9 +45,14 @@ pub fn url_allowed(url: &str) -> bool {
 
 impl Http {
     pub fn new() -> Self {
-        let tls = ureq::tls::TlsConfig::builder()
-            .root_certs(ureq::tls::RootCerts::PlatformVerifier)
-            .build();
+        // En Android el verificador del sistema necesita un componente de Kotlin y una
+        // inicialización por JNI; sin eso entra en pánico («Expect rustls-platform-verifier to be
+        // initialized»). Ahí se usan las raíces de Mozilla (webpki-roots) que trae ureq.
+        #[cfg(target_os = "android")]
+        let roots = ureq::tls::RootCerts::WebPki;
+        #[cfg(not(target_os = "android"))]
+        let roots = ureq::tls::RootCerts::PlatformVerifier;
+        let tls = ureq::tls::TlsConfig::builder().root_certs(roots).build();
         let agent: ureq::Agent = ureq::Agent::config_builder()
             .user_agent(USER_AGENT)
             .tls_config(tls)
