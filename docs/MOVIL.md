@@ -130,6 +130,15 @@ Además hay que aceptar la **EULA de Minecraft** (MercHosting nunca la acepta po
   de la app (`celular/`). Si desinstalas la app o borras sus datos, **se borran los mundos**: haz
   copias y guárdalas fuera si te importan.
 
+### Etiquetado de punteros (Android 11+)
+
+En celulares arm64 con Android 11 o más nuevo, el asignador de memoria pone una etiqueta en el
+byte alto de cada puntero. La JVM de escritorio (HotSpot) guarda punteros sin ese byte y, al
+liberarlos, Android aborta el proceso con «Pointer tag for 0x… was truncated». Por eso el
+manifiesto del plugin pone `android:allowNativeHeapPointerTagging="false"` en `<application>` (se
+une al manifiesto de la app al compilar). Es lo mismo que hacen los lanzadores de Minecraft Java
+para Android.
+
 ### De dónde sale cada cosa (verificado)
 
 | Qué | Origen | Huella / versión | Licencia |

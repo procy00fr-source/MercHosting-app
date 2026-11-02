@@ -10,7 +10,13 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
-    <application>
+    <!--
+      La JVM de escritorio (HotSpot) guarda punteros sin el byte alto. En Android 11+ arm64 el
+      asignador de memoria pone una etiqueta en ese byte, y al liberar un puntero sin etiqueta el
+      sistema aborta el proceso («Pointer tag for 0x… was truncated»). Se desactiva el etiquetado
+      para toda la app: https://source.android.com/docs/security/test/tagged-pointers
+    -->
+    <application android:allowNativeHeapPointerTagging="false">
         <!--
           Proceso propio (":server"): la JVM del servidor se carga ahí con dlopen + JLI_Launch.
           Si el servidor se cae o Android lo cierra, la app no se cae con él.
