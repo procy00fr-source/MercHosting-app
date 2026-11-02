@@ -139,6 +139,13 @@ manifiesto del plugin pone `android:allowNativeHeapPointerTagging="false"` en `<
 une al manifiesto de la app al compilar). Es lo mismo que hacen los lanzadores de Minecraft Java
 para Android.
 
+### Red: sin transporte nativo
+
+El transporte de red nativo de Minecraft (epoll de Netty) está hecho para Linux de PC. En el
+celular el juego se quedaba en «Pinging…» y «Joining». Por eso cada servidor del celular arranca
+con `use-native-transport=false` en `server.properties` (se pone antes de cada encendido, sin tocar
+las demás líneas) y con `-Dio.netty.transport.noNative=true`.
+
 ### Paper y el Java «internal»
 
 El Java para Android dice ser `21.0.1-internal` (no es una versión de disponibilidad general) y

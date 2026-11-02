@@ -127,6 +127,36 @@ pub(crate) fn now_ms() -> i64 {
         .unwrap_or(0)
 }
 
+/// En Android el transporte de red nativo de Minecraft (epoll de Netty, hecho para Linux de PC)
+/// puede aceptar conexiones y no responder nunca: el juego se queda en «Pinging…» y «Joining».
+/// Se apaga con la opción oficial `use-native-transport=false` (las demás líneas no se tocan).
+fn ensure_android_properties(dir: &Path) -> Result<(), PhoneError> {
+    let path = dir.join("server.properties");
+    let text = std::fs::read_to_string(&path).unwrap_or_default();
+    let mut found = false;
+    let mut out: Vec<String> = text
+        .lines()
+        .map(|l| {
+            if l.trim_start().starts_with("use-native-transport=") {
+                found = true;
+                "use-native-transport=false".to_string()
+            } else {
+                l.to_string()
+            }
+        })
+        .collect();
+    if !found {
+        out.push("use-native-transport=false".to_string());
+    }
+    let new = out.join("\n") + "\n";
+    if new != text {
+        let tmp = dir.join("server.properties.merchosting.tmp");
+        std::fs::write(&tmp, new)?;
+        std::fs::rename(&tmp, &path)?;
+    }
+    Ok(())
+}
+
 /// Nombre visible válido.
 fn clean_name(name: &str) -> Result<String, PhoneError> {
     merc_core::instance::validate_instance_name(name).map_err(|e| PhoneError::Invalid(e.into()))
@@ -356,6 +386,8 @@ impl Phone {
         properties.insert("max-players".to_string(), "5".to_string());
         properties.insert("view-distance".to_string(), "6".to_string());
         properties.insert("simulation-distance".to_string(), "5".to_string());
+        // Ver `ensure_android_properties`.
+        properties.insert("use-native-transport".to_string(), "false".to_string());
         let plan = merc_install::InstallPlan {
             resolved,
             target: dir.clone(),
@@ -507,6 +539,7 @@ impl Phone {
         let run = self.run_dir(id);
         std::fs::create_dir_all(&run)?;
         let work = self.server_dir(id);
+        ensure_android_properties(&work)?;
         let tmp = work.join(".tmp");
         std::fs::create_dir_all(&tmp)?;
         let mut args = vec![
@@ -515,6 +548,8 @@ impl Phone {
             format!("-Xmx{}M", s.heap_mb),
             // Android no tiene /tmp: sin esto la JVM intenta crear ahí sus datos de rendimiento.
             "-XX:-UsePerfData".to_string(),
+            // Netty: solo la red estándar de Java (los transportes nativos son para Linux de PC).
+            "-Dio.netty.transport.noNative=true".to_string(),
             // Si la JVM se cae, su informe queda junto a la consola y la app lo muestra.
             format!("-XX:ErrorFile={}", run.join("fallo_java_%p.log").display()),
             format!("-Djava.io.tmpdir={}", tmp.display()),
@@ -742,6 +777,27 @@ mod tests {
     }
 
     #[test]
+    fn native_transport_off_keeps_other_lines() {
+        let d = tempfile::tempdir().unwrap();
+        std::fs::write(
+            d.path().join("server.properties"),
+            "motd=Hola\nuse-native-transport=true\nserver-port=25565\n",
+        )
+        .unwrap();
+        ensure_android_properties(d.path()).unwrap();
+        assert_eq!(
+            std::fs::read_to_string(d.path().join("server.properties")).unwrap(),
+            "motd=Hola\nuse-native-transport=false\nserver-port=25565\n"
+        );
+        let e = tempfile::tempdir().unwrap();
+        ensure_android_properties(e.path()).unwrap();
+        assert_eq!(
+            std::fs::read_to_string(e.path().join("server.properties")).unwrap(),
+            "use-native-transport=false\n"
+        );
+    }
+
+    #[test]
     fn info_reports_why_not() {
         let d = tempfile::tempdir().unwrap();
         let p = Phone::new(d.path().into(), "x86_64", 8_192, None);
@@ -810,6 +866,9 @@ mod tests {
         assert_eq!(spec.jre, p.jre_dir(21));
         assert!(spec.companion.is_none());
         assert!(spec.args.contains(&"-XX:-UsePerfData".to_string()));
+        assert!(spec.args.contains(&"-Dio.netty.transport.noNative=true".to_string()));
+        let props = std::fs::read_to_string(p.server_dir("abc").join("server.properties")).unwrap();
+        assert!(props.lines().any(|l| l == "use-native-transport=false"), "{props}");
         assert!(
             spec.args.contains(&"-DPaper.IgnoreJavaVersion=true".to_string()),
             "Paper con el Java «internal» de Android"
