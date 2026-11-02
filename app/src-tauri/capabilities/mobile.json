@@ -1,0 +1,54 @@
+{
+  "$schema": "../gen/schemas/mobile-schema.json",
+  "identifier": "movil",
+  "description": "Permisos de la app del celular: notificaciones y abrir en el navegador solo las páginas oficiales (vincular Playit, la EULA, las páginas de mods). Sin diálogos de archivos ni iconos de ventana.",
+  "platforms": [
+    "android",
+    "iOS"
+  ],
+  "windows": [
+    "main"
+  ],
+  "permissions": [
+    "core:default",
+    "notification:default",
+    {
+      "identifier": "opener:allow-open-url",
+      "allow": [
+        {
+          "url": "https://aka.ms/MinecraftEULA"
+        },
+        {
+          "url": "https://modrinth.com/*"
+        },
+        {
+          "url": "https://www.curseforge.com/*"
+        },
+        {
+          "url": "https://hangar.papermc.io/*"
+        },
+        {
+          "url": "https://playit.gg/*"
+        },
+        {
+          "url": "https://gumroad.com/*"
+        },
+        {
+          "url": "https://*.gumroad.com/*"
+        },
+        {
+          "url": "https://www.youtube.com/@Amercson"
+        },
+        {
+          "url": "https://www.tiktok.com/@amercfr"
+        },
+        {
+          "url": "https://docs.google.com/forms/d/e/*"
+        },
+        {
+          "url": "https://github.com/procy00fr-source/*"
+        }
+      ]
+    }
+  ]
+}

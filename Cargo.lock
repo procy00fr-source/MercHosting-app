@@ -785,6 +785,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "crc"
+version = "3.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5eb8a2a1cd12ab0d987a5d5e825195d372001a4094a0376319d5a0ad71c1ba0d"
+dependencies = [
+ "crc-catalog",
+]
+
+[[package]]
+name = "crc-catalog"
+version = "2.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "217698eaf96b4a3f0bc4f3662aaa55bdf913cd54d7204591faa790070c6d0853"
+
+[[package]]
 name = "crc32fast"
 version = "1.5.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2930,6 +2945,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4050469837a6ff301cd14c1f8f24f88549e6d548f24f64e2148eb0f72cebc51f"
 
 [[package]]
+name = "lzma-rs"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "297e814c836ae64db86b36cf2a557ba54368d03f6afcd7d947c266692f71115e"
+dependencies = [
+ "byteorder",
+ "crc",
+]
+
+[[package]]
 name = "mac-addr"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2996,7 +3021,7 @@ dependencies = [
 
 [[package]]
 name = "merc-admin"
-version = "0.2.4"
+version = "0.1.0"
 dependencies = [
  "chrono",
  "flate2",
@@ -3015,7 +3040,7 @@ dependencies = [
 
 [[package]]
 name = "merc-content"
-version = "0.2.4"
+version = "0.1.0"
 dependencies = [
  "merc-core",
  "merc-install",
@@ -3030,7 +3055,7 @@ dependencies = [
 
 [[package]]
 name = "merc-core"
-version = "0.2.4"
+version = "0.1.0"
 dependencies = [
  "regex",
  "serde",
@@ -3042,8 +3067,10 @@ dependencies = [
 
 [[package]]
 name = "merc-install"
-version = "0.2.4"
+version = "0.1.0"
 dependencies = [
+ "flate2",
+ "lzma-rs",
  "md-5",
  "merc-core",
  "regex",
@@ -3051,6 +3078,7 @@ dependencies = [
  "serde_json",
  "sha1",
  "sha2 0.10.9",
+ "tar",
  "tempfile",
  "thiserror 2.0.21",
  "ureq",
@@ -3059,7 +3087,7 @@ dependencies = [
 
 [[package]]
 name = "merc-ipc"
-version = "0.2.4"
+version = "0.1.0"
 dependencies = [
  "interprocess",
  "merc-admin",
@@ -3079,7 +3107,7 @@ dependencies = [
 
 [[package]]
 name = "merc-net"
-version = "0.2.4"
+version = "0.1.0"
 dependencies = [
  "interprocess",
  "merc-install",
@@ -3090,8 +3118,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "merc-phone"
+version = "0.1.0"
+dependencies = [
+ "libc",
+ "merc-admin",
+ "merc-core",
+ "merc-install",
+ "merc-net",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror 2.0.21",
+ "uuid",
+]
+
+[[package]]
 name = "merc-remote"
-version = "0.2.4"
+version = "0.1.0"
 dependencies = [
  "base64 0.22.1",
  "iroh",
@@ -3100,13 +3144,14 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2 0.10.9",
+ "tempfile",
  "thiserror 2.0.21",
  "tokio",
 ]
 
 [[package]]
 name = "merc-store"
-version = "0.2.4"
+version = "0.1.0"
 dependencies = [
  "merc-core",
  "rusqlite",
@@ -3118,7 +3163,7 @@ dependencies = [
 
 [[package]]
 name = "merc-supervisor"
-version = "0.2.4"
+version = "0.1.0"
 dependencies = [
  "merc-core",
  "serde",
@@ -3131,10 +3176,11 @@ dependencies = [
 
 [[package]]
 name = "merc-supervisord"
-version = "0.2.4"
+version = "0.1.0"
 dependencies = [
  "base64 0.22.1",
  "chrono",
+ "flate2",
  "image",
  "interprocess",
  "merc-admin",
@@ -3151,6 +3197,7 @@ dependencies = [
  "sha1",
  "sha2 0.10.9",
  "sysinfo",
+ "tar",
  "tempfile",
  "trash",
  "uuid",
@@ -3160,15 +3207,20 @@ dependencies = [
 
 [[package]]
 name = "merchosting-app"
-version = "0.2.4"
+version = "0.1.0"
 dependencies = [
+ "jni 0.21.1",
  "merc-core",
+ "merc-install",
  "merc-ipc",
+ "merc-phone",
+ "merc-remote",
  "serde",
  "serde_json",
  "tauri",
  "tauri-build",
  "tauri-plugin-dialog",
+ "tauri-plugin-mercphone",
  "tauri-plugin-notification",
  "tauri-plugin-opener",
  "tauri-plugin-updater",
@@ -5743,6 +5795,16 @@ dependencies = [
  "thiserror 2.0.21",
  "toml 1.1.8+spec-1.1.0",
  "url",
+]
+
+[[package]]
+name = "tauri-plugin-mercphone"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "tauri",
+ "tauri-plugin",
 ]
 
 [[package]]

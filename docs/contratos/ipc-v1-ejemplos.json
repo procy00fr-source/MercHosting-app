@@ -123,6 +123,10 @@
       "op": "catalog"
     },
     {
+      "flavor": "bedrock",
+      "op": "catalog"
+    },
+    {
       "flavor": "arclight",
       "op": "catalog"
     },
@@ -414,6 +418,11 @@
       "op": "test_address"
     },
     {
+      "address": "147.185.221.20:19132",
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "op": "test_bedrock_address"
+    },
+    {
       "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
       "op": "set_voice_config",
       "port": 24455,
@@ -515,6 +524,67 @@
     },
     {
       "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "op": "addons"
+    },
+    {
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "op": "bedrock_players"
+    },
+    {
+      "change": {
+        "ignores_player_limit": false,
+        "name": "Steve Craft",
+        "type": "add"
+      },
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "op": "bedrock_allowlist"
+    },
+    {
+      "change": {
+        "name": "Alex",
+        "type": "remove"
+      },
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "op": "bedrock_allowlist"
+    },
+    {
+      "change": {
+        "name": "Alex",
+        "type": "set_ignores_limit",
+        "value": true
+      },
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "op": "bedrock_allowlist"
+    },
+    {
+      "enabled": true,
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "op": "bedrock_allowlist_enabled"
+    },
+    {
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "level": "operator",
+      "op": "bedrock_permission",
+      "xuid": "2535428000000000"
+    },
+    {
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "op": "addon_import",
+      "source": "C:/Users/amir/Downloads/dragones.mcaddon"
+    },
+    {
+      "active": false,
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "op": "addon_set_active",
+      "uuid": "11111111-2222-3333-4444-555555555555"
+    },
+    {
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "op": "addon_remove",
+      "uuid": "11111111-2222-3333-4444-555555555555"
+    },
+    {
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
       "op": "mod_sides"
     },
     {
@@ -574,6 +644,10 @@
     {
       "enabled": true,
       "op": "set_startup"
+    },
+    {
+      "enabled": true,
+      "op": "set_keep_awake"
     },
     {
       "op": "supporter"
@@ -638,6 +712,10 @@
         "status",
         "console_read"
       ]
+    },
+    {
+      "minutes": 60,
+      "op": "create_host_invite"
     },
     {
       "invite_id": "a1b2c3d4e5f6",
@@ -923,6 +1001,47 @@
             },
             "loader_version": "21.1.259",
             "mc_version": "1.21.1",
+            "name": "Mi servidor",
+            "root": "C:\\Users\\ejemplo\\Servidores\\neoforge"
+          },
+          "status": {
+            "has_console": false,
+            "hint": "El servidor terminó inesperadamente (código 1).",
+            "last_exit": {
+              "at_unix_ms": 2,
+              "code": 1,
+              "forced": false,
+              "requested": false
+            },
+            "log_file": null,
+            "online_at_unix_ms": null,
+            "pid": null,
+            "port": null,
+            "started_at_unix_ms": 1,
+            "state": "CRASHED"
+          }
+        },
+        {
+          "archived": false,
+          "configured_port": 19132,
+          "eula_accepted": true,
+          "instance": {
+            "created_at_unix": 1793300000,
+            "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+            "imported": true,
+            "kind": "bedrock",
+            "launch": {
+              "extra_jvm_args": [],
+              "java": "",
+              "max_memory_mb": 4096,
+              "min_memory_mb": 0,
+              "target": {
+                "exe": "bedrock_server.exe",
+                "type": "native"
+              }
+            },
+            "loader_version": null,
+            "mc_version": "1.21.124.2",
             "name": "Mi servidor",
             "root": "C:\\Users\\ejemplo\\Servidores\\neoforge"
           },
@@ -1366,6 +1485,41 @@
     },
     {
       "data": {
+        "bedrock": {
+          "config": "plugins/Geyser-Spigot/config.yml",
+          "floodgate": "plugins/floodgate-spigot.jar",
+          "floodgate_enabled": true,
+          "geyser": "plugins/Geyser-Spigot.jar",
+          "geyser_enabled": true,
+          "lan": [
+            "192.168.1.20:19132"
+          ],
+          "port": 19132,
+          "port_from_config": true,
+          "tests": [
+            {
+              "address": "147.185.221.20:19132",
+              "at_unix_ms": 1793300300000,
+              "error": null,
+              "result": {
+                "latency_ms": 52,
+                "motd": "Survival de Amir",
+                "players_max": 20,
+                "players_online": 1,
+                "tested": "147.185.221.20:19132",
+                "version": "Bedrock 1.21.40"
+              }
+            }
+          ],
+          "tunnels": [
+            {
+              "destination": "127.0.0.1:19132",
+              "disabled_reason": null,
+              "display_address": "147.185.221.20:19132",
+              "is_disabled": false
+            }
+          ]
+        },
         "lan": [
           "192.168.1.20:25565"
         ],
@@ -1498,7 +1652,8 @@
           "note": "Construyó el castillo",
           "online_since_unix": 1793303600,
           "sessions": 3,
-          "total_secs": 5400
+          "total_secs": 5400,
+          "xuid": null
         }
       ],
       "kind": "player_history"
@@ -1557,6 +1712,75 @@
         }
       },
       "kind": "luck_perms"
+    },
+    {
+      "data": {
+        "allow_list_enabled": true,
+        "allowlist": [
+          {
+            "ignores_player_limit": false,
+            "name": "Steve Craft",
+            "xuid": "2535428000000000"
+          }
+        ],
+        "default_permission": "member",
+        "known": [
+          {
+            "last_seen_unix": 1793303600,
+            "name": "Steve Craft",
+            "online": true,
+            "xuid": "2535428000000000"
+          }
+        ],
+        "legacy_whitelist": false,
+        "online": [
+          "Steve Craft"
+        ],
+        "online_mode": true,
+        "permissions": [
+          {
+            "level": "operator",
+            "name": "Steve Craft",
+            "xuid": "2535428000000000"
+          }
+        ],
+        "running": true
+      },
+      "kind": "bedrock_players"
+    },
+    {
+      "data": {
+        "last_import": {
+          "installed": [
+            "Dragones 1.1.0"
+          ],
+          "notes": [
+            "«Dragones» usa scripts."
+          ],
+          "replaced": [],
+          "unchanged": []
+        },
+        "level_name": "Bedrock level",
+        "packs": [
+          {
+            "active": true,
+            "bundled": false,
+            "description": "Dragones que vuelan",
+            "folder": "behavior_packs/Dragones_11111111",
+            "kind": "behavior",
+            "name": "Dragones",
+            "scripts": true,
+            "uuid": "11111111-2222-3333-4444-555555555555",
+            "version": [
+              1,
+              1,
+              0
+            ]
+          }
+        ],
+        "world_exists": true
+      },
+      "kind": "addons"
     },
     {
       "data": {
@@ -1679,6 +1903,8 @@
         "auto_restart": true,
         "autostart": false,
         "gave_up": false,
+        "keep_awake": true,
+        "keep_awake_active": true,
         "max_restarts": 3,
         "recent_restarts": 1,
         "startup_available": true,
@@ -1850,6 +2076,7 @@
             "companion": "abababababababababababababababababababababababababababababababab",
             "connected": true,
             "fingerprint": "MNOP-QRST-UVWX",
+            "host_admin": false,
             "last_seen_unix_ms": 1793300400000,
             "name": "Shandé",
             "servers": [
@@ -1871,6 +2098,7 @@
           {
             "created_at_unix_ms": 1793300300000,
             "expires_at_unix_ms": 1793303900000,
+            "host_admin": false,
             "invite_id": "a1b2c3d4e5f6",
             "perms": [
               "status"
@@ -1889,6 +2117,7 @@
         "invite": {
           "created_at_unix_ms": 1793300300000,
           "expires_at_unix_ms": 1793303900000,
+          "host_admin": false,
           "invite_id": "a1b2c3d4e5f6",
           "perms": [
             "status"
@@ -1904,6 +2133,7 @@
         {
           "fingerprint": "ABCD-EFGH-IJKL",
           "host": "cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd",
+          "host_admin": true,
           "last_error": null,
           "last_ok_unix_ms": 1793300400000,
           "name": "PC-DE-AMIR",

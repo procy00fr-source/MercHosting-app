@@ -3,7 +3,12 @@
 
 import type { FileDropEvent, MercApi } from "../api/client";
 import type {
+  AddonImportResult,
+  AddonPack,
+  AddonsInfo,
+  BedrockPlayersInfo,
   AppUpdateCheck,
+  BedrockInfo,
   FriendPackPlan,
   ModSidesInfo,
   ModpackStatusInfo,
@@ -214,6 +219,8 @@ export class FakeApi implements MercApi {
     autostart: false,
     startup_available: true,
     startup_enabled: false,
+    keep_awake: false,
+    keep_awake_active: false,
   };
   autostartIds = new Set<string>();
   playerCommands: { name: string; command: PlayerCommand }[] = [];
@@ -265,6 +272,7 @@ export class FakeApi implements MercApi {
       { mc_version: "1.21.1", java_major: 21, latest: false },
     ],
     neo_forge: [{ mc_version: "1.21.1", java_major: 21, latest: true }],
+    bedrock: [{ mc_version: "1.21.124.2", java_major: 0, latest: true }],
   };
   catalogFails = 0;
   /** Carpetas que "ya tienen archivos". */
@@ -326,7 +334,38 @@ export class FakeApi implements MercApi {
   uploadSource: string | null = "C:\\Users\\ana\\Downloads\\mod.jar";
   savePath: string | null = "C:\\Users\\ana\\Desktop\\copia.txt";
 
+  /** Lo que devuelve el selector al elegir un addon de Bedrock. */
+  addonSource: string | null = "C:\\Users\\ana\\Downloads\\dragones.mcaddon";
+  /** Addons del servidor Bedrock simulado; `addonImports` = packs que trae cada archivo. */
+  bedrockPlayersState: BedrockPlayersInfo = {
+    allow_list_enabled: false,
+    online_mode: true,
+    default_permission: "member",
+    legacy_whitelist: false,
+    running: false,
+    allowlist: [],
+    permissions: [],
+    known: [],
+    online: [],
+  };
+  private bedrockPlayersData(id: string) {
+    const s = this.find(id);
+    if (s.instance.kind !== "bedrock") throw new MercError("bad_request", "Esta pantalla es para servidores Bedrock; en Java se usa la de siempre.");
+    const st = this.bedrockPlayersState;
+    st.running = s.status.state === "ONLINE";
+    st.permissions = st.permissions.map((p) => ({ ...p, name: st.known.find((k) => k.xuid === p.xuid)?.name ?? null }));
+    return { kind: "bedrock_players" as const, data: structuredClone(st) };
+  }
+  addonsState: AddonsInfo = { level_name: "Bedrock level", world_exists: true, packs: [], last_import: null };
+  addonImports: Record<string, AddonPack[]> = {
+    "C:\\Users\\ana\\Downloads\\dragones.mcaddon": [
+      { uuid: "11111111-2222-3333-4444-555555555555", version: [1, 0, 0], name: "Dragones", description: "Dragones que vuelan", kind: "behavior", folder: "behavior_packs/Dragones_11111111", active: true, bundled: false, scripts: true },
+      { uuid: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee", version: [1, 0, 0], name: "Dragones (texturas)", description: "", kind: "resource", folder: "resource_packs/Dragones_aaaaaaaa", active: true, bundled: false, scripts: false },
+    ],
+  };
+
   async pickFile(filter?: { name: string; extensions: string[] }) {
+    if (filter?.extensions.includes("mcaddon")) return this.addonSource;
     if (filter?.extensions.includes("png")) return this.iconSource;
     return filter?.extensions.includes("zip") ? this.zipSource : this.uploadSource;
   }
@@ -440,7 +479,7 @@ export class FakeApi implements MercApi {
   /** PC de un amigo simulada (lado compañero): otra FakeApi y los permisos concedidos. */
   friend: { fake: FakeApi; host: RemoteHost } | null = null;
   friendHosts: RemoteHost[] = [];
-  private static readonly REMOTE_NEED: Record<string, Perm | "any"> = {
+  private static readonly REMOTE_NEED: Record<string, Perm | "any" | "host"> = {
     ping: "any",
     list_instances: "any",
     status: "status",
@@ -457,17 +496,42 @@ export class FakeApi implements MercApi {
     list_files: "files_list",
     read_file: "files_read",
     connection: "network",
+    // Servidor casero (control total).
+    find_java: "host",
+    catalog: "host",
+    resolve: "host",
+    loader_versions: "host",
+    creation_defaults: "host",
+    modpack_search: "host",
+    modpack_project: "host",
+    modpack_inspect: "host",
+    create_server: "host",
+    install_java: "host",
+    accept_eula: "host",
+    // Playit del servidor casero (control total).
+    playit_status: "host",
+    playit_enable: "host",
+    playit_disable: "host",
+    playit_link: "host",
+    playit_unlink: "host",
+    playit_login_url: "host",
+    job: "any",
   };
   /** Simple Voice Chat detectado (null = no instalado) y estado por capas. */
   voice: VoiceInfo | null = null;
   layers: ConnLayer[] = [];
+  /** Destino real (tras SRV) que devuelve la prueba de una dirección; por defecto, el túnel. */
+  testedAs: Record<string, string> = {};
+  /** Geyser instalado (null = no) y direcciones de Bedrock que «responden». */
+  bedrock: BedrockInfo | null = null;
+  reachableBedrock = new Set<string>();
   voiceWrites: { voice_host?: string | null; port?: number | null }[] = [];
   private connectionInfo() {
     const port = Number(this.props.find((p) => p.key === "server-port")?.value ?? 25565);
     const tunnels = (this.playit.enabled ? (this.playit.agent?.tunnels ?? []) : []).filter((t) => t.destination.endsWith(`:${port}`));
     return {
       kind: "connection" as const,
-      data: { port, lan: [`192.168.1.20:${port}`], tunnels, tests: structuredClone(this.addressTests), ports_in_use: structuredClone(this.portsInUse), voice: structuredClone(this.voice), layers: structuredClone(this.layers) },
+      data: { port, lan: [`192.168.1.20:${port}`], tunnels, tests: structuredClone(this.addressTests), ports_in_use: structuredClone(this.portsInUse), voice: structuredClone(this.voice), layers: structuredClone(this.layers), bedrock: structuredClone(this.bedrock) },
     };
   }
   notifications: { title: string; body: string }[] = [];
@@ -1367,6 +1431,62 @@ export class FakeApi implements MercApi {
           },
         };
       }
+      case "bedrock_players":
+        return this.bedrockPlayersData(body.id);
+      case "bedrock_allowlist": {
+        const st = this.bedrockPlayersState;
+        const c = body.change;
+        const i = st.allowlist.findIndex((a) => a.name.toLowerCase() === c.name.trim().toLowerCase());
+        if (c.type === "add") {
+          if (!/^[\p{L}\p{N} _#.-]{1,32}$/u.test(c.name.trim())) throw new MercError("bad_request", "gamertag no válido");
+          if (i >= 0) st.allowlist[i].ignores_player_limit = c.ignores_player_limit;
+          else st.allowlist.push({ name: c.name.trim(), xuid: null, ignores_player_limit: c.ignores_player_limit });
+        } else if (i < 0) throw new MercError("not_found", `no existe: ${c.name}`);
+        else if (c.type === "remove") st.allowlist.splice(i, 1);
+        else st.allowlist[i].ignores_player_limit = c.value;
+        return this.bedrockPlayersData(body.id);
+      }
+      case "bedrock_allowlist_enabled":
+        this.bedrockPlayersState.allow_list_enabled = body.enabled;
+        return this.bedrockPlayersData(body.id);
+      case "bedrock_permission": {
+        const st = this.bedrockPlayersState;
+        st.permissions = st.permissions.filter((p) => p.xuid !== body.xuid);
+        if (body.level) st.permissions.push({ xuid: body.xuid, level: body.level, name: null });
+        return this.bedrockPlayersData(body.id);
+      }
+      case "addons":
+        if (this.find(body.id).instance.kind !== "bedrock") throw new MercError("bad_request", "Los addons son para servidores Bedrock.");
+        return { kind: "addons", data: { ...structuredClone(this.addonsState), last_import: null } };
+      case "addon_import": {
+        this.requireStopped(body.id);
+        const packs = this.addonImports[body.source];
+        if (!packs) throw new MercError("bad_request", "no se encontró ningún behavior pack ni resource pack dentro");
+        const r: AddonImportResult = { installed: [], unchanged: [], replaced: [], notes: [] };
+        for (const p of packs) {
+          const label = `${p.name} ${p.version.join(".")}`;
+          const old = this.addonsState.packs.find((x) => x.uuid === p.uuid);
+          if (old && old.version.join(".") === p.version.join(".")) r.unchanged.push(label);
+          else {
+            if (old) r.replaced.push(label);
+            else r.installed.push(label);
+            this.addonsState.packs = [...this.addonsState.packs.filter((x) => x.uuid !== p.uuid), structuredClone(p)];
+          }
+          if (p.scripts) r.notes.push(`«${p.name}» usa scripts: si no funciona, puede necesitar experimentos o APIs beta activados en el mundo.`);
+        }
+        return { kind: "addons", data: { ...structuredClone(this.addonsState), last_import: r } };
+      }
+      case "addon_set_active": {
+        this.requireStopped(body.id);
+        const p = this.addonsState.packs.find((x) => x.uuid === body.uuid);
+        if (!p) throw new MercError("not_found", "pack");
+        p.active = body.active;
+        return { kind: "addons", data: { ...structuredClone(this.addonsState), last_import: null } };
+      }
+      case "addon_remove":
+        this.requireStopped(body.id);
+        this.addonsState.packs = this.addonsState.packs.filter((x) => x.uuid !== body.uuid);
+        return { kind: "addons", data: { ...structuredClone(this.addonsState), last_import: null } };
       case "mod_sides":
         this.find(body.id);
         return { kind: "mod_sides", data: structuredClone(this.modSidesState) };
@@ -1440,6 +1560,9 @@ export class FakeApi implements MercApi {
       case "set_startup":
         this.automationState = { ...this.automationState, startup_enabled: body.enabled };
         return { kind: "ok" };
+      case "set_keep_awake":
+        this.automationState = { ...this.automationState, keep_awake: body.enabled, keep_awake_active: body.enabled && this.servers.some((x) => x.status.state === "ONLINE") };
+        return { kind: "ok" };
       case "supporter":
         return { kind: "supporter", data: structuredClone(this.supporterState) };
       case "activate_supporter": {
@@ -1506,9 +1629,24 @@ export class FakeApi implements MercApi {
           perms: [...body.perms].sort(),
           created_at_unix_ms: 1_793_300_300_000,
           expires_at_unix_ms: 1_793_300_300_000 + body.minutes * 60_000,
+          host_admin: false,
         };
         this.companionsState.invites.push(invite);
         return { kind: "invite", data: { code: "MH1-PRUEBA2ABCDEF", invite } };
+      }
+      case "create_host_invite": {
+        if (!this.companionsState.enabled) throw new MercError("invalid_state", "Activa «Permitir compañeros» antes de invitar.");
+        const invite = {
+          invite_id: `inv${this.companionsState.invites.length + 1}`,
+          server: null,
+          server_name: "",
+          perms: [] as Perm[],
+          created_at_unix_ms: 1_793_300_300_000,
+          expires_at_unix_ms: 1_793_300_300_000 + body.minutes * 60_000,
+          host_admin: true,
+        };
+        this.companionsState.invites.push(invite);
+        return { kind: "invite", data: { code: "MH1-CASERO2ABCDEF", invite } };
       }
       case "cancel_invite":
         this.companionsState.invites = this.companionsState.invites.filter((i) => i.invite_id !== body.invite_id);
@@ -1541,10 +1679,16 @@ export class FakeApi implements MercApi {
         const need = FakeApi.REMOTE_NEED[req.op];
         const sid = "id" in req ? (req as { id: string }).id : null;
         const server = f.host.servers.find((x) => x.id === sid);
-        const ok = need === "any" || (need !== undefined && !!server && server.perms.includes(need));
+        const admin = f.host.host_admin;
+        const ok =
+          need === "any" ||
+          (need === "host" && admin) ||
+          (admin && need !== undefined && need !== "host") ||
+          (need !== undefined && need !== "host" && !!server && server.perms.includes(need));
         if (!ok) throw new MercError("forbidden", "No tienes permiso para esto.");
-        const r = await f.fake.call(req);
-        if (r.kind === "instances") {
+        // Como el anfitrión real: carpeta y Java los pone su PC.
+        const r = await f.fake.call(req.op === "create_server" ? { ...req, path: "/casero/Servidores/x", java: "/casero/java" } : req);
+        if (r.kind === "instances" && !admin) {
           return { kind: "instances", data: r.data.filter((x) => f.host.servers.some((h) => h.id === x.instance.id)) };
         }
         return r;
@@ -1573,10 +1717,24 @@ export class FakeApi implements MercApi {
           {
             address: body.address,
             at_unix_ms: 1_793_300_300_000,
-            result: ok ? { tested: "dark-sea.gl.at.ply.gg:41234", latency_ms: 48, version: "Paper 1.21.1", players_online: 2, players_max: 20, motd: "Hola" } : null,
+            result: ok ? { tested: this.testedAs[body.address] ?? "dark-sea.gl.at.ply.gg:41234", latency_ms: 48, version: "Paper 1.21.1", players_online: 2, players_max: 20, motd: "Hola" } : null,
             error: ok ? null : "sin conexión: no se pudo conectar con dark-sea.gl.at.ply.gg:41234",
           },
           ...this.addressTests.filter((t) => t.address !== body.address),
+        ];
+        return this.connectionInfo();
+      }
+      case "test_bedrock_address": {
+        if (!this.bedrock) throw new MercError("invalid_state", "Geyser no está instalado.");
+        const ok = this.reachableBedrock.has(body.address);
+        this.bedrock.tests = [
+          {
+            address: body.address,
+            at_unix_ms: 1_793_300_300_000,
+            result: ok ? { tested: body.address, latency_ms: 52, version: "Bedrock 1.21.40", players_online: 0, players_max: 20, motd: "Hola" } : null,
+            error: ok ? null : `${body.address} no respondió como un servidor Bedrock (UDP)`,
+          },
+          ...this.bedrock.tests.filter((t) => t.address !== body.address),
         ];
         return this.connectionInfo();
       }

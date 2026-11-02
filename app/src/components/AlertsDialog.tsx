@@ -1,5 +1,5 @@
 // Alertas de todos los servidores (caídas, poco disco, memoria llena, tareas o copias que fallan,
-// túnel caído, actualizaciones) y sus ajustes, incluidas las notificaciones de Windows.
+// túnel caído, actualizaciones) y sus ajustes, incluidas las notificaciones del sistema.
 
 import { BellOff, CheckCheck } from "lucide-react";
 import { useState } from "react";
@@ -51,7 +51,7 @@ export function AlertsDialog({ sup, list, onChange, onClose }: Props) {
   return (
     <Dialog
       title="Alertas"
-      lead="Lo vigila el supervisor aunque cierres la ventana. Las notificaciones de Windows salen mientras MercHosting está abierto (también minimizado)."
+      lead="Lo vigila el supervisor aunque cierres la ventana. Las notificaciones del sistema salen mientras MercHosting está abierto (también minimizado)."
       onClose={onClose}
       wide
       footer={
@@ -100,7 +100,7 @@ export function AlertsDialog({ sup, list, onChange, onClose }: Props) {
           <input id="al-gb" type="text" inputMode="numeric" value={gb} onChange={(e) => setGb(e.target.value)} aria-invalid={!gbValid} />
           {!gbValid && <p className="form-error">Un número entre 1 y 1000.</p>}
         </div>
-        {toggle("notify", "Mostrar notificaciones de Windows")}
+        {toggle("notify", "Mostrar notificaciones del sistema")}
         <div className="files-bar">
           <button
             type="button"

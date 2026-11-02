@@ -1042,3 +1042,392 @@ fn update_modpack_respects_user_changes() {
     };
     assert_eq!(st.linked.unwrap().version_number, "2.0");
 }
+
+/// Crear un servidor Bedrock: enlaces de minecraft.net, zip oficial, sin Java, EULA marcada.
+#[cfg(unix)]
+#[test]
+fn create_bedrock_server_without_java() {
+    use std::io::Write;
+    let tmp = tempfile::tempdir().unwrap();
+    let mut zbuf = std::io::Cursor::new(Vec::new());
+    {
+        let mut z = zip::ZipWriter::new(&mut zbuf);
+        let opts = zip::write::SimpleFileOptions::default().unix_permissions(0o755);
+        z.start_file("bedrock_server", opts).unwrap();
+        z.write_all(b"#!/bin/sh\necho '[2026-11-01 10:00:01:000 INFO] Server started.'\nwhile read l; do [ \"$l\" = stop ] && exit 0; done\n")
+            .unwrap();
+        z.start_file("server.properties", zip::write::SimpleFileOptions::default())
+            .unwrap();
+        z.write_all(b"server-name=Dedicated Server\nserver-port=19132\nlevel-name=Bedrock level\n")
+            .unwrap();
+        z.finish().unwrap();
+    }
+    let routes: Routes = Default::default();
+    let base = fake_http(routes.clone());
+    {
+        let mut r = routes.lock().unwrap();
+        r.insert(
+            "/bedrock/links".into(),
+            serde_json::json!({"result": {"links": [
+                {"downloadType": "serverBedrockLinux", "downloadUrl": format!("{base}/bedrock/bedrock-server-1.21.124.2.zip")}
+            ]}})
+            .to_string()
+            .into_bytes(),
+        );
+        r.insert("/bedrock/bedrock-server-1.21.124.2.zip".into(), zbuf.into_inner());
+    }
+    let data = tmp.path().join("datos");
+    let _d = Daemon(
+        Command::new(env!("CARGO_BIN_EXE_merc-supervisord"))
+            .arg("--data-dir")
+            .arg(&data)
+            .env("MERC_SOURCE_BEDROCK", format!("{base}/bedrock/links"))
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .spawn()
+            .unwrap(),
+    );
+    let mut c = client(&data);
+    let ResponseBody::Catalog(list) = c
+        .call(RequestBody::Catalog {
+            flavor: Flavor::Bedrock,
+        })
+        .unwrap()
+    else {
+        panic!()
+    };
+    assert_eq!(list.len(), 1);
+    assert_eq!(list[0].mc_version, "1.21.124.2");
+    let port = std::net::UdpSocket::bind(("0.0.0.0", 0))
+        .unwrap()
+        .local_addr()
+        .unwrap()
+        .port();
+    let target = tmp.path().join("Bedrock de prueba");
+    let create = |c: &mut Client, props: BTreeMap<String, String>, rules: BTreeMap<String, String>| {
+        c.call(RequestBody::CreateServer {
+            name: "Bedrock de prueba".into(),
+            flavor: Flavor::Bedrock,
+            mc_version: "1.21.124.2".into(),
+            path: target.clone(),
+            java: PathBuf::new(),
+            min_memory_mb: 0,
+            max_memory_mb: 0,
+            properties: props,
+            accept_eula: true,
+            modpack_version: None,
+            modpack_source: ContentSource::Modrinth,
+            loader_version: None,
+            game_rules: rules,
+        })
+    };
+    // Claves de Java y reglas de Java se rechazan antes de crear nada.
+    assert!(matches!(
+        create(&mut c, [("motd".to_string(), "x".to_string())].into(), BTreeMap::new()),
+        Err(ClientError::Api(e)) if e.code == ErrorCode::BadRequest
+    ));
+    assert!(matches!(
+        create(&mut c, BTreeMap::new(), [("keep_inventory".to_string(), "true".to_string())].into()),
+        Err(ClientError::Api(e)) if e.code == ErrorCode::BadRequest
+    ));
+    let props: BTreeMap<String, String> = [
+        ("server-port".to_string(), port.to_string()),
+        ("server-name".to_string(), "Server de Ñandú".to_string()),
+    ]
+    .into();
+    let ResponseBody::Job(j) = create(&mut c, props, BTreeMap::new()).unwrap() else {
+        panic!()
+    };
+    let j = wait_job(&mut c, &j.job_id);
+    assert_eq!(j.state, JobState::Succeeded, "{:?} {:?}", j.error, j.log);
+    let id = j.instance_id.unwrap();
+    let text = std::fs::read_to_string(target.join("server.properties")).unwrap();
+    assert!(text.contains("server-name=Server de Ñandú") && text.contains(&format!("server-port={port}")));
+    assert!(target.join("merchosting-bedrock-sha256.txt").is_file());
+    c.call(RequestBody::Start { id }).unwrap();
+    let deadline = Instant::now() + Duration::from_secs(20);
+    loop {
+        let ResponseBody::Status(s) = c.call(RequestBody::Status { id }).unwrap() else {
+            panic!()
+        };
+        if s.state == RuntimeState::Online {
+            break;
+        }
+        assert!(Instant::now() < deadline, "{s:?}");
+        std::thread::sleep(Duration::from_millis(100));
+    }
+    c.call(RequestBody::Stop { id, timeout_secs: 20 }).unwrap();
+}
+
+#[test]
+fn legacy_forge_needs_exactly_java_8() {
+    let j = java();
+    let major = merc_core::java::probe_java(&j, Duration::from_secs(15)).unwrap().major;
+    if major == 8 {
+        // Esta comprobación necesita un Java distinto de 8 en la máquina de pruebas.
+        return;
+    }
+    let tmp = tempfile::tempdir().unwrap();
+    let routes: Routes = Default::default();
+    let base = fake_http(routes.clone());
+    {
+        let mut r = routes.lock().unwrap();
+        r.insert(
+            "/forge/promotions_slim.json".into(),
+            br#"{"promos":{"1.12.2-recommended":"14.23.5.2859"}}"#.to_vec(),
+        );
+        r.insert(
+            "/forgemaven/net/minecraftforge/forge/1.12.2-14.23.5.2859/forge-1.12.2-14.23.5.2859-installer.jar".into(),
+            b"instalador".to_vec(),
+        );
+    }
+    let data = tmp.path().join("datos");
+    let _d = Daemon(
+        Command::new(env!("CARGO_BIN_EXE_merc-supervisord"))
+            .arg("--data-dir")
+            .arg(&data)
+            .env("MERC_SOURCE_FORGE_PROMOS", format!("{base}/forge/promotions_slim.json"))
+            .env("MERC_SOURCE_FORGE", format!("{base}/forgemaven"))
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .spawn()
+            .unwrap(),
+    );
+    let mut c = client(&data);
+    let ResponseBody::Catalog(list) = c.call(RequestBody::Catalog { flavor: Flavor::Forge }).unwrap() else {
+        panic!()
+    };
+    assert_eq!(list[0].mc_version, "1.12.2");
+    assert_eq!(list[0].java_major, 8);
+    let target = tmp.path().join("srp");
+    let ResponseBody::Job(job) = c
+        .call(RequestBody::CreateServer {
+            name: "SRP".into(),
+            flavor: Flavor::Forge,
+            mc_version: "1.12.2".into(),
+            path: target.clone(),
+            java: j,
+            min_memory_mb: 0,
+            max_memory_mb: 2048,
+            properties: BTreeMap::new(),
+            accept_eula: true,
+            modpack_version: None,
+            modpack_source: ContentSource::Modrinth,
+            loader_version: None,
+            game_rules: Default::default(),
+        })
+        .unwrap()
+    else {
+        panic!()
+    };
+    let job = wait_job(&mut c, &job.job_id);
+    assert_eq!(job.state, JobState::Failed, "{job:?}");
+    assert!(
+        job.error
+            .as_deref()
+            .is_some_and(|e| e.contains("solo funciona con Java 8")),
+        "{job:?}"
+    );
+    assert!(!target.exists());
+}
+
+/// Servidor casero: el código de control total sale de `merc` (terminal) y otra PC crea un
+/// servidor desde lejos. La carpeta y el Java los pone el anfitrión, no la otra PC.
+#[cfg(unix)]
+#[test]
+fn home_server_full_control_from_cli() {
+    use std::io::Write;
+    let tmp = tempfile::tempdir().unwrap();
+    let mut zbuf = std::io::Cursor::new(Vec::new());
+    {
+        let mut z = zip::ZipWriter::new(&mut zbuf);
+        let opts = zip::write::SimpleFileOptions::default().unix_permissions(0o755);
+        z.start_file("bedrock_server", opts).unwrap();
+        z.write_all(b"#!/bin/sh\necho '[2026-11-01 10:00:01:000 INFO] Server started.'\nwhile read l; do [ \"$l\" = stop ] && exit 0; done\n")
+            .unwrap();
+        z.start_file("server.properties", zip::write::SimpleFileOptions::default())
+            .unwrap();
+        z.write_all(b"server-name=Dedicated Server\nserver-port=19132\nlevel-name=Bedrock level\n")
+            .unwrap();
+        z.finish().unwrap();
+    }
+    let routes: Routes = Default::default();
+    let base = fake_http(routes.clone());
+    {
+        let mut r = routes.lock().unwrap();
+        r.insert(
+            "/bedrock/links".into(),
+            serde_json::json!({"result": {"links": [
+                {"downloadType": "serverBedrockLinux", "downloadUrl": format!("{base}/bedrock/bedrock-server-1.21.124.2.zip")}
+            ]}})
+            .to_string()
+            .into_bytes(),
+        );
+        r.insert("/bedrock/bedrock-server-1.21.124.2.zip".into(), zbuf.into_inner());
+    }
+    let host_data = tmp.path().join("casero");
+    let guest_data = tmp.path().join("mi-pc");
+    let servers_dir = tmp.path().join("Servidores del casero");
+    let spawn = |data: &Path| {
+        Daemon(
+            Command::new(env!("CARGO_BIN_EXE_merc-supervisord"))
+                .arg("--data-dir")
+                .arg(data)
+                .env("MERC_SOURCE_BEDROCK", format!("{base}/bedrock/links"))
+                .env("MERC_SERVERS_DIR", &servers_dir)
+                .env("MERC_REMOTE_LOCAL", "1")
+                .stdin(Stdio::null())
+                .stdout(Stdio::null())
+                .stderr(Stdio::null())
+                .spawn()
+                .unwrap(),
+        )
+    };
+    let _h = spawn(&host_data);
+    let _g = spawn(&guest_data);
+    let mut host = client(&host_data);
+    let mut guest = client(&guest_data);
+
+    // En el casero, desde la terminal.
+    let merc = |args: &[&str]| {
+        let out = Command::new(env!("CARGO_BIN_EXE_merc"))
+            .arg("--data-dir")
+            .arg(&host_data)
+            .args(args)
+            .env("MERC_SUPERVISORD_PATH", env!("CARGO_BIN_EXE_merc-supervisord"))
+            .output()
+            .unwrap();
+        assert!(out.status.success(), "{}", String::from_utf8_lossy(&out.stderr));
+        String::from_utf8_lossy(&out.stdout).into_owned()
+    };
+    let out = merc(&["compañeros", "invitar", "--control-total", "--minutos", "30"]);
+    assert!(out.contains("CONTROL TOTAL"), "{out}");
+    let code = out
+        .lines()
+        .find(|l| l.starts_with("MH1-"))
+        .expect("el código")
+        .trim()
+        .to_string();
+    let ResponseBody::Companions(info) = host.call(RequestBody::Companions).unwrap() else {
+        panic!()
+    };
+    assert!(info.enabled);
+    assert!(info.invites.iter().any(|i| i.host_admin && i.server.is_none()));
+    // El secreto no se guarda en claro.
+    let saved = std::fs::read_to_string(host_data.join("companeros/anfitrion.json")).unwrap();
+    let secret = merc_remote::code::Invite::decode(&code).unwrap().secret;
+    assert!(!saved.contains(&merc_remote::hex(&secret)));
+
+    // En la PC principal: se conecta con el código.
+    let ResponseBody::RemoteHosts(hosts) = guest
+        .call(RequestBody::JoinWithCode {
+            code: code.clone(),
+            name: "Amir".into(),
+        })
+        .unwrap()
+    else {
+        panic!()
+    };
+    assert_eq!(hosts.len(), 1);
+    assert!(hosts[0].host_admin);
+    assert!(hosts[0].servers.is_empty());
+    let h = hosts[0].host.clone();
+    let remote = |c: &mut Client, r: RequestBody| {
+        c.call(RequestBody::RemoteCall {
+            host: h.clone(),
+            request: Box::new(r),
+        })
+    };
+    let forbidden =
+        |r: Result<ResponseBody, ClientError>| matches!(r, Err(ClientError::Api(e)) if e.code == ErrorCode::Forbidden);
+
+    // Sigue sin poder tocar cosas de la PC: rutas, apagar, compañeros, Playit.
+    for r in [
+        RequestBody::CheckTarget { path: "/etc".into() },
+        RequestBody::Detect { path: "/etc".into() },
+        RequestBody::Shutdown,
+        RequestBody::Companions,
+        RequestBody::CreateHostInvite { minutes: 30 },
+    ] {
+        assert!(forbidden(remote(&mut guest, r.clone())), "{r:?}");
+    }
+    // Con control total sí ve Playit de esa PC (para activarlo y vincularlo desde el celular).
+    assert!(matches!(
+        remote(&mut guest, RequestBody::PlayitStatus),
+        Ok(ResponseBody::Playit(_))
+    ));
+
+    // Crea un servidor: la ruta y el Java que manda se ignoran.
+    let ResponseBody::Job(j) = remote(
+        &mut guest,
+        RequestBody::CreateServer {
+            name: "Casero ../../x".into(),
+            flavor: Flavor::Bedrock,
+            mc_version: "1.21.124.2".into(),
+            path: "/tmp/no-aqui".into(),
+            java: "/bin/sh".into(),
+            min_memory_mb: 0,
+            max_memory_mb: 0,
+            properties: BTreeMap::new(),
+            accept_eula: true,
+            modpack_version: None,
+            modpack_source: ContentSource::Modrinth,
+            loader_version: None,
+            game_rules: BTreeMap::new(),
+        },
+    )
+    .unwrap() else {
+        panic!()
+    };
+    // El trabajo lo sigue quien lo empezó.
+    let deadline = Instant::now() + Duration::from_secs(60);
+    let id = loop {
+        let ResponseBody::Job(s) = remote(
+            &mut guest,
+            RequestBody::Job {
+                job_id: j.job_id.clone(),
+                after: 0,
+            },
+        )
+        .unwrap() else {
+            panic!()
+        };
+        if s.state != JobState::Running {
+            assert_eq!(s.state, JobState::Succeeded, "{:?}", s.error);
+            break s.instance_id.unwrap();
+        }
+        assert!(Instant::now() < deadline);
+        std::thread::sleep(Duration::from_millis(150));
+    };
+    assert!(!Path::new("/tmp/no-aqui").exists());
+    let made = servers_dir.join("Casero-x");
+    assert!(
+        made.join("bedrock_server").is_file(),
+        "{:?}",
+        std::fs::read_dir(&servers_dir).unwrap().collect::<Vec<_>>()
+    );
+
+    // Ve el servidor nuevo con todos los permisos, y sin rutas del casero.
+    let ResponseBody::Instances(list) = remote(&mut guest, RequestBody::ListInstances).unwrap() else {
+        panic!()
+    };
+    assert_eq!(list.len(), 1);
+    assert_eq!(list[0].instance.root, PathBuf::new());
+    assert!(matches!(
+        remote(&mut guest, RequestBody::Status { id }).unwrap(),
+        ResponseBody::Status(_)
+    ));
+    let ResponseBody::RemoteHosts(hosts) = guest.call(RequestBody::RefreshHost { host: h.clone() }).unwrap() else {
+        panic!()
+    };
+    assert_eq!(hosts[0].servers.len(), 1);
+    assert_eq!(hosts[0].servers[0].perms.len(), merc_ipc::remote::Perm::ALL.len());
+
+    // La terminal lo muestra y lo puede quitar.
+    let out = merc(&["compañeros", "lista"]);
+    assert!(out.contains("Amir") && out.contains("CONTROL TOTAL"), "{out}");
+    merc(&["compañeros", "quitar", "Amir"]);
+    assert!(forbidden(remote(&mut guest, RequestBody::Status { id })));
+}

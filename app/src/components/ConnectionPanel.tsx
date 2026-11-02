@@ -8,7 +8,10 @@ import type { MercApi, Supervisor } from "../api/client";
 import { errorMessage } from "../api/client";
 import type { AddressTest, ConnLayer, ConnectionInfo, InstanceId, LayerState, PlayitInfo, VoiceInfo } from "../api/types";
 import { Dialog } from "./Dialog";
+import { DomainHelper } from "./DomainHelper";
+import { CrossplayCard } from "./CrossplayCard";
 import { uiLocale } from "../i18n/lang";
+import { PLAYIT_LINUX_GUIDE, isLinux } from "../platform";
 
 const CLAIM_TEXT: Record<string, string> = {
   waiting_for_visit: "Abre el enlace y entra con tu cuenta de playit.gg (o créala, es gratis).",
@@ -27,6 +30,11 @@ interface Props {
   stopped: boolean;
   /** Servidor de un amigo: solo su estado y su chat de voz (Playit es de la PC del dueño). */
   remote?: boolean;
+  /** Servidor Bedrock: túnel UDP «Minecraft Bedrock», sin dominio SRV ni Geyser. */
+  bedrock?: boolean;
+  /** Servidor remoto con control total de esa PC (servidor casero): se ve y se maneja su Playit.
+   * El enlace de vinculación se abre en el navegador de este dispositivo. */
+  remotePlayit?: boolean;
 }
 
 function portOf(destination: string): number | null {
@@ -53,7 +61,8 @@ function hour(ms: number) {
   return new Date(ms).toLocaleTimeString(uiLocale(), { hour: "2-digit", minute: "2-digit", second: "2-digit" });
 }
 
-function LayersCard({ layers }: { layers: ConnLayer[] }) {
+function LayersCard({ layers, bedrock = false }: { layers: ConnLayer[]; bedrock?: boolean }) {
+  const label = (k: string) => (k === "server" && bedrock ? "Servidor (Bedrock)" : (LAYER_LABEL[k] ?? k));
   if (layers.length === 0) return null;
   return (
     <section className="card props-card" aria-label="Estado de la conexión">
@@ -62,9 +71,9 @@ function LayersCard({ layers }: { layers: ConnLayer[] }) {
       </h2>
       <ul className="layer-list">
         {layers.map((l) => (
-          <li key={l.key} data-state={l.state} aria-label={`${LAYER_LABEL[l.key] ?? l.key}: ${STATE_LABEL[l.state]}`}>
+          <li key={l.key} data-state={l.state} aria-label={`${label(l.key)}: ${STATE_LABEL[l.state]}`}>
             <span className="layer-dot" aria-hidden="true" />
-            <strong>{LAYER_LABEL[l.key] ?? l.key}</strong>
+            <strong>{label(l.key)}</strong>
             <span className="layer-state">{STATE_LABEL[l.state]}</span>
             <span className="field-help layer-detail">{l.detail}</span>
             <span className="field-help layer-time">comprobado a las {hour(l.checked_at_unix_ms)}</span>
@@ -96,7 +105,8 @@ function TestLine({ t }: { t: AddressTest | undefined }) {
   );
 }
 
-export function ConnectionPanel({ api, sup, id, online, stopped, remote = false }: Props) {
+export function ConnectionPanel({ api, sup, id, online, stopped, remote = false, bedrock = false, remotePlayit = false }: Props) {
+  const showPlayit = !remote || remotePlayit;
   const [conn, setConn] = useState<ConnectionInfo | null>(null);
   const [playit, setPlayit] = useState<PlayitInfo | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -106,13 +116,13 @@ export function ConnectionPanel({ api, sup, id, online, stopped, remote = false 
 
   const load = useCallback(async () => {
     try {
-      const [c, p] = await Promise.all([sup.connection(id), remote ? Promise.resolve(null) : sup.playitStatus()]);
+      const [c, p] = await Promise.all([sup.connection(id), showPlayit ? sup.playitStatus() : Promise.resolve(null)]);
       setConn(c);
       setPlayit(p);
     } catch (e) {
       setError(errorMessage(e));
     }
-  }, [sup, id, remote]);
+  }, [sup, id, showPlayit]);
 
   useEffect(() => {
     load();
@@ -184,9 +194,9 @@ export function ConnectionPanel({ api, sup, id, online, stopped, remote = false 
         </p>
       )}
 
-      {conn && <LayersCard layers={conn.layers} />}
+      {conn && <LayersCard layers={conn.layers} bedrock={bedrock} />}
 
-      {!remote && (
+      {showPlayit && (
       <>
       <section className="card props-card" aria-label="En tu misma red">
         <h2>
@@ -226,7 +236,20 @@ export function ConnectionPanel({ api, sup, id, online, stopped, remote = false 
         {playit === null ? (
           <p className="wiz-loading">Consultando…</p>
         ) : !playit.supported ? (
-          <p className="field-help">El agente oficial de Playit que usa MercHosting es para Windows.</p>
+          isLinux() ? (
+            <>
+              <p className="field-help">
+                En este equipo MercHosting no tiene un agente de Playit verificado (lo incluye para Linux de 64 bits x86).
+                Puedes instalar Playit por tu cuenta con su guía oficial y crear el túnel hacia el puerto de este servidor, o
+                abrir ese puerto en tu router.
+              </p>
+              <button type="button" className="btn btn-sm" onClick={() => api.openUrl(PLAYIT_LINUX_GUIDE)}>
+                <ExternalLink size={14} aria-hidden="true" /> Guía oficial de Playit para Linux
+              </button>
+            </>
+          ) : (
+            <p className="field-help">El agente oficial de Playit que usa MercHosting no está disponible en este sistema.</p>
+          )
         ) : !playit.enabled ? (
           <>
             <p>
@@ -335,6 +358,19 @@ export function ConnectionPanel({ api, sup, id, online, stopped, remote = false 
                       La prueba es real: MercHosting entra por la dirección pública como lo haría el juego y mide cuánto tarda en
                       responder.
                     </p>
+                    {!bedrock && (
+                    <DomainHelper
+                      instanceId={id}
+                      tunnel={t.display_address}
+                      tunnelTest={tested}
+                      domainTest={testOf}
+                      online={online}
+                      busy={busy === "domain"}
+                      onTest={(d) => run("domain", () => sup.testAddress(id, d))}
+                      onCopy={copy}
+                      copied={copied}
+                    />
+                    )}
                   </div>
                 );
               })
@@ -388,7 +424,7 @@ export function ConnectionPanel({ api, sup, id, online, stopped, remote = false 
                 <ol>
                   <li>Abre tu cuenta de playit.gg.</li>
                   <li>
-                    Crea un túnel de tipo <strong>Minecraft Java</strong> para este agente, con dirección local <code>127.0.0.1</code>{" "}
+                    Crea un túnel de tipo <strong>{bedrock ? "Minecraft Bedrock" : "Minecraft Java"}</strong> para este agente, con dirección local <code>127.0.0.1</code>{" "}
                     y puerto <code>{port ?? "del servidor"}</code>.
                   </li>
                   <li>Vuelve aquí: MercHosting lo detecta solo en unos segundos.</li>
@@ -455,6 +491,20 @@ export function ConnectionPanel({ api, sup, id, online, stopped, remote = false 
         )}
       </section>
       </>
+      )}
+
+      {conn && !bedrock && (
+        <CrossplayCard
+          api={api}
+          sup={sup}
+          id={id}
+          bedrock={conn.bedrock ?? null}
+          online={online}
+          running={!stopped}
+          remote={remote}
+          onChanged={load}
+          onOpenPlayit={() => run("login", async () => api.openUrl(await sup.playitLoginUrl()))}
+        />
       )}
 
       {voice && (

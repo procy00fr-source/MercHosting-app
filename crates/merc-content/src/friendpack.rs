@@ -80,6 +80,9 @@ pub fn loader_dependency(
         ServerKind::Mohist | ServerKind::Arclight => {
             return Err("Este servidor es un híbrido (plugins y mods): no hay un loader de cliente que lo represente en un .mrpack.".into())
         }
+        ServerKind::Bedrock => {
+            return Err("Bedrock no usa mods de Java: el paquete para amigos es solo para servidores de Java.".into())
+        }
         ServerKind::Unknown => return Err("No se sabe qué tipo de servidor es.".into()),
     };
     let v = loader_version

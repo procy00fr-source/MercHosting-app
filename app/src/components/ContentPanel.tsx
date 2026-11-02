@@ -587,7 +587,7 @@ function SearchView({
   );
 }
 
-function ProjectDialog({
+export function ProjectDialog({
   api,
   sup,
   id,

@@ -2226,7 +2226,349 @@
 "Buscar componente": "Search component",
 "Buscar por nombre o licencia": "Search by name or license",
 "Componente": "Component",
-"Licencia": "License"
+"Licencia": "License",
+"Modo 24/7.": "24/7 mode.",
+"El servidor está disponible mientras tu PC esté prendida: si se cae vuelve solo, enciende al iniciar Windows y la PC no se suspende sola.": "The server is available as long as your PC is on: if it crashes it comes back on its own, it starts when Windows starts, and the PC doesn't go to sleep by itself.",
+"Está activado para este servidor.": "It's on for this server.",
+"Activar modo 24/7": "Turn on 24/7 mode",
+"No hace milagros: si apagas la PC, se va la luz o se corta el Internet, el servidor también se apaga.": "It's not magic: if you turn off the PC, the power goes out or the Internet drops, the server goes down too.",
+"No suspender la PC mientras haya un servidor encendido": "Don't let the PC sleep while a server is running",
+"Le pide a Windows que no la duerma por inactividad. La pantalla sí se puede apagar, y apagar o suspender a mano sigue funcionando. Vale para todos tus servidores.": "Asks Windows not to put it to sleep when idle. The screen can still turn off, and shutting down or sleeping by hand still works. Applies to all your servers.",
+"Ahora mismo está evitando la suspensión.": "It's preventing sleep right now.",
+"Se activa cuando enciendes un servidor.": "It kicks in when you start a server.",
+"Jugadores de Bedrock": "Bedrock players",
+"Jugadores de Bedrock (celular, consola, Windows)": "Bedrock players (phone, console, Windows)",
+"Con": "With",
+"los jugadores de Minecraft Bedrock entran a este servidor de Java, y con": "Minecraft Bedrock players can join this Java server, and with",
+"pueden hacerlo sin tener una cuenta de Java. Los dos son de GeyserMC, gratis y de código abierto.": "they can do it without a Java account. Both are by GeyserMC, free and open source.",
+"Comprobando el tipo de servidor…": "Checking the server type…",
+"Geyser funciona en servidores Paper, Purpur, Spigot, Fabric o NeoForge. Este tipo de servidor no es compatible.": "Geyser works on Paper, Purpur, Spigot, Fabric or NeoForge servers. This server type isn't supported.",
+"El dueño del servidor puede instalarlo desde su PC.": "The server owner can install it from their PC.",
+"Instalar Geyser": "Install Geyser",
+"Detén el servidor para instalarlo.": "Stop the server to install it.",
+"Verás la versión, lo que descarga y la licencia antes de instalar.": "You'll see the version, what it downloads and the license before installing.",
+"· desactivado": "· disabled",
+"no instalado: los jugadores de Bedrock necesitarán una cuenta de Java.": "not installed: Bedrock players will need a Java account.",
+"Instalar Floodgate": "Install Floodgate",
+"Puerto de Bedrock (UDP):": "Bedrock port (UDP):",
+"· el de fábrica; se confirma al encender por primera vez": "· the default; confirmed the first time it starts",
+"En tu misma red (Bedrock)": "On your same network (Bedrock)",
+"Dirección para tus amigos de Bedrock (servidor y puerto)": "Address for your Bedrock friends (server and port)",
+"Para jugar por Internet, el dueño tiene que crear un túnel de Bedrock en Playit.": "To play over the Internet, the owner has to create a Bedrock tunnel in Playit.",
+"Túnel de Bedrock": "Bedrock tunnel",
+"Para que entren por Internet, crea un segundo túnel en Playit:": "To let them join over the Internet, create a second tunnel in Playit:",
+"Abre tu cuenta de playit.gg y elige «Create Tunnel».": "Open your playit.gg account and choose “Create Tunnel”.",
+"Tipo:": "Type:",
+". Puerto local:": ". Local port:",
+"Vuelve aquí: el túnel aparece solo y lo puedes probar.": "Come back here: the tunnel shows up on its own and you can test it.",
+"Enciende el servidor para probar las direcciones: Geyser arranca con él.": "Start the server to test the addresses: Geyser starts with it.",
+"En Bedrock se agrega como servidor escribiendo la dirección y el puerto por separado. Si por Internet no logran entrar, prueben primero en tu misma red: hay reportes de túneles UDP de Playit que fallan con Bedrock.": "In Bedrock you add it as a server by typing the address and the port separately. If they can't get in over the Internet, try on your same network first: there are reports of Playit UDP tunnels failing with Bedrock.",
+"Usar mi dominio": "Use my domain",
+"Prioridad": "Priority",
+"Peso": "Weight",
+"Destino": "Target",
+"_minecraft._tcp.<tu dominio>": "_minecraft._tcp.<your domain>",
+"Si tienes un dominio propio, tus amigos pueden entrar con él en vez de la dirección de Playit. Tu IP sigue sin mostrarse: el dominio solo apunta al túnel.": "If you have your own domain, your friends can join with it instead of the Playit address. Your IP still isn't shown: the domain only points to the tunnel.",
+"Tu dominio o subdominio": "Your domain or subdomain",
+"Escribe solo el nombre, por ejemplo play.midominio.com.": "Type only the name, for example play.mydomain.com.",
+"Primero prueba la dirección de Playit de arriba: así se sabe a qué servidor y puerto debe apuntar tu dominio.": "First test the Playit address above: that tells us which server and port your domain must point to.",
+"En el panel DNS de donde compraste el dominio, crea este registro:": "In the DNS panel where you bought the domain, create this record:",
+"El destino de un SRV tiene que ser un nombre, no una IP. Usa la dirección con nombre que te da Playit.": "An SRV target has to be a name, not an IP. Use the named address Playit gives you.",
+"En muchos paneles el nombre se escribe sin tu dominio al final (por ejemplo": "In many panels the name is typed without your domain at the end (for example",
+"). Los cambios de DNS pueden tardar desde minutos hasta horas en verse.": "). DNS changes can take from minutes to hours to show up.",
+"Probar mi dominio": "Test my domain",
+"Enciende el servidor para probarlo.": "Start the server to test it.",
+"Listo:": "Done:",
+"llega a tu servidor en": "reaches your server in",
+"ms. Ya puedes compartirlo.": "ms. You can share it now.",
+"Tu dominio responde, pero lleva a": "Your domain responds, but it leads to",
+"en vez de a tu túnel. Revisa el registro.": "instead of your tunnel. Check the record.",
+"Todavía no responde:": "Not responding yet:",
+". Si acabas de crear el registro, espera un rato y vuelve a probar.": ". If you just created the record, wait a while and test again.",
+"Para tus amigos (tu dominio)": "For your friends (your domain)",
+"Para tus amigos (Internet)": "For your friends (Internet)",
+"Pruébala en Conexión para compartirla": "Test it in Connection to share it",
+"no suspender con servidores encendidos: sí": "don't sleep while servers run: yes",
+"no suspender con servidores encendidos: no": "don't sleep while servers run: no",
+"Comportamiento": "Behavior",
+"Recursos": "Resources",
+"Addons de Minecraft Bedrock": "Minecraft Bedrock add-ons",
+"Detén el servidor para instalar addons.": "Stop the server to install add-ons.",
+"Addons": "Add-ons",
+"Suelta tus .mcpack o .mcaddon para instalarlos y activarlos en el mundo.": "Drop your .mcpack or .mcaddon files to install them and turn them on in the world.",
+"Behavior packs (comportamiento) y resource packs (texturas y sonidos) de Minecraft Bedrock. Los jugadores los descargan solos al entrar.": "Minecraft Bedrock behavior packs and resource packs (textures and sounds). Players download them automatically when they join.",
+"Instalar addon": "Install add-on",
+"Detén el servidor para instalar, activar o quitar addons.": "Stop the server to install, turn on or remove add-ons.",
+"Leyendo los addons…": "Reading add-ons…",
+"Tus addons": "Your add-ons",
+"Todavía no hay addons.": "No add-ons yet.",
+"Todavía no hay addons. Pulsa «Instalar addon» o arrastra aquí un .mcpack o .mcaddon.": "No add-ons yet. Click “Install add-on” or drag a .mcpack or .mcaddon here.",
+"Solo instala addons de fuentes en las que confíes. Los que usan scripts pueden necesitar activar experimentos en el mundo.": "Only install add-ons from sources you trust. Add-ons with scripts may need experiments turned on in the world.",
+"Paquetes que trae el propio servidor de Mojang. Se muestran solo para consultar.": "Packs that ship with Mojang's server itself. Shown for reference only.",
+"Buscar addons": "Find add-ons",
+"Buscar addons gratis": "Find free add-ons",
+"Próximamente: buscar e instalar addons de CurseForge desde aquí. Mientras tanto, descárgalos de su página y arrástralos a esta pestaña.": "Coming soon: find and install CurseForge add-ons from here. Meanwhile, download them from their page and drag them onto this tab.",
+"Se desactiva en el mundo y su carpeta va a la papelera de MercHosting (la puedes recuperar desde Archivos).": "It's turned off in the world and its folder goes to the MercHosting trash (you can restore it from Files).",
+"Si el mundo guardó datos de este addon, se conservan; al volver a instalarlo los recupera.": "If the world saved data for this add-on, it's kept; reinstalling it brings it back.",
+"Servidor (Bedrock)": "Server (Bedrock)",
+"Bedrock (celular, consola, Windows)": "Bedrock (phone, console, Windows)",
+"El servidor oficial de Mojang para Minecraft Bedrock. Solo entran jugadores de Bedrock; usa addons en vez de mods.": "Mojang's official server for Minecraft Bedrock. Only Bedrock players can join; it uses add-ons instead of mods.",
+"Sin Java": "No Java",
+"Es un programa de Mojang para Windows 10 o más nuevo: no necesita Java. Mojang solo ofrece la versión más reciente, y los jugadores necesitan una versión de Bedrock compatible con ella.": "It's a Mojang program for Windows 10 or newer: it doesn't need Java. Mojang only offers the latest version, and players need a Bedrock version compatible with it.",
+"El habitual de Bedrock es 19132 (UDP).": "Bedrock's usual one is 19132 (UDP).",
+"Nombre en la lista de servidores (opcional)": "Name in the server list (optional)",
+"Vacío = el nombre del servidor": "Empty = the server name",
+"Lista de permitidos (allow-list)": "Allow list",
+"Comprobar cuentas de Xbox/Microsoft (online-mode)": "Check Xbox/Microsoft accounts (online-mode)",
+"Recomendado. Cada jugador entra con su cuenta de Microsoft verificada.": "Recommended. Each player joins with their verified Microsoft account.",
+"Al descargar el servidor de Bedrock, Mojang pide aceptar también su Política de privacidad (enlazada desde la EULA). Bedrock no usa el archivo eula.txt: MercHosting guarda ahí tu aceptación solo para no encenderlo sin ella.": "When downloading the Bedrock server, Mojang also asks you to accept its Privacy Policy (linked from the EULA). Bedrock doesn't use eula.txt: MercHosting stores your acceptance there only so it never starts without it.",
+"He leído y acepto la EULA y la Política de privacidad de Minecraft": "I have read and accept the Minecraft EULA and Privacy Policy",
+"No hace falta (programa nativo de Mojang)": "Not needed (native Mojang program)",
+"Por HTTPS desde minecraft.net (Mojang no publica huella; se anota su SHA-256)": "Over HTTPS from minecraft.net (Mojang publishes no checksum; its SHA-256 is recorded)",
+"Bedrock Dedicated Server es un programa de Mojang: no usa Java ni una memoria fija.": "Bedrock Dedicated Server is a Mojang program: it doesn't use Java or a fixed amount of memory.",
+"Nombre en la lista de servidores": "Name in the server list",
+"Permitir trucos (comandos)": "Allow cheats (commands)",
+"Necesario para que funcionen muchos comandos y addons.": "Needed for many commands and add-ons to work.",
+"Comprobar cuentas de Microsoft (online-mode)": "Check Microsoft accounts (online-mode)",
+"Solo entran los de allowlist.json (está en Archivos).": "Only people in allowlist.json can join (it's in Files).",
+"Puerto (UDP, IPv4)": "Port (UDP, IPv4)",
+"Puerto (UDP, IPv6)": "Port (UDP, IPv6)",
+"No usa Java (Bedrock Dedicated Server)": "Doesn't use Java (Bedrock Dedicated Server)",
+"minecraft.net (enlaces de Bedrock)": "minecraft.net (Bedrock links)",
+"Mojang no ofrece ahora el servidor de Bedrock para este sistema": "Mojang doesn't currently offer the Bedrock server for this system",
+"minecraft.net (nombre del archivo de Bedrock)": "minecraft.net (Bedrock file name)",
+"Mojang no publica la huella del servidor de Bedrock: se descarga por HTTPS desde minecraft.net y MercHosting anota su SHA-256 en la carpeta.": "Mojang doesn't publish a checksum for the Bedrock server: it's downloaded over HTTPS from minecraft.net and MercHosting records its SHA-256 in the folder.",
+"Mojang solo ofrece la versión más reciente.": "Mojang only offers the latest version.",
+"el contenido del .zip de Bedrock": "the contents of the Bedrock .zip",
+"Bedrock no usa mods de Java: el paquete para amigos es solo para servidores de Java.": "Bedrock doesn't use Java mods: the friend pack is only for Java servers.",
+"Bedrock Dedicated Server no usa Java ni una memoria fija: no hay nada que cambiar aquí.": "Bedrock Dedicated Server doesn't use Java or a fixed amount of memory: there's nothing to change here.",
+"Los addons son para servidores Bedrock. En Java se usan mods, plugins o datapacks.": "Add-ons are for Bedrock servers. Java uses mods, plugins or datapacks.",
+"Elige un archivo .mcpack o .mcaddon de tu PC": "Choose a .mcpack or .mcaddon file from your PC",
+"Ese addon ya no está instalado": "That add-on is no longer installed",
+"Bedrock no usa modpacks de Java": "Bedrock doesn't use Java modpacks",
+"Las reglas del juego de Bedrock se cambian desde la consola una vez creado": "Bedrock game rules are changed from the console once it's created",
+"Bedrock Dedicated Server no usa Java": "Bedrock Dedicated Server doesn't use Java",
+"el pack no tiene un identificador (uuid) válido": "the pack doesn't have a valid identifier (uuid)",
+"el pack no tiene versión": "the pack has no version",
+"el archivo está dañado o no es un addon (.mcpack/.mcaddon)": "the file is damaged or isn't an add-on (.mcpack/.mcaddon)",
+"el addon tiene demasiados archivos": "the add-on has too many files",
+"el addon está dañado": "the add-on is damaged",
+"el addon trae enlaces: no se instala": "the add-on contains links: it won't be installed",
+"el addon trae rutas no permitidas: no se instala": "the add-on contains disallowed paths: it won't be installed",
+"el addon es demasiado grande": "the add-on is too large",
+"un pack dentro del addon es demasiado grande": "a pack inside the add-on is too large",
+"el addon está dañado (tamaños falsos)": "the add-on is damaged (fake sizes)",
+"elige un archivo .mcpack o .mcaddon": "choose a .mcpack or .mcaddon file",
+"no se encontró ningún behavior pack ni resource pack dentro": "no behavior pack or resource pack was found inside",
+"el pack": "the pack",
+"El cargador de mods clásico (1.12.2 a 1.16.5 y desde 1.17).": "The classic mod loader (1.12.2 to 1.16.5 and from 1.17).",
+"Forge antiguo": "Old Forge",
+"es una versión antigua: funciona solo con": "is an old version: it only works with",
+"(MercHosting puede descargarlo) y con mods hechos para": "(MercHosting can download it) and with mods made for",
+". El buscador de mods filtra por esta versión.": ". The mod browser filters by this version.",
+"Las versiones antiguas de Forge (1.16.5 o anteriores) solo funcionan con Java 8; con un Java más nuevo el servidor se cierra al cargar. Elige Java 8 en Ajustes › Java y memoria (MercHosting puede descargarlo).": "Old Forge versions (1.16.5 or earlier) only work with Java 8; with a newer Java the server closes while loading. Choose Java 8 in Settings › Java and memory (MercHosting can download it).",
+"el instalador de Forge terminó, pero no dejó el JAR del servidor (forge-<versión>.jar). Revisa el archivo .log del instalador en la carpeta": "the Forge installer finished, but didn't leave the server JAR (forge-<version>.jar). Check the installer's .log file in the folder",
+"Miembro": "Member",
+"Visitante": "Visitor",
+"El servidor está encendido: los cambios se aplican al momento.": "The server is running: changes apply right away.",
+"Los cambios se guardan en los archivos y valen al encender el servidor.": "Changes are saved to the files and take effect when the server starts.",
+"Conectados ahora": "Online now",
+"Enciende el servidor para ver quién está conectado.": "Start the server to see who's online.",
+"No hay nadie conectado.": "Nobody is online.",
+"Hay un archivo whitelist.json: el servidor lo usa en lugar de allowlist.json, así que esta lista no tendrá efecto. Bórralo o renómbralo en Archivos.": "There's a whitelist.json file: the server uses it instead of allowlist.json, so this list won't have any effect. Delete or rename it in Files.",
+"online-mode está desactivado: así el servidor no usa la lista blanca. Actívalo en Ajustes.": "online-mode is off: that way the server doesn't use the allowlist. Turn it on in Settings.",
+"Solo pueden entrar los de la lista": "Only people on the list can join",
+"Se guarda en server.properties (allow-list). Los operadores también necesitan estar en la lista.": "Saved in server.properties (allow-list). Operators also need to be on the list.",
+"Gamertag de Xbox": "Xbox gamertag",
+"Puede entrar aunque el servidor esté lleno": "Can join even if the server is full",
+"Solo letras, números, espacios y _ - # . (hasta 32 caracteres).": "Only letters, numbers, spaces and _ - # . (up to 32 characters).",
+"La lista está vacía.": "The list is empty.",
+"ya entró alguna vez": "has joined before",
+"todavía no ha entrado": "hasn't joined yet",
+"Aunque esté lleno": "Even when full",
+"Todavía no ha entrado nadie mientras MercHosting miraba la consola.": "Nobody has joined yet while MercHosting was watching the console.",
+"conocido por la lista blanca": "known from the allowlist",
+"conectado": "online",
+"En permissions.json también hay XUIDs que MercHosting no ha visto entrar:": "permissions.json also has XUIDs that MercHosting hasn't seen join:",
+"Quitar permiso": "Remove permission",
+"Esta pantalla es para servidores Bedrock; en Java se usa la de siempre.": "This screen is for Bedrock servers; Java uses the usual one.",
+"gamertag no válido": "invalid gamertag",
+"la lista está llena": "the list is full",
+"XUID no válido": "invalid XUID",
+"demasiadas entradas": "too many entries",
+"Bedrock da los permisos por XUID (el identificador de Xbox), no por nombre. MercHosting lo anota cuando el jugador entra a este servidor; si alguien no aparece aquí, pídele que entre una vez. Quien no tiene un permiso propio es": "Bedrock gives permissions by XUID (the Xbox ID), not by name. MercHosting notes it down when the player joins this server; if someone isn't listed here, ask them to join once. Anyone without their own permission is",
+"Por defecto (": "Default (",
+"Permiso de": "Permission for",
+"Buscar en CurseForge": "Search CurseForge",
+"Buscar e instalar addons de CurseForge desde aquí llega cuando MercHosting tenga su clave oficial. Mientras tanto, descárgalos de su página y arrástralos a esta pestaña.": "Searching and installing CurseForge add-ons from here arrives once MercHosting has its official key. Until then, download them from their page and drag them onto this tab.",
+"Igual que el sistema": "Same as the system",
+"App gratuita para Windows y Linux que crea y administra servidores de Minecraft en tu propia PC. Minecraft es una marca de Mojang Studios y Microsoft; MercHosting no está afiliado a ellos.": "A free app for Windows and Linux that creates and manages Minecraft servers on your own PC. Minecraft is a trademark of Mojang Studios and Microsoft; MercHosting is not affiliated with them.",
+"Lo vigila el supervisor aunque cierres la ventana. Las notificaciones del sistema salen mientras MercHosting está abierto (también minimizado).": "The supervisor keeps watching even if you close the window. System notifications show while MercHosting is open (also minimized).",
+"Mostrar notificaciones del sistema": "Show system notifications",
+"Instalaste MercHosting con el paquete .deb, que no se actualiza solo: descarga el .deb nuevo de la página de releases e instálalo encima. Tus servidores y ajustes se conservan.": "You installed MercHosting with the .deb package, which doesn't update itself: download the new .deb from the releases page and install it over the old one. Your servers and settings are kept.",
+"Abrir la página de releases": "Open the releases page",
+"Si tu sistema tiene activado «reducir animaciones», los fondos se quedan quietos.": "If your system has “reduce animations” turned on, backgrounds stay still.",
+"Si se cae y al iniciar sesión": "If it crashes and when you sign in",
+"El servidor está disponible mientras tu PC esté prendida: si se cae vuelve solo, enciende al iniciar sesión y la PC no se suspende sola.": "The server is available as long as your PC is on: if it crashes it comes back on its own, it starts when you sign in, and the PC doesn't go to sleep by itself.",
+"Arrancar MercHosting al iniciar sesión": "Start MercHosting when you sign in",
+"Al iniciar sesión arranca el supervisor en segundo plano (sin abrir ninguna ventana). Vale para todos tus servidores.": "When you sign in, the supervisor starts in the background (without opening any window). Applies to all your servers.",
+"No está disponible en este sistema.": "Not available on this system.",
+"Encender este servidor al iniciar sesión": "Start this server when you sign in",
+"Necesita «Arrancar MercHosting al iniciar sesión» activado.": "Requires “Start MercHosting when you sign in” to be turned on.",
+"Le pide al sistema (con systemd-inhibit) que no la suspenda. La pantalla sí se puede apagar; mientras esté activo, el escritorio puede avisarte de que MercHosting impide suspender. Vale para todos tus servidores.": "Asks the system (with systemd-inhibit) not to suspend it. The screen can still turn off; while it's active, your desktop may tell you that MercHosting is preventing suspend. Applies to all your servers.",
+"Se activa cuando enciendes un servidor (si tu sistema tiene systemd-inhibit).": "It kicks in when you start a server (if your system has systemd-inhibit).",
+": podrá poner archivos JAR que Java ejecuta en tu PC con tu usuario. Un mod malicioso podría dañar tu PC; MercHosting no puede aislarlo.": ": they can add JAR files that Java runs on your PC with your user account. A malicious mod could harm your PC; MercHosting can't isolate it.",
+": podrá enviar cualquier comando de Minecraft (incluidos /op y /stop). No puede ejecutar programas en tu PC.": ": they can send any Minecraft command (including /op and /stop). They can't run programs on your PC.",
+"Tu compañero nunca entra en tu PC: solo puede hacer, en el servidor que le des, lo que marques.": "Your companion never gets into your PC: on the server you give them, they can only do what you tick.",
+"Guía oficial de Playit para Linux": "Playit's official Linux guide",
+"El agente oficial de Playit que usa MercHosting no está disponible en este sistema.": "The official Playit agent MercHosting uses isn't available on this system.",
+"Es un programa de Mojang que en Linux solo funciona oficialmente en Ubuntu 22.04 o más nuevo: no necesita Java. Mojang solo ofrece la versión más reciente, y los jugadores necesitan una versión de Bedrock compatible con ella.": "It's a Mojang program that on Linux is only officially supported on Ubuntu 22.04 or newer: it doesn't need Java. Mojang only offers the latest version, and players need a compatible version of Bedrock.",
+"Deja memoria para el sistema y, si juegas en esta PC, para Minecraft.": "Leave memory for the system and, if you play on this PC, for Minecraft.",
+"Abrir esta carpeta en el explorador de archivos": "Open this folder in the file manager",
+"de esta PC. Si además juegas aquí, el juego y el sistema pueden quedarse sin memoria: baja la memoria del servidor o usa el modo «Ligero».": "of this PC. If you also play here, the game and the system can run out of memory: lower the server's memory or use “Light” mode.",
+"Para unos pocos amigos en Vanilla o Paper, 2–4 GB suelen bastar. Los modpacks grandes piden 6 GB o más. No le des toda la memoria de tu PC: el sistema (y el juego, si juegas aquí) también la necesitan.": "For a few friends on Vanilla or Paper, 2–4 GB is usually enough. Big modpacks need 6 GB or more. Don't give it all your PC's memory: the system (and the game, if you play here) need it too.",
+"Sale de la memoria de tu PC. Si también juegas en esta PC, deja suficiente para el sistema y para Minecraft.": "It comes out of your PC's memory. If you also play on this PC, leave enough for the system and for Minecraft.",
+"Gratis, de la fuente oficial (Adoptium). Se comprueba su huella SHA-256 y queda en la carpeta de MercHosting: no se instala nada en el sistema.": "Free, from the official source (Adoptium). Its SHA-256 fingerprint is checked and it stays in MercHosting's folder: nothing is installed on the system.",
+"Más memoria ayuda con muchos mods o jugadores, pero deja suficiente para el sistema (y para el juego, si juegas en esta PC).": "More memory helps with lots of mods or players, but leave enough for the system (and for the game, if you play on this PC).",
+"Se quitará de MercHosting y su carpeta irá a la Papelera, con el mundo, los mods y todo lo demás. Desde la Papelera la puedes recuperar mientras no la vacíes.": "It will be removed from MercHosting and its folder will go to the Trash, with the world, the mods and everything else. You can recover it from the Trash as long as you don't empty it.",
+"También borrar la carpeta del servidor (va a la Papelera)": "Also delete the server folder (it goes to the Trash)",
+"Si quieres conservar el mundo, expórtalo antes desde la pestaña Mundos. Si la carpeta es más grande de lo que cabe en la Papelera, el sistema puede preguntarte si quieres borrarla definitivamente; si dices que no, no se borra ni se quita nada.": "If you want to keep the world, export it first from the Worlds tab. If the folder is bigger than the Trash can hold, the system may ask whether to delete it permanently; if you say no, nothing is deleted or removed.",
+"MercHosting nunca te pedirá tu contraseña de Minecraft ni la de tu PC.": "MercHosting will never ask for your Minecraft password or your PC's.",
+"el paquete no trae bin/java": "the package has no bin/java",
+"Necesita un JDK (Java con compilador) y Git instalado en el sistema (en Linux, BuildTools no lo descarga).": "Needs a JDK (Java with a compiler) and Git installed on the system (on Linux, BuildTools doesn't download it).",
+"Puede ir lento todo: el juego, el servidor y el sistema. Cierra programas que no uses o baja la memoria asignada al servidor.": "Everything may run slowly: the game, the server and the system. Close programs you don't use or lower the memory given to the server.",
+"encendido al iniciar sesión": "started when you signed in",
+"arrancar al iniciar sesión: sí": "start when signing in: yes",
+"arrancar al iniciar sesión: no": "start when signing in: no",
+"No se encontró la carpeta de configuración del usuario (HOME).": "The user's configuration folder (HOME) wasn't found.",
+"arrancado al iniciar sesión: se encienden los servidores marcados": "started at sign-in: starting the marked servers",
+"tu servidor casero": "your home server",
+"Respuesta inesperada de la otra PC.": "Unexpected answer from the other PC.",
+"Control total de esta PC": "Full control of this PC",
+"Para manejar esta PC como tu servidor casero desde MercHosting en otra PC tuya. Quien use el código podrá administrar todos los servidores de esta PC y crear nuevos.": "To run this PC as your home server from MercHosting on another PC of yours. Whoever uses the code will be able to manage every server on this PC and create new ones.",
+"Código de control total": "Full-control code",
+"En tu otra PC: Compañeros › «Conectar a mi servidor casero» › pega el código.": "On your other PC: Companions › “Connect to my home server” › paste the code.",
+"Podrá encender, apagar, crear servidores, instalar contenido y aceptar la EULA desde lejos.": "They'll be able to start, stop, create servers, install content and accept the EULA remotely.",
+"Nunca podrá ejecutar programas de esta PC, elegir carpetas fuera de la de servidores ni gestionar compañeros o Playit.": "They can never run programs on this PC, pick folders outside the servers folder, or manage companions or Playit.",
+"Todo queda en la Actividad con su nombre. Lo quitas aquí cuando quieras.": "Everything is logged in Activity under their name. Remove them here any time.",
+"Es para mí (o alguien de total confianza): entiendo que tendrá el control de todos mis servidores.": "It's for me (or someone I fully trust): I understand they'll control all my servers.",
+"Control total (servidor casero)": "Full control (home server)",
+"Control total de esta PC: todos los servidores (también los nuevos) y crear servidores. Para quitárselo, pulsa «Quitar».": "Full control of this PC: every server (including new ones) and creating servers. To take it away, press “Remove”.",
+"Conectar a mi servidor casero": "Connect to my home server",
+"Conectar a mi servidor casero (una PC sin pantalla)": "Connect to my home server (a PC without a screen)",
+"En esa PC, con MercHosting instalado, abre una terminal y ejecuta": "On that PC, with MercHosting installed, open a terminal and run",
+"(queda funcionando en segundo plano).": "(it keeps running in the background).",
+"Luego": "Then",
+": te muestra un código.": ": it shows you a code.",
+"Pégalo aquí abajo con tu nombre. Desde aquí podrás crear servidores en esa PC y manejarlos como si fueran tuyos.": "Paste it below with your name. From here you'll be able to create servers on that PC and manage them as if they were local.",
+"También sirve una PC con pantalla: en su MercHosting, Compañeros › «Control total (servidor casero)».": "A PC with a screen works too: in its MercHosting, Companions › “Full control (home server)”.",
+"Tu servidor casero: tienes el control total": "Your home server: you have full control",
+"Crear servidor aquí": "Create a server here",
+"Todavía no hay servidores en esa PC.": "There are no servers on that PC yet.",
+"y no lo encontré": "and I couldn't find it",
+"en tu PC": "on your PC",
+". MercHosting puede descargarlo por ti:": ". MercHosting can download it for you:",
+"La elige": "Chosen by",
+": una carpeta nueva dentro de su carpeta de servidores, con el nombre del servidor. Otra PC nunca decide dónde se escribe.": ": a new folder inside its servers folder, named after the server. Another PC never decides where files are written.",
+"Esto necesita el control total de esa PC (se da con una invitación de servidor casero).": "This needs full control of that PC (granted with a home-server invitation).",
+"Caduca:": "Expires:",
+". Sirve una sola vez.": ". It can be used once.",
+"En este equipo MercHosting no tiene un agente de Playit verificado (lo incluye para Linux de 64 bits x86). Puedes instalar Playit por tu cuenta con su guía oficial y crear el túnel hacia el puerto de este servidor, o abrir ese puerto en tu router.": "MercHosting doesn’t have a verified Playit agent for this machine (it includes one for 64-bit x86 Linux). You can install Playit yourself with its official guide and create the tunnel to this server’s port, or open that port on your router.",
+"En el celular no se puede: hazlo desde MercHosting en una PC.": "Not available on the phone: do it from MercHosting on a PC.",
+"En tu celular": "On your phone",
+"Conectado por Compañeros": "Connected through Companions",
+"Administra los servidores de tu PC desde el celular": "Manage your PC's servers from your phone",
+"Mis PCs": "My PCs",
+"Todavía no conectaste ninguna PC.": "You haven't connected any PC yet.",
+"Conectar con un código": "Connect with a code",
+"PC sin nombre": "Unnamed PC",
+"Control total de esa PC": "Full control of that PC",
+"Crear servidor (Java o Bedrock)": "Create server (Java or Bedrock)",
+"Control total": "Full control",
+"Conectar": "Connect",
+"Conectar una PC": "Connect a PC",
+"En tu PC, abre MercHosting ›": "On your PC, open MercHosting ›",
+"y crea una invitación. Para manejarla entera (crear servidores, Playit…) elige": "and create an invitation. To manage all of it (create servers, Playit…) choose",
+". En una PC sin pantalla usa": ". On a PC without a screen use",
+"Nombre de este celular (así lo verá la PC)": "Name of this phone (how the PC will see it)",
+"Pega el código que te muestra la PC (cópialo en la PC y pásalo a tu celular por un mensaje a ti mismo). Cada código sirve una sola vez y caduca.": "Paste the code your PC shows you (copy it on the PC and send it to your phone in a message to yourself). Each code works only once and expires.",
+"Los servidores corren en tu PC o en tu servidor casero, no en el celular. La PC tiene que estar encendida, con MercHosting abierto o en segundo plano, y conectada a Internet.": "The servers run on your PC or home server, not on the phone. The PC must be on, with MercHosting open or in the background, and connected to the Internet.",
+"El celular se conecta con el canal cifrado de Compañeros (sin cuentas ni puertos abiertos). La PC decide cada acción según los permisos que le dio a este celular, y todo queda en su Actividad.": "The phone connects through the encrypted Companions channel (no accounts, no open ports). The PC decides every action based on the permissions it gave this phone, and everything is logged in its Activity.",
+"Para que tus amigos jueguen desde fuera, activa Playit en la pestaña Conexión del servidor (con control total).": "To let your friends play from outside, turn on Playit in the server's Connection tab (requires full control).",
+"Descargar o subir archivos se hace desde MercHosting en una PC.": "Downloading or uploading files is done from MercHosting on a PC.",
+"Huella de este celular:": "This phone's fingerprint:",
+"(la verás en la lista de compañeros de tu PC).": "(you'll see it in your PC's companion list).",
+"Secciones": "Sections",
+"Ayuda": "Help",
+"esta PC": "this PC",
+"Se quita de este celular. En esa PC seguirás apareciendo como compañero hasta que te quiten allí; para volver a conectar necesitarás un código nuevo.": "It's removed from this phone. You'll still appear as a companion on that PC until you're removed there; to reconnect you'll need a new code.",
+"Escribe un nombre para este dispositivo (hasta 40 caracteres).": "Type a name for this device (up to 40 characters).",
+"Ese código es de este mismo dispositivo.": "That code belongs to this same device.",
+"En el celular todavía no se pueden descargar ni subir archivos. Hazlo desde MercHosting en una PC.": "Files can't be downloaded or uploaded on the phone yet. Do it from MercHosting on a PC.",
+"En el celular MercHosting solo administra servidores de tus PCs.": "On the phone, MercHosting only manages your PCs' servers.",
+"En este celular": "On this phone",
+"Un servidor Java dentro de este celular": "A Java server inside this phone",
+"Puedes encender un servidor de Minecraft": "You can run a Minecraft",
+"dentro de este celular para jugar con pocos amigos.": "server inside this phone to play with a few friends.",
+"Bedrock no se puede dentro del celular": "Bedrock can't run inside the phone",
+": el servidor oficial de Bedrock solo existe para PC (Windows y Linux de 64 bits x86). Para Bedrock usa «Mis PCs». Forge y NeoForge tampoco: necesitan ejecutar su instalador de Java, que Android no deja.": ": the official Bedrock server only exists for PC (64-bit x86 Windows and Linux). For Bedrock use «My PCs». Forge and NeoForge can't either: they need to run their Java installer, which Android doesn't allow.",
+"Puedes seguir usando «Mis PCs» para manejar los servidores de tu PC.": "You can keep using «My PCs» to manage your PC's servers.",
+"Crear servidor Java en este celular": "Create a Java server on this phone",
+"Todavía no hay servidores en este celular.": "There are no servers on this phone yet.",
+"Crear un servidor en este celular": "Create a server on this phone",
+"Lee y marca cada aviso. Sin aceptarlos todos no se puede seguir.": "Read and tick each warning. You can't continue without accepting all of them.",
+"Entiendo los riesgos, seguir": "I understand the risks, continue",
+"Cancelar descarga": "Cancel download",
+"Gasta mucha batería": "Uses a lot of battery",
+"Un servidor usa el procesador todo el tiempo. Con la batería sola dura poco: úsalo enchufado.": "A server uses the processor all the time. On battery alone it won't last long: keep it plugged in.",
+"El celular se calienta": "The phone gets hot",
+"Si se calienta mucho, Android baja la velocidad o cierra apps. No lo tapes ni lo dejes al sol ni cargando debajo de una almohada.": "If it gets very hot, Android slows down or closes apps. Don't cover it, leave it in the sun or charge it under a pillow.",
+"Android puede cerrarlo": "Android may close it",
+"Aunque tenga su notificación, Android (o el ahorro de batería del fabricante) puede cerrar el servidor sin avisar. Haz copias de seguridad.": "Even with its notification, Android (or the manufacturer's battery saver) may close the server without warning. Make backups.",
+"Mejor con cargador y wifi": "Best with a charger and Wi-Fi",
+"Para jugar un rato largo, déjalo enchufado y conectado a un wifi estable.": "For long sessions, keep it plugged in and on a stable Wi-Fi.",
+"Gasta datos móviles": "Uses mobile data",
+"Con datos móviles cada jugador consume tu plan. Con Playit también pasa todo el tráfico por Internet.": "On mobile data every player uses your plan. With Playit all traffic also goes over the Internet.",
+"Rinde menos que una PC": "Performs worse than a PC",
+"Es para pocos amigos (2 a 5) y pocos mods o plugins. Si va lento, baja la distancia de visión o usa tu PC.": "It's for a few friends (2 to 5) and few mods or plugins. If it's slow, lower the view distance or use your PC.",
+"Desgasta el celular": "Wears out the phone",
+"Mucho calor y carga por horas envejecen la batería. Si es tu celular de todos los días, úsalo con moderación.": "Lots of heat and hours of charging age the battery. If it's your everyday phone, use it in moderation.",
+"Paper (plugins, recomendado)": "Paper (plugins, recommended)",
+"Vanilla (oficial de Mojang)": "Vanilla (official from Mojang)",
+"Purpur (plugins)": "Purpur (plugins)",
+"Fabric (mods)": "Fabric (mods)",
+"Versión de Minecraft": "Minecraft version",
+"En el celular se ofrecen de la 1.18 en adelante (Java 17 y 21 para Android).": "On the phone, 1.18 and newer are offered (Java 17 and 21 for Android).",
+"Se descargará el Java para Android (unos 28 MB, comprobado con su huella) y el servidor. Usa wifi si puedes.": "Java for Android (about 28 MB, checked against its fingerprint) and the server will be downloaded. Use Wi-Fi if you can.",
+"Apagado": "Stopped",
+"Apagando…": "Stopping…",
+"Para encenderlo tienes que aceptar la EULA de Minecraft.": "To start it you have to accept the Minecraft EULA.",
+"He leído y acepto la EULA": "I have read and accept the EULA",
+"Encender": "Start",
+"Detener (guarda el mundo)": "Stop (saves the world)",
+"Mientras está encendido verás una notificación con el botón «Detener». Si Android lo cierra, no se vuelve a encender solo.": "While it's running you'll see a notification with a «Stop» button. If Android closes it, it won't start again by itself.",
+"Amigos por Internet (Playit)": "Friends over the Internet (Playit)",
+"Encender Playit junto con el servidor": "Start Playit with the server",
+"Con datos móviles, cada amigo gasta tu plan.": "On mobile data, every friend uses your plan.",
+"Dirección para tus amigos:": "Address for your friends:",
+"Vincula Playit con TU cuenta de playit.gg (gratis). La clave la guarda el agente en este celular.": "Link Playit with YOUR playit.gg account (free). The agent keeps the key on this phone.",
+"Abrir playit.gg y aprobar": "Open playit.gg and approve",
+"Vincular con playit.gg": "Link with playit.gg",
+"Playit arranca cuando enciendes el servidor.": "Playit starts when you start the server.",
+"Playit está apagado para este servidor.": "Playit is off for this server.",
+"Desvincular Playit": "Unlink Playit",
+"Sin mensajes todavía.": "No messages yet.",
+"Comando": "Command",
+"Hacer copia de seguridad": "Make a backup",
+"Copiando…": "Copying…",
+"Las copias se guardan dentro de la app (se conservan las 5 últimas).": "Backups are kept inside the app (the last 5 are kept).",
+"Antes se hace una copia de seguridad. La carpeta no se borra: pasa a la papelera de la app, dentro del celular.": "A backup is made first. The folder isn't deleted: it goes to the app's trash, inside the phone.",
+"¿Forzar el cierre?": "Force close?",
+"Se cierra sin guardar: puedes perder lo último que pasó en el mundo. Úsalo solo si «Detener» no responde.": "It closes without saving: you may lose the latest changes in the world. Only use it if «Stop» doesn't respond.",
+"Esta versión de la app no trae Playit.": "This version of the app doesn't include Playit.",
+"Playit incluido.": "Playit included.",
+"← En este celular": "← On this phone",
+"(la más nueva)": " (newest)"
 },
 "patterns": [
 [
@@ -5064,6 +5406,310 @@
 [
 "el {0}:{1}",
 "on {0}:{1}"
+],
+[
+"Le pide a Windows que no la duerma por inactividad. La pantalla sí se puede apagar, y apagar o suspender a mano sigue funcionando. Vale para todos tus servidores. {0}",
+"Asks Windows not to put it to sleep when idle. The screen can still turn off, and shutting down or sleeping by hand still works. Applies to all your servers. {0}"
+],
+[
+"Floodgate: {0}",
+"Floodgate: {0}"
+],
+[
+"no instalado: los jugadores de Bedrock necesitarán una cuenta de Java. {0}",
+"not installed: Bedrock players will need a Java account. {0}"
+],
+[
+"Probar Bedrock {0}",
+"Test Bedrock {0}"
+],
+[
+"Copiar Bedrock {0}",
+"Copy Bedrock {0}"
+],
+[
+"no se pudo enviar a {0}:{1}: {2}",
+"couldn't send to {0}:{1}: {2}"
+],
+[
+"{0}:{1} no respondió como un servidor Bedrock (UDP)",
+"{0}:{1} didn't answer like a Bedrock server (UDP)"
+],
+[
+"Instalado y activado: {0}.",
+"Installed and turned on: {0}."
+],
+[
+"Actualizado (la versión anterior está en la papelera): {0}.",
+"Updated (the previous version is in the trash): {0}."
+],
+[
+"Ya estaba con la misma versión: {0}.",
+"Already had the same version: {0}."
+],
+[
+"Activo en el mundo: {0}",
+"On in the world: {0}"
+],
+[
+"Ignorados (no son .mcpack ni .mcaddon): {0}.",
+"Ignored (not .mcpack or .mcaddon): {0}."
+],
+[
+"¿Quitar {0}?",
+"Remove {0}?"
+],
+[
+"Bedrock Dedicated Server {0}",
+"Bedrock Dedicated Server {0}"
+],
+[
+"El mundo «{0}» se crea la primera vez que enciendas el servidor; los addons que instales ya quedan activados para él.",
+"The world “{0}” is created the first time you start the server; add-ons you install are already turned on for it."
+],
+[
+"Incluidos con el servidor ({0})",
+"Included with the server ({0})"
+],
+[
+"en uso de los {0} de tu PC",
+"in use out of your PC's {0}"
+],
+[
+"Mojang solo ofrece la versión más reciente de Bedrock ({0}); vuelve a elegirla.",
+"Mojang only offers the latest Bedrock version ({0}); choose it again."
+],
+[
+"el .zip no es válido: {0}",
+"the .zip isn't valid: {0}"
+],
+[
+"ruta no permitida en el .zip: {0}",
+"disallowed path in the .zip: {0}"
+],
+[
+"el .zip trae un enlace: {0}",
+"the .zip contains a link: {0}"
+],
+[
+"SHA-256 del .zip descargado: {0}",
+"SHA-256 of the downloaded .zip: {0}"
+],
+[
+"{0} archivos extraídos",
+"{0} files extracted"
+],
+[
+"Versión {0} anotada por MercHosting al instalarlo",
+"Version {0} recorded by MercHosting when installing it"
+],
+[
+"manifest.json no es válido: {0}",
+"manifest.json isn't valid: {0}"
+],
+[
+"no es un behavior pack ni un resource pack (tipo «{0}»)",
+"it's not a behavior pack or a resource pack (type “{0}”)"
+],
+[
+"Se ignoró «{0}»: {1}",
+"Ignored “{0}”: {1}"
+],
+[
+"«{0}» usa scripts: si no funciona, puede necesitar experimentos o APIs beta activados en el mundo.",
+"“{0}” uses scripts: if it doesn't work, it may need experiments or beta APIs turned on in the world."
+],
+[
+"{0}: no puede llevar barras invertidas ni saltos de línea",
+"{0}: can't contain backslashes or line breaks"
+],
+[
+"Forge {0} para Minecraft {1} es una compilación antigua que MercHosting no ofrece; usa una 14.23.5.x",
+"Forge {0} for Minecraft {1} is an old build MercHosting doesn't offer; use a 14.23.5.x one"
+],
+[
+"Forge {0} es una versión antigua: funciona solo con Java 8 y con mods hechos para {1}.",
+"Forge {0} is an old version: it only works with Java 8 and with mods made for {1}."
+],
+[
+"JAR del servidor de Forge: {0}",
+"Forge server JAR: {0}"
+],
+[
+"{0} no es un JAR ejecutable (no tiene Main-Class en su manifiesto)",
+"{0} isn't an executable JAR (no Main-Class in its manifest)"
+],
+[
+"Forge {0} solo funciona con Java 8 y el elegido es Java {1}. Elige o instala Java 8.",
+"Forge {0} only works with Java 8 and the chosen one is Java {1}. Choose or install Java 8."
+],
+[
+"Archivo {0} encontrado (Forge antiguo, se arranca con java -jar)",
+"File {0} found (old Forge, started with java -jar)"
+],
+[
+"Forge {0} necesita Java 8 y este servidor usa Java {1}",
+"Forge {0} needs Java 8 and this server uses Java {1}"
+],
+[
+"Puede entrar aunque esté lleno: {0}",
+"Can join even when full: {0}"
+],
+[
+"Quitar de la lista: {0}",
+"Remove from the list: {0}"
+],
+[
+"Bedrock da los permisos por XUID (el identificador de Xbox), no por nombre. MercHosting lo anota cuando el jugador entra a este servidor; si alguien no aparece aquí, pídele que entre una vez. Quien no tiene un permiso propio es {0}.",
+"Bedrock gives permissions by XUID (the Xbox ID), not by name. MercHosting notes it down when the player joins this server; if someone isn't listed here, ask them to join once. Anyone without their own permission is {0}."
+],
+[
+"visto el {0}",
+"seen {0}"
+],
+[
+"Permiso de {0}",
+"Permission for {0}"
+],
+[
+"Por defecto ({0})",
+"Default ({0})"
+],
+[
+"Quitar permiso de {0}",
+"Remove permission for {0}"
+],
+[
+"{0} es demasiado grande",
+"{0} is too large"
+],
+[
+"{0} no es una lista JSON válida; corrígelo en Archivos antes de cambiarlo aquí",
+"{0} isn't a valid JSON list; fix it in Files before changing it here"
+],
+[
+"Tu PC tiene {0}. Deja memoria para el sistema y, si juegas aquí, para Minecraft.",
+"Your PC has {0}. Leave memory for the system and, if you play here, for Minecraft."
+],
+[
+"Adoptium no publica un JRE para {0} x64 de esa versión",
+"Adoptium doesn't publish a {0} x64 JRE for that version"
+],
+[
+"ruta no permitida en el paquete: {0}",
+"path not allowed in the package: {0}"
+],
+[
+"enlace no permitido en el paquete: {0}",
+"link not allowed in the package: {0}"
+],
+[
+"Tu PC tiene unos {0} MB; deja memoria para el sistema (máximo {1} MB).",
+"Your PC has about {0} MB; leave memory for the system (maximum {1} MB)."
+],
+[
+"No se pudo quitar del inicio de sesión: {0}",
+"Couldn't remove it from sign-in startup: {0}"
+],
+[
+"El sistema no pudo mandar la carpeta a la Papelera ({0}). No se quitó nada de la lista.",
+"The system couldn't send the folder to the Trash ({0}). Nothing was removed from the list."
+],
+[
+"Java llegó al máximo asignado ({0} MB). Con muchos mods o jugadores hace falta más. Sube la memoria sin pasarte de lo que tiene tu PC (deja sitio para el sistema y, si juegas aquí, para el juego).",
+"Java hit its assigned maximum ({0} MB). Lots of mods or players need more. Raise the memory without going past what your PC has (leave room for the system and, if you play here, for the game)."
+],
+[
+"Caduca: {0}. Sirve una sola vez.",
+"Expires: {0}. It can be used once."
+],
+[
+"{0} · caduca {1}",
+"{0} · expires {1}"
+],
+[
+"Buscando Java en {0}…",
+"Looking for Java on {0}…"
+],
+[
+"· en {0}",
+"· on {0}"
+],
+[
+"Este modpack necesita Java {0} y no lo encontré {1}. MercHosting puede descargarlo por ti:",
+"This modpack needs Java {0} and I couldn't find it {1}. MercHosting can download it for you:"
+],
+[
+"Esta versión necesita Java {0} y no lo encontré {1}. MercHosting puede descargarlo por ti:",
+"This version needs Java {0} and I couldn't find it {1}. MercHosting can download it for you:"
+],
+[
+"La elige {0}",
+"Chosen by {0}"
+],
+[
+"El servidor casero no tiene un JDK {0} (Spigot se compila allí). Instálalo en esa PC y vuelve a intentarlo.",
+"The home server has no JDK {0} (Spigot is compiled there). Install it on that PC and try again."
+],
+[
+"El servidor casero no tiene Java {0}. Descárgalo desde aquí con «Descargar Java {1} (Eclipse Temurin)» y vuelve a intentarlo.",
+"The home server has no Java {0}. Download it from here with “Download Java {1} (Eclipse Temurin)” and try again."
+],
+[
+"{0} tiene control total de esta PC",
+"{0} has full control of this PC"
+],
+[
+"Puede administrar todos los servidores y crear nuevos (PC {0}). Quítalo en Compañeros si no fuiste tú.",
+"They can manage every server and create new ones (PC {0}). Remove them in Companions if it wasn't you."
+],
+[
+"Actualizar {0}",
+"Refresh {0}"
+],
+[
+"¿Olvidar {0}?",
+"Forget {0}?"
+],
+[
+"{0}. Esa PC tiene que estar encendida, con MercHosting abierto o en segundo plano y conectada a Internet.",
+"{0}. That PC must be on, with MercHosting open or in the background, and connected to the Internet."
+],
+[
+"Memoria del celular: {0} MB · para el servidor como mucho {1} MB.",
+"Phone memory: {0} MB · at most {1} MB for the server."
+],
+[
+"Memoria para el servidor: {0} MB",
+"Memory for the server: {0} MB"
+],
+[
+"Recomendado {0} MB. Como mucho {1} MB: el resto lo necesita Android.",
+"Recommended {0} MB. At most {1} MB: Android needs the rest."
+],
+[
+"Memoria: {0} MB",
+"Memory: {0} MB"
+],
+[
+"· puerto {0} (wifi de tu casa)",
+"· port {0} (your home Wi-Fi)"
+],
+[
+"Playit está vinculado. Crea un túnel «Minecraft Java» en playit.gg hacia el puerto {0} de este agente; aparecerá aquí.",
+"Playit is linked. Create a «Minecraft Java» tunnel on playit.gg to port {0} of this agent; it will show up here."
+],
+[
+"Esta versión de la app no trae el agente de Playit. Tus amigos solo pueden entrar si están en tu mismo wifi (con la IP del celular y el puerto {0}).",
+"This version of the app doesn't include the Playit agent. Your friends can only join if they're on your same Wi-Fi (with the phone's IP and port {0})."
+],
+[
+"En «En este celular» puedes encender un servidor Java dentro del propio celular (gasta batería, se calienta y Android puede cerrarlo). Bedrock solo se puede en una PC.",
+"In «On this phone» you can run a Java server inside the phone itself (it uses battery, gets hot and Android may close it). Bedrock only works on a PC."
+],
+[
+"En «Mis PCs» los servidores corren en tu PC o en tu servidor casero. La PC tiene que estar encendida, con MercHosting abierto o en segundo plano, y conectada a Internet.",
+"In «My PCs» servers run on your PC or home server. The PC must be on, with MercHosting open or in the background, and connected to the Internet."
 ]
 ]
 }

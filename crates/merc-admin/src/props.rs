@@ -190,7 +190,16 @@ impl PropsDoc {
 
     /// Cambia (o añade al final) una clave. Las repeticiones anteriores se eliminan.
     pub fn set(&mut self, key: &str, value: &str) {
-        let line = format!("{key}={}", escape_value(value));
+        self.set_line(key, format!("{key}={}", escape_value(value)));
+    }
+
+    /// Como [`Self::set`], pero escribe el valor tal cual (UTF-8): Bedrock Dedicated Server no
+    /// interpreta los `\uXXXX` de Java y los mostraría literalmente.
+    pub fn set_raw(&mut self, key: &str, value: &str) {
+        self.set_line(key, format!("{key}={value}"));
+    }
+
+    fn set_line(&mut self, key: &str, line: String) {
         let positions: Vec<(usize, usize)> = self
             .entries
             .iter()
@@ -312,6 +321,22 @@ pub fn validate_level_name(value: &str) -> Result<(), AdminError> {
 
 /// Aplica cambios validados a un texto `server.properties` y devuelve el texto nuevo.
 pub fn apply_changes(text: &str, changes: &BTreeMap<String, String>) -> Result<String, AdminError> {
+    apply_changes_for(text, changes, false)
+}
+
+/// Como [`apply_changes`]; con `raw` (Bedrock) los valores se escriben en UTF-8 sin escapar y
+/// no se admiten barras invertidas, que Bedrock no interpreta.
+pub fn apply_changes_for(text: &str, changes: &BTreeMap<String, String>, raw: bool) -> Result<String, AdminError> {
+    if raw {
+        if let Some((k, _)) = changes
+            .iter()
+            .find(|(_, v)| v.contains('\\') || v.chars().any(|c| c.is_control()))
+        {
+            return Err(AdminError::Invalid(format!(
+                "{k}: no puede llevar barras invertidas ni saltos de línea"
+            )));
+        }
+    }
     if changes.is_empty() {
         return Err(AdminError::Invalid("no hay cambios que guardar".into()));
     }
@@ -323,7 +348,11 @@ pub fn apply_changes(text: &str, changes: &BTreeMap<String, String>) -> Result<S
     }
     let mut doc = PropsDoc::parse(text);
     for (k, v) in changes {
-        doc.set(k, v);
+        if raw {
+            doc.set_raw(k, v);
+        } else {
+            doc.set(k, v);
+        }
     }
     Ok(doc.render())
 }
@@ -331,6 +360,18 @@ pub fn apply_changes(text: &str, changes: &BTreeMap<String, String>) -> Result<S
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn bedrock_values_stay_utf8() {
+        let mut ch = BTreeMap::new();
+        ch.insert("server-name".to_string(), "Server de Ñandú".to_string());
+        let out = apply_changes_for("server-name=Dedicated Server\n", &ch, true).unwrap();
+        assert_eq!(out.trim_end(), "server-name=Server de Ñandú");
+        let java = apply_changes("motd=x\n", &BTreeMap::from([("motd".to_string(), "Ñ".to_string())])).unwrap();
+        assert!(java.contains("\\u00d1"));
+        ch.insert("server-name".to_string(), "a\\b".to_string());
+        assert!(apply_changes_for("", &ch, true).is_err());
+    }
 
     const SAMPLE: &str = "#Minecraft server properties\n#Thu Oct 30 2026\nmotd=Un servidor \\u00f1and\\u00fa\nserver-port=25565\n# nota\nwhite-list=false\nlevel-seed=\nmax-players=20\n";
 

@@ -160,7 +160,8 @@ pub fn java_exe_name() -> &'static str {
 }
 
 /// Busca posibles ejecutables de Java sin ejecutarlos: `JAVA_HOME`, el `PATH` y las carpetas
-/// habituales de los instaladores de Windows (Adoptium/Temurin, Microsoft, Oracle, Zulu, Amazon).
+/// habituales de los instaladores de Windows (Adoptium/Temurin, Microsoft, Oracle, Zulu, Amazon)
+/// o de Linux (`/usr/lib/jvm` de la distribución, `/opt`, SDKMAN!).
 /// Devuelve rutas absolutas existentes y sin duplicados. La versión se comprueba aparte con
 /// [`probe_java`].
 pub fn find_java_candidates() -> Vec<std::path::PathBuf> {
@@ -207,6 +208,22 @@ pub fn find_java_candidates() -> Vec<std::path::PathBuf> {
                 for entry in std::fs::read_dir(&dir).into_iter().flatten().flatten() {
                     push(entry.path().join("bin").join(exe));
                 }
+            }
+        }
+    }
+    if cfg!(target_os = "linux") {
+        // Paquetes de la distribución (OpenJDK de apt/dnf/pacman) y las rutas habituales de
+        // Adoptium/Temurin, Zulu, Corretto y SDKMAN!.
+        let mut roots: Vec<PathBuf> = ["/usr/lib/jvm", "/usr/lib64/jvm", "/usr/java", "/opt/java", "/opt/jdk"]
+            .iter()
+            .map(PathBuf::from)
+            .collect();
+        if let Some(h) = std::env::var_os("HOME") {
+            roots.push(PathBuf::from(h).join(".sdkman/candidates/java"));
+        }
+        for root in roots {
+            for entry in std::fs::read_dir(&root).into_iter().flatten().flatten() {
+                push(entry.path().join("bin").join(exe));
             }
         }
     }

@@ -76,7 +76,7 @@ export function RemoteServerView({ api, host, id, sidebar, onBack, onError }: Pr
         onChanged={load}
         onRemoved={onBack}
         onError={onError}
-        remote={{ perms, hostName: host.name || "tu amigo" }}
+        remote={{ perms, hostName: host.name || "tu amigo", hostAdmin: host.host_admin }}
       />
     );
 

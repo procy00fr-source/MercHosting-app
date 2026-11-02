@@ -19,7 +19,7 @@ const FAQ: { q: string; a: string }[] = [
   },
   {
     q: "¿Cuánta memoria le doy al servidor?",
-    a: "Para unos pocos amigos en Vanilla o Paper, 2–4 GB suelen bastar. Los modpacks grandes piden 6 GB o más. No le des toda la memoria de tu PC: Windows (y el juego, si juegas aquí) también la necesitan.",
+    a: "Para unos pocos amigos en Vanilla o Paper, 2–4 GB suelen bastar. Los modpacks grandes piden 6 GB o más. No le des toda la memoria de tu PC: el sistema (y el juego, si juegas aquí) también la necesitan.",
   },
   {
     q: "¿Qué es la EULA?",

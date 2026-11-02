@@ -231,7 +231,7 @@ export function FilesPanel({ api, sup, id, running, remote = false, can = () => 
           <button
             type="button"
             className="btn btn-sm"
-            title="Abrir esta carpeta en el Explorador de Windows"
+            title="Abrir esta carpeta en el explorador de archivos"
             onClick={() => api.openServerFolder(id, dir).catch((e) => setError(errorMessage(e)))}
           >
             <FolderOpen size={14} aria-hidden="true" /> Ver carpeta del servidor
@@ -243,7 +243,7 @@ export function FilesPanel({ api, sup, id, running, remote = false, can = () => 
         <button type="button" className="btn btn-sm" hidden={!can("files_edit")} onClick={() => setAsk({ kind: "mkdir", value: "" })} disabled={locked}>
           <FolderPlus size={14} aria-hidden="true" /> Nueva carpeta
         </button>
-        {can("files_edit") && (
+        {can("files_edit") && api.canTransfer !== false && (
           <button type="button" className="btn btn-sm btn-go" onClick={upload} disabled={locked}>
             <Upload size={14} aria-hidden="true" /> Subir archivo
           </button>
@@ -310,7 +310,7 @@ export function FilesPanel({ api, sup, id, running, remote = false, can = () => 
                     <td className="num">{e.size !== null ? formatSize(e.size) : ""}</td>
                     <td className="num">{formatDate(e.modified_unix_ms)}</td>
                     <td className="file-actions">
-                      {can("files_read") && !e.is_dir && !e.link && (
+                      {can("files_read") && !e.is_dir && !e.link && api.canTransfer !== false && (
                         <button
                           type="button"
                           className="icon-btn"

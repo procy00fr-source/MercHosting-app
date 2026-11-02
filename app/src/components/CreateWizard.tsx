@@ -2,6 +2,7 @@
 // Todo lo que muestra viene del supervisor (catálogo real, Java real, progreso real).
 
 import {
+  Smartphone,
   Anvil,
   Box,
   Check,
@@ -47,6 +48,7 @@ import { MercError } from "../api/types";
 import { formatBytes, formatMemory, joinPath, safeFolderName } from "../format";
 import { Dialog } from "./Dialog";
 import { JavaInstall } from "./JavaInstall";
+import { isLinux } from "../platform";
 
 export const EULA_URL = "https://aka.ms/MinecraftEULA";
 const JOB_POLL_MS = 500;
@@ -104,7 +106,7 @@ const FLAVOR_GROUPS: { title: string; items: { id: Flavor; title: string; text: 
       {
         id: "forge",
         title: "Forge",
-        text: "El cargador de mods clásico (desde 1.17).",
+        text: "El cargador de mods clásico (1.12.2 a 1.16.5 y desde 1.17).",
         icon: <Hammer size={20} aria-hidden="true" />,
       },
       {
@@ -126,6 +128,17 @@ const FLAVOR_GROUPS: { title: string; items: { id: Flavor; title: string; text: 
       },
     ],
   },
+  {
+    title: "Bedrock (celular, consola, Windows)",
+    items: [
+      {
+        id: "bedrock",
+        title: "Bedrock",
+        text: "El servidor oficial de Mojang para Minecraft Bedrock. Solo entran jugadores de Bedrock; usa addons en vez de mods.",
+        icon: <Smartphone size={20} aria-hidden="true" />,
+      },
+    ],
+  },
 ];
 
 const FLAVOR_TITLE: Record<Flavor, string> = {
@@ -138,10 +151,13 @@ const FLAVOR_TITLE: Record<Flavor, string> = {
   forge: "Forge",
   neo_forge: "NeoForge",
   arclight: "Arclight",
+  bedrock: "Bedrock",
 };
 
 /** Tipos que se instalan ejecutando un instalador oficial (muestran ese paso en el progreso). */
-const USES_INSTALLER: Flavor[] = ["neo_forge", "forge", "quilt", "spigot"];
+const USES_INSTALLER: Flavor[] = ["neo_forge", "forge", "quilt", "spigot", "bedrock"];
+/** Puerto UDP por defecto de Bedrock Dedicated Server. */
+const BEDROCK_PORT = "19132";
 
 type Page = "type" | "version" | "settings" | "eula" | "summary" | "progress";
 /** Tipos con versión de loader elegible. */
@@ -248,9 +264,19 @@ interface Props {
   usedPorts: number[];
   onClose: () => void;
   onCreated: (id: InstanceId) => void;
+  /** Se crea en tu servidor casero (otra PC): la carpeta y el Java los elige esa PC. */
+  remote?: { hostName: string };
 }
 
 /** Java aceptable para una versión: Java 8 exacto para las antiguas; si no, igual o superior. */
+/** Forge antiguo (1.12.2 y 1.13 – 1.16.5): instalador distinto y solo Java 8. */
+export function isLegacyForge(mc: string): boolean {
+  const p = mc.split(".");
+  if (p[0] !== "1") return false;
+  const minor = Number(p[1]);
+  return (minor === 12 && p[2] === "2") || (minor >= 13 && minor <= 16);
+}
+
 function javaFits(major: number | null, required: number): boolean {
   if (major === null) return false;
   return required <= 8 ? major === 8 : major >= required;
@@ -258,12 +284,12 @@ function javaFits(major: number | null, required: number): boolean {
 
 function ramLimits(system: SystemInfo | null): { max: number } {
   const totalMb = system?.total_memory_bytes ? Math.floor(system.total_memory_bytes / 1024 ** 2) : null;
-  // Se deja al menos 2 GB para Windows.
+  // Se deja al menos 2 GB para el sistema.
   const max = totalMb ? Math.max(1024, Math.min(32768, Math.floor((totalMb - 2048) / 512) * 512)) : 16384;
   return { max };
 }
 
-export function CreateWizard({ api, system, usedPorts, onClose, onCreated }: Props) {
+export function CreateWizard({ api, system, usedPorts, onClose, onCreated, remote }: Props) {
   const sup = useMemo(() => new Supervisor(api), [api]);
   const [page, setPage] = useState<Page>("type");
   const [flavor, setFlavor] = useState<Flavor | null>(null);
@@ -327,7 +353,14 @@ export function CreateWizard({ api, system, usedPorts, onClose, onCreated }: Pro
   const [starting, setStarting] = useState(false);
   const logRef = useRef<HTMLDivElement>(null);
 
-  const path = defaults && parentDir ? joinPath(parentDir, safeFolderName(name)) : null;
+  // En el servidor casero la carpeta la pone esa PC (dentro de su carpeta de servidores).
+  const path = remote
+    ? defaults
+      ? `${remote.hostName}/${safeFolderName(name)}`
+      : null
+    : defaults && parentDir
+      ? joinPath(parentDir, safeFolderName(name))
+      : null;
   const running = job?.state === "running";
 
   // --- Carga de datos ---
@@ -376,7 +409,7 @@ export function CreateWizard({ api, system, usedPorts, onClose, onCreated }: Pro
 
   // Comprobación de la carpeta destino (con una pequeña espera mientras se escribe).
   useEffect(() => {
-    if (page !== "settings" || !path) return;
+    if (page !== "settings" || !path || remote) return;
     let alive = true;
     setTargetChecking(true);
     const t = setTimeout(() => {
@@ -389,7 +422,7 @@ export function CreateWizard({ api, system, usedPorts, onClose, onCreated }: Pro
       alive = false;
       clearTimeout(t);
     };
-  }, [page, path, sup]);
+  }, [page, path, sup, remote]);
 
   // Versiones del loader para la versión de Minecraft elegida.
   useEffect(() => {
@@ -456,6 +489,13 @@ export function CreateWizard({ api, system, usedPorts, onClose, onCreated }: Pro
     setJavaPath("");
     setQuery("");
     setRam(Math.min(f === "neo_forge" ? 6144 : 4096, ramMax));
+    // Bedrock escucha por UDP en su propio puerto; el resto, el puerto de Java sugerido.
+    if (f === "bedrock") {
+      setPort(BEDROCK_PORT);
+      setTemplate(null);
+      setExtraProps({});
+      setKeepInventory(false);
+    } else if (port === BEDROCK_PORT && defaults) setPort(String(defaults.suggested_port));
     loadCatalog(f);
   }
 
@@ -529,6 +569,12 @@ export function CreateWizard({ api, system, usedPorts, onClose, onCreated }: Pro
     const autoName = flavor && version ? `${FLAVOR_TITLE[flavor]} ${version.mc_version}` : "";
     setVersion(entry);
     if (flavor && (!name || name === autoName)) setName(`${FLAVOR_TITLE[flavor]} ${entry.mc_version}`);
+    // Bedrock Dedicated Server es un programa nativo: no usa Java.
+    if (flavor === "bedrock") {
+      setJava(null);
+      setJavaPath("");
+      return;
+    }
     loadJava(entry);
   }
 
@@ -538,6 +584,19 @@ export function CreateWizard({ api, system, usedPorts, onClose, onCreated }: Pro
   }
 
   function properties(): Record<string, string> {
+    if (flavor === "bedrock") {
+      const b: Record<string, string> = {
+        "server-port": port,
+        "max-players": maxPlayers,
+        gamemode,
+        difficulty,
+        "online-mode": String(onlineMode),
+        "allow-list": String(whitelist),
+        "server-name": (motd.trim() || name.trim()).slice(0, 64),
+      };
+      if (seed.trim()) b["level-seed"] = seed.trim();
+      return b;
+    }
     const p: Record<string, string> = {
       "server-port": port,
       "max-players": maxPlayers,
@@ -564,15 +623,15 @@ export function CreateWizard({ api, system, usedPorts, onClose, onCreated }: Pro
         flavor,
         mc_version: version.mc_version,
         path,
-        java: javaPath,
+        java: isBedrock ? "" : javaPath,
         min_memory_mb: 0,
-        max_memory_mb: ram,
+        max_memory_mb: isBedrock ? 0 : ram,
         properties: properties(),
         accept_eula: eula,
         modpack_version: mode === "modpack" ? packVersionId : null,
         modpack_source: packSource,
         loader_version: mode === "server" ? loaderChoice || null : null,
-        game_rules: keepInventory ? { keep_inventory: "true" } : {},
+        game_rules: keepInventory && !isBedrock ? { keep_inventory: "true" } : {},
       });
       setLog(j.log);
       setJob(j);
@@ -616,14 +675,15 @@ export function CreateWizard({ api, system, usedPorts, onClose, onCreated }: Pro
   const playersNum = Number(maxPlayers);
   const playersValid = Number.isInteger(playersNum) && playersNum >= 1 && playersNum <= 1000;
   const needsJdk = flavor === "spigot";
+  const isBedrock = flavor === "bedrock";
   const usableJava =
     java?.candidates.filter((c) => version && javaFits(c.major, version.java_major) && (!needsJdk || c.jdk)) ?? [];
 
   const canNext: Record<Page, boolean> = {
     type: !!flavor || mode === "modpack",
-    version: !!version && !!javaPath && !javaLoading && (mode === "server" || !!packSummary),
+    version: !!version && (isBedrock || (!!javaPath && !javaLoading)) && (mode === "server" || !!packSummary),
     settings:
-      name.trim().length > 0 && !!path && !targetError && !targetChecking && portValid && playersValid && ram >= 1024,
+      name.trim().length > 0 && !!path && !targetError && !targetChecking && portValid && playersValid && (isBedrock || ram >= 1024),
     eula: true,
     summary: !!resolved,
     progress: false,
@@ -877,7 +937,7 @@ export function CreateWizard({ api, system, usedPorts, onClose, onCreated }: Pro
                   </ul>
                   {javaLoading ? (
                     <p className="field-help" role="status">
-                      Buscando Java en tu PC…
+                      {remote ? `Buscando Java en ${remote.hostName}…` : "Buscando Java en tu PC…"}
                     </p>
                   ) : usableJava.length > 0 ? (
                     <div className="field">
@@ -886,7 +946,8 @@ export function CreateWizard({ api, system, usedPorts, onClose, onCreated }: Pro
                         {usableJava.map((c) => (
                           <option key={c.path} value={c.path}>
                             Java {c.major}
-                            {c.path === java?.recommended ? " (recomendado)" : ""} en {c.path}
+                            {c.path === java?.recommended ? " (recomendado)" : ""}
+                            {remote ? ` · en ${remote.hostName}` : ` en ${c.path}`}
                           </option>
                         ))}
                       </select>
@@ -895,7 +956,8 @@ export function CreateWizard({ api, system, usedPorts, onClose, onCreated }: Pro
                     version && (
                       <>
                         <p className="form-error" role="alert">
-                          Este modpack necesita Java {version.java_major} y no lo encontré en tu PC. MercHosting puede descargarlo por ti:
+                          Este modpack necesita Java {version.java_major} y no lo encontré {remote ? `en ${remote.hostName}` : "en tu PC"}.
+                          MercHosting puede descargarlo por ti:
                         </p>
                         <JavaInstall sup={sup} minMajor={version.java_major} onInstalled={() => loadJava(version)} />
                       </>
@@ -947,7 +1009,7 @@ export function CreateWizard({ api, system, usedPorts, onClose, onCreated }: Pro
                     onClick={() => chooseVersion(e)}
                   >
                     <span className="version-num">{e.mc_version}</span>
-                    <span className="version-java">Java {e.java_major}</span>
+                    <span className="version-java">{isBedrock ? "Sin Java" : `Java ${e.java_major}`}</span>
                     {e.latest && <span className="badge">Última</span>}
                   </button>
                 ))}
@@ -956,12 +1018,33 @@ export function CreateWizard({ api, system, usedPorts, onClose, onCreated }: Pro
             </>
           )}
 
-          {version && (
+          {version && isBedrock && (
+            <div className="detect-box" aria-live="polite">
+              <h3>Bedrock Dedicated Server {version.mc_version}</h3>
+              <p className="field-help">
+                {isLinux()
+                  ? "Es un programa de Mojang que en Linux solo funciona oficialmente en Ubuntu 22.04 o más nuevo: no necesita Java. Mojang solo ofrece la versión más reciente, y los jugadores necesitan una versión de Bedrock compatible con ella."
+                  : "Es un programa de Mojang para Windows 10 o más nuevo: no necesita Java. Mojang solo ofrece la versión más reciente, y los jugadores necesitan una versión de Bedrock compatible con ella."}
+              </p>
+            </div>
+          )}
+
+          {version && flavor === "forge" && isLegacyForge(version.mc_version) && (
+            <div className="wiz-alert" role="note" aria-label="Forge antiguo">
+              <TriangleAlert size={18} aria-hidden="true" />
+              <p>
+                Forge {version.mc_version} es una versión antigua: funciona solo con <strong>Java 8</strong> (MercHosting puede
+                descargarlo) y con mods hechos para {version.mc_version}. El buscador de mods filtra por esta versión.
+              </p>
+            </div>
+          )}
+
+          {version && !isBedrock && (
             <div className="detect-box" aria-live="polite">
               <h3>Java para Minecraft {version.mc_version}</h3>
               {javaLoading ? (
                 <p className="field-help" role="status">
-                  Buscando Java en tu PC…
+                  {remote ? `Buscando Java en ${remote.hostName}…` : "Buscando Java en tu PC…"}
                 </p>
               ) : usableJava.length > 0 ? (
                 <div className="field">
@@ -970,7 +1053,8 @@ export function CreateWizard({ api, system, usedPorts, onClose, onCreated }: Pro
                     {usableJava.map((c) => (
                       <option key={c.path} value={c.path}>
                         Java {c.major}
-                        {c.path === java?.recommended ? " (recomendado)" : ""} en {c.path}
+                        {c.path === java?.recommended ? " (recomendado)" : ""}
+                            {remote ? ` · en ${remote.hostName}` : ` en ${c.path}`}
                       </option>
                     ))}
                   </select>
@@ -982,7 +1066,7 @@ export function CreateWizard({ api, system, usedPorts, onClose, onCreated }: Pro
                     <p>
                       {needsJdk
                         ? `Spigot se compila en tu PC y necesita un JDK ${version.java_major} (Java con compilador). No encontré uno: instala, por ejemplo, Eclipse Temurin JDK ${version.java_major} y pulsa «Buscar de nuevo».`
-                        : `Esta versión necesita Java ${version.java_major} y no lo encontré en tu PC. MercHosting puede descargarlo por ti:`}
+                        : `Esta versión necesita Java ${version.java_major} y no lo encontré ${remote ? `en ${remote.hostName}` : "en tu PC"}. MercHosting puede descargarlo por ti:`}
                     </p>
                     {!needsJdk && <JavaInstall sup={sup} minMajor={version.java_major} onInstalled={() => loadJava(version)} />}
                     <button type="button" className="btn btn-sm" onClick={() => loadJava(version)}>
@@ -1025,6 +1109,7 @@ export function CreateWizard({ api, system, usedPorts, onClose, onCreated }: Pro
 
       {page === "settings" && (
         <div className="wiz-page settings-grid">
+          {!isBedrock && (
           <fieldset className="field span-2 template-row">
             <legend className="field-title">Plantilla (opcional)</legend>
             <div className="template-options">
@@ -1068,6 +1153,7 @@ export function CreateWizard({ api, system, usedPorts, onClose, onCreated }: Pro
               </p>
             )}
           </fieldset>
+          )}
 
           <div className="field span-2">
             <label htmlFor="wiz-name">Nombre del servidor</label>
@@ -1078,13 +1164,20 @@ export function CreateWizard({ api, system, usedPorts, onClose, onCreated }: Pro
             <span id="wiz-folder-title" className="field-title">
               Carpeta
             </span>
+            {remote ? (
+              <p className="field-help">
+                La elige <strong translate="no">{remote.hostName}</strong>: una carpeta nueva dentro de su carpeta de servidores, con el
+                nombre del servidor. Otra PC nunca decide dónde se escribe.
+              </p>
+            ) : (
             <div className="folder-pick">
               <button type="button" className="btn btn-sm" onClick={pickParent}>
                 <FolderOpen size={15} aria-hidden="true" /> Cambiar ubicación
               </button>
               <span className="folder-path">{path ?? "…"}</span>
             </div>
-            {targetError ? (
+            )}
+            {remote ? null : targetError ? (
               <p className="form-error" role="alert">
                 {targetError}
               </p>
@@ -1093,6 +1186,7 @@ export function CreateWizard({ api, system, usedPorts, onClose, onCreated }: Pro
             )}
           </div>
 
+          {!isBedrock && (
           <div className="field span-2">
             <label htmlFor="wiz-ram">Memoria máxima</label>
             <div className="ram-row">
@@ -1109,11 +1203,12 @@ export function CreateWizard({ api, system, usedPorts, onClose, onCreated }: Pro
             </div>
             <p className="field-help">
               {system?.total_memory_bytes
-                ? `Tu PC tiene ${formatBytes(system.total_memory_bytes)}. Deja memoria para Windows y, si juegas aquí, para Minecraft.`
-                : "Deja memoria para Windows y, si juegas en esta PC, para Minecraft."}
+                ? `Tu PC tiene ${formatBytes(system.total_memory_bytes)}. Deja memoria para el sistema y, si juegas aquí, para Minecraft.`
+                : "Deja memoria para el sistema y, si juegas en esta PC, para Minecraft."}
               {flavor === "neo_forge" || flavor === "fabric" ? " Los mods suelen necesitar más memoria." : ""}
             </p>
           </div>
+          )}
 
           <div className="field">
             <label htmlFor="wiz-port">Puerto</label>
@@ -1123,7 +1218,7 @@ export function CreateWizard({ api, system, usedPorts, onClose, onCreated }: Pro
             ) : portTaken ? (
               <p className="field-help warn-text">Otro de tus servidores ya usa este puerto; no podrán estar encendidos a la vez.</p>
             ) : (
-              <p className="field-help">El habitual de Minecraft es 25565.</p>
+              <p className="field-help">{isBedrock ? "El habitual de Bedrock es 19132 (UDP)." : "El habitual de Minecraft es 25565."}</p>
             )}
           </div>
 
@@ -1162,8 +1257,15 @@ export function CreateWizard({ api, system, usedPorts, onClose, onCreated }: Pro
           </div>
 
           <div className="field">
-            <label htmlFor="wiz-motd">Mensaje en la lista (opcional)</label>
-            <input id="wiz-motd" type="text" maxLength={120} value={motd} onChange={(e) => setMotd(e.target.value)} />
+            <label htmlFor="wiz-motd">{isBedrock ? "Nombre en la lista de servidores (opcional)" : "Mensaje en la lista (opcional)"}</label>
+            <input
+              id="wiz-motd"
+              type="text"
+              maxLength={isBedrock ? 64 : 120}
+              placeholder={isBedrock ? "Vacío = el nombre del servidor" : undefined}
+              value={motd}
+              onChange={(e) => setMotd(e.target.value)}
+            />
           </div>
 
           <div className="field">
@@ -1178,6 +1280,7 @@ export function CreateWizard({ api, system, usedPorts, onClose, onCreated }: Pro
             />
           </div>
 
+          {!isBedrock && (
           <label className="switch-row span-2">
             <input type="checkbox" checked={keepInventory} onChange={(e) => setKeepInventory(e.target.checked)} />
             <span>
@@ -1185,11 +1288,12 @@ export function CreateWizard({ api, system, usedPorts, onClose, onCreated }: Pro
               <span className="field-help">Es una regla del juego: se aplica sola la primera vez que el servidor quede en línea.</span>
             </span>
           </label>
+          )}
 
           <label className="switch-row span-2">
             <input type="checkbox" checked={whitelist} onChange={(e) => setWhitelist(e.target.checked)} />
             <span>
-              <strong>Lista blanca</strong>
+              <strong>{isBedrock ? "Lista de permitidos (allow-list)" : "Lista blanca"}</strong>
               <span className="field-help">Solo podrán entrar los jugadores que agregues.</span>
             </span>
           </label>
@@ -1197,8 +1301,14 @@ export function CreateWizard({ api, system, usedPorts, onClose, onCreated }: Pro
           <label className="switch-row span-2">
             <input type="checkbox" checked={onlineMode} onChange={(e) => setOnlineMode(e.target.checked)} />
             <span>
-              <strong>Comprobar cuentas oficiales de Minecraft (online-mode)</strong>
-              <span className="field-help">Recomendado. Verifica con Mojang que cada jugador es quien dice ser.</span>
+              <strong>
+                {isBedrock ? "Comprobar cuentas de Xbox/Microsoft (online-mode)" : "Comprobar cuentas oficiales de Minecraft (online-mode)"}
+              </strong>
+              <span className="field-help">
+                {isBedrock
+                  ? "Recomendado. Cada jugador entra con su cuenta de Microsoft verificada."
+                  : "Recomendado. Verifica con Mojang que cada jugador es quien dice ser."}
+              </span>
             </span>
           </label>
           {!onlineMode && (
@@ -1221,6 +1331,12 @@ export function CreateWizard({ api, system, usedPorts, onClose, onCreated }: Pro
               Para encender cualquier servidor de Minecraft hay que aceptar el Acuerdo de Licencia de Usuario Final (EULA)
               de Mojang. MercHosting no lo acepta por ti: solo lo marca si tú lo decides aquí.
             </p>
+            {isBedrock && (
+              <p className="field-help">
+                Al descargar el servidor de Bedrock, Mojang pide aceptar también su Política de privacidad (enlazada desde la EULA).
+                Bedrock no usa el archivo eula.txt: MercHosting guarda ahí tu aceptación solo para no encenderlo sin ella.
+              </p>
+            )}
             <button type="button" className="btn btn-sm" onClick={() => api.openUrl(EULA_URL)}>
               <ExternalLink size={14} aria-hidden="true" /> Leer la EULA (aka.ms/MinecraftEULA)
             </button>
@@ -1228,7 +1344,11 @@ export function CreateWizard({ api, system, usedPorts, onClose, onCreated }: Pro
           <label className="switch-row">
             <input type="checkbox" checked={eula} onChange={(e) => setEula(e.target.checked)} />
             <span>
-              <strong>He leído y acepto la EULA de Minecraft</strong>
+              <strong>
+                {isBedrock
+                  ? "He leído y acepto la EULA y la Política de privacidad de Minecraft"
+                  : "He leído y acepto la EULA de Minecraft"}
+              </strong>
               <span className="field-help">
                 Si no la aceptas ahora, el servidor se crea igual pero no arrancará hasta que la aceptes.
               </span>
@@ -1275,11 +1395,22 @@ export function CreateWizard({ api, system, usedPorts, onClose, onCreated }: Pro
                 <dt>Nombre</dt>
                 <dd>{name.trim()}</dd>
                 <dt>Carpeta</dt>
-                <dd className="mono">{path}</dd>
-                <dt>Java</dt>
-                <dd className="mono">{javaPath}</dd>
-                <dt>Memoria</dt>
-                <dd>{formatMemory(ram)}</dd>
+                <dd className={remote ? undefined : "mono"}>{remote ? `La elige ${remote.hostName}` : path}</dd>
+                {isBedrock ? (
+                  <>
+                    <dt>Java</dt>
+                    <dd>No hace falta (programa nativo de Mojang)</dd>
+                  </>
+                ) : (
+                  <>
+                    <dt>Java</dt>
+                    <dd className={remote ? undefined : "mono"}>
+                      {remote ? `Java ${usableJava.find((c) => c.path === javaPath)?.major ?? version?.java_major ?? ""} de ${remote.hostName}` : javaPath}
+                    </dd>
+                    <dt>Memoria</dt>
+                    <dd>{formatMemory(ram)}</dd>
+                  </>
+                )}
                 <dt>Puerto</dt>
                 <dd>{port}</dd>
                 <dt>{resolved.installer_args ? "Instalador oficial" : "Archivo"}</dt>
@@ -1290,7 +1421,7 @@ export function CreateWizard({ api, system, usedPorts, onClose, onCreated }: Pro
                 <dt>Verificación</dt>
                 <dd>
                   {resolved.artifact.checksum.algorithm === "none" ? (
-                    "Por HTTPS (la fuente no publica huella)"
+                    isBedrock ? "Por HTTPS desde minecraft.net (Mojang no publica huella; se anota su SHA-256)" : "Por HTTPS (la fuente no publica huella)"
                   ) : (
                     <>
                       <ShieldCheck size={14} aria-hidden="true" className="inline-icon" /> Huella{" "}

@@ -718,6 +718,11 @@ select {
   font-weight: 700;
   font-size: 14.5px;
 }
+.addr-pending .addr-value {
+  font-weight: 500;
+  font-size: 13px;
+  color: var(--muted);
+}
 .addr-copy {
   color: var(--muted);
   margin-left: 6px;
@@ -3946,6 +3951,142 @@ select {
   margin: 6px 0;
 }
 
+.addon-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.addon-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.addon-row .switch-row {
+  flex: 1;
+}
+
+.addon-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.addon-meta .badge {
+  width: auto;
+}
+
+.bp-list {
+  list-style: none;
+  margin: 6px 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.bp-list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  padding: 8px 10px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--line-strong);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.bp-list li .btn,
+.bp-list li .bp-level {
+  margin-left: auto;
+}
+
+.bedrock-players .check-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.crossplay-guide .btn {
+  justify-self: start;
+}
+
+.mode247 {
+  display: grid;
+  gap: 6px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--line-strong);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.mode247 p {
+  margin: 0;
+}
+
+.mode247 .btn {
+  justify-self: start;
+}
+
+.domain-box {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 12px 14px;
+  border-radius: var(--r-md);
+  border: 1px dashed var(--line-strong);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.domain-box h3 {
+  margin: 0;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.srv-table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 13px;
+}
+
+.srv-table th {
+  text-align: left;
+  font-weight: 600;
+  color: var(--muted);
+  padding: 4px 10px 4px 0;
+  white-space: nowrap;
+  width: 1%;
+}
+
+.srv-table td {
+  padding: 4px 6px 4px 0;
+  overflow-wrap: anywhere;
+}
+
+.srv-table td:last-child {
+  width: 1%;
+  white-space: nowrap;
+}
+
+.btn-xs {
+  min-height: 24px;
+  padding: 0 8px;
+  font-size: 12px;
+}
+
+.share-chip .addr-label {
+  color: var(--ok);
+}
+
 .claim-box ol,
 .plain-list {
   margin: 6px 0 10px;
@@ -5644,4 +5785,206 @@ select {
   padding: 6px 8px;
   border-bottom: 1px solid var(--line);
   vertical-align: top;
+}
+
+/* Compañeros › conectar a mi servidor casero */
+.home-server-help {
+  margin: 4px 0 12px;
+  padding: 10px 12px;
+  border-radius: var(--r-md);
+  border: 1px dashed var(--line-strong);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.home-server-help summary {
+  cursor: pointer;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.home-server-help ol {
+  margin: 8px 0 6px;
+}
+
+/* =====================================================================
+   App del celular (html[data-mobile]): pantalla pequeña y táctil.
+   ===================================================================== */
+
+.mobile-root {
+  position: relative;
+  z-index: 1;
+  min-height: 100vh;
+}
+
+.mobile-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: calc(14px + env(safe-area-inset-top, 0px)) 16px 10px;
+}
+
+.mobile-head .brand-sub {
+  font-size: 12px;
+}
+
+.mobile-main {
+  display: grid;
+  gap: 14px;
+  padding: 4px 14px calc(96px + env(safe-area-inset-bottom, 0px));
+}
+
+.mobile-page {
+  display: grid;
+  gap: 14px;
+}
+
+.mobile-host {
+  display: grid;
+  gap: 10px;
+}
+
+.mobile-admin {
+  display: grid;
+  gap: 8px;
+}
+
+.mobile-servers {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.mobile-server {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 56px;
+  padding: 10px 14px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--line-strong);
+  background: rgba(255, 255, 255, 0.04);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.mobile-server span {
+  display: grid;
+  gap: 2px;
+}
+
+.mobile-nav {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 20;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  padding: 6px 8px calc(6px + env(safe-area-inset-bottom, 0px));
+  background: rgba(9, 14, 34, 0.94);
+  border-top: 1px solid var(--line);
+  backdrop-filter: blur(14px);
+}
+
+.mobile-nav button {
+  display: grid;
+  justify-items: center;
+  gap: 3px;
+  min-height: 52px;
+  border: 0;
+  border-radius: var(--r-md);
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.mobile-nav button[aria-current="page"] {
+  color: var(--text);
+  background: rgba(79, 125, 255, 0.16);
+}
+
+html[data-mobile] .shell {
+  display: flex;
+  flex-direction: column;
+  height: auto;
+  min-height: 100vh;
+}
+
+html[data-mobile] .shell > .sidebar,
+html[data-mobile] .shell[data-side="right"] > .sidebar {
+  order: 0;
+  flex: none;
+  flex-direction: row;
+  align-items: center;
+  margin: calc(8px + env(safe-area-inset-top, 0px)) 8px 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+html[data-mobile] .sidebar .brand,
+html[data-mobile] .sidebar .sidebar-foot,
+html[data-mobile] .sidebar .nav-title {
+  display: none;
+}
+
+html[data-mobile] .sidebar .server-switch {
+  flex: none;
+  margin: 6px;
+}
+
+html[data-mobile] .nav-groups,
+html[data-mobile] .nav-group,
+html[data-mobile] .nav-list {
+  display: flex;
+  flex-direction: row;
+  gap: 4px;
+  overflow: visible;
+  padding: 0;
+  margin: 0;
+}
+
+html[data-mobile] .nav-groups {
+  padding: 6px;
+}
+
+html[data-mobile] .nav-item {
+  flex: none;
+  white-space: nowrap;
+  min-height: 44px;
+}
+
+html[data-mobile] .main {
+  padding: 14px 12px calc(24px + env(safe-area-inset-bottom, 0px));
+  overflow: visible;
+}
+
+html[data-mobile] .btn {
+  min-height: 44px;
+}
+
+html[data-mobile] .btn-sm {
+  min-height: 38px;
+}
+
+/* Texto de una licencia de terceros (Ayuda del celular). */
+.license-text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.5;
+  max-height: 220px;
+  overflow: auto;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(4, 7, 20, 0.35);
 }

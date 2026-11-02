@@ -80,6 +80,29 @@ pub fn spawn_supervisor(exe: &Path, data_dir: &Path) -> io::Result<()> {
     cmd.spawn().map(|_| ())
 }
 
+/// Dentro de un AppImage los archivos viven en un montaje temporal que desaparece al cerrar la
+/// app, pero el supervisor debe seguir funcionando (y arrancar al iniciar sesión). Se copia a
+/// `<datos>/bin/` y se ejecuta desde ahí; solo se vuelve a copiar si cambió el contenido.
+pub fn stable_copy(exe: &Path, data_dir: &Path) -> io::Result<PathBuf> {
+    let bin = data_dir.join("bin");
+    std::fs::create_dir_all(&bin)?;
+    let dest = bin.join(supervisor_exe_name());
+    let new = std::fs::read(exe)?;
+    if std::fs::read(&dest).ok().as_deref() != Some(new.as_slice()) {
+        // Se escribe al lado y se renombra: si el supervisor viejo está en marcha, conserva su
+        // archivo (en Linux un ejecutable abierto sigue funcionando aunque se reemplace).
+        let tmp = bin.join(format!("{}.nuevo", supervisor_exe_name()));
+        std::fs::write(&tmp, &new)?;
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            std::fs::set_permissions(&tmp, std::fs::Permissions::from_mode(0o755))?;
+        }
+        std::fs::rename(&tmp, &dest)?;
+    }
+    Ok(dest)
+}
+
 #[derive(Debug, thiserror::Error)]
 pub enum LaunchError {
     #[error("no se encontró el supervisor de MercHosting ({0}). Reinstala la aplicación")]
@@ -96,6 +119,11 @@ pub fn connect_or_spawn(data_dir: &Path, client_name: &str, timeout: Duration) -
         return Ok(c);
     }
     let exe = find_supervisor_exe().ok_or_else(|| LaunchError::MissingExe(supervisor_exe_name().into()))?;
+    let exe = if std::env::var_os("APPIMAGE").is_some() {
+        stable_copy(&exe, data_dir).map_err(LaunchError::Spawn)?
+    } else {
+        exe
+    };
     spawn_supervisor(&exe, data_dir).map_err(LaunchError::Spawn)?;
     let deadline = Instant::now() + timeout;
     loop {
@@ -104,5 +132,31 @@ pub fn connect_or_spawn(data_dir: &Path, client_name: &str, timeout: Duration) -
             Err(e) if Instant::now() >= deadline => return Err(LaunchError::Timeout(e)),
             Err(_) => std::thread::sleep(Duration::from_millis(150)),
         }
+    }
+}
+
+#[cfg(all(test, unix))]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn stable_copy_only_rewrites_when_changed() {
+        let d = tempfile::tempdir().unwrap();
+        let src = d.path().join("montaje-temporal").join(supervisor_exe_name());
+        std::fs::create_dir_all(src.parent().unwrap()).unwrap();
+        std::fs::write(&src, b"v1").unwrap();
+        let data = d.path().join("datos");
+        let a = stable_copy(&src, &data).unwrap();
+        assert_eq!(a, data.join("bin").join(supervisor_exe_name()));
+        assert_eq!(std::fs::read(&a).unwrap(), b"v1");
+        use std::os::unix::fs::PermissionsExt;
+        assert_eq!(std::fs::metadata(&a).unwrap().permissions().mode() & 0o111, 0o111);
+        let before = std::fs::metadata(&a).unwrap().modified().unwrap();
+        std::thread::sleep(std::time::Duration::from_millis(20));
+        stable_copy(&src, &data).unwrap();
+        assert_eq!(std::fs::metadata(&a).unwrap().modified().unwrap(), before);
+        std::fs::write(&src, b"v2").unwrap();
+        stable_copy(&src, &data).unwrap();
+        assert_eq!(std::fs::read(&a).unwrap(), b"v2");
     }
 }

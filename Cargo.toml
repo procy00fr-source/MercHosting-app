@@ -1,9 +1,9 @@
 [workspace]
 resolver = "2"
-members = ["crates/merc-core", "crates/merc-store", "crates/merc-supervisor", "crates/merc-ipc", "crates/merc-install", "crates/merc-admin", "crates/merc-content", "crates/merc-supervisord", "crates/merc-net", "crates/merc-remote", "app/src-tauri"]
+members = ["crates/merc-core", "crates/merc-store", "crates/merc-supervisor", "crates/merc-ipc", "crates/merc-install", "crates/merc-admin", "crates/merc-content", "crates/merc-supervisord", "crates/merc-net", "crates/merc-remote", "crates/merc-phone", "crates/tauri-plugin-mercphone", "app/src-tauri"]
 
 [workspace.package]
-version = "0.2.4"
+version = "0.1.0"
 edition = "2021"
 license = "GPL-3.0-or-later"
 rust-version = "1.91"

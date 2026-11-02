@@ -161,6 +161,8 @@ struct SlotState {
     metrics: VecDeque<MetricSample>,
     /// Jugadores conectados según la consola (solo con consola conectada).
     players: BTreeSet<String>,
+    /// Bedrock: XUID de cada jugador que entró en esta sesión (gamertag → xuid).
+    xuids: std::collections::BTreeMap<String, String>,
 }
 
 struct Slot {
@@ -193,6 +195,7 @@ impl Slot {
                 orphan: false,
                 metrics: VecDeque::new(),
                 players: BTreeSet::new(),
+                xuids: Default::default(),
             }),
             changed: Condvar::new(),
         }
@@ -391,6 +394,13 @@ impl Supervisor {
             .unwrap_or_default()
     }
 
+    /// Bedrock: gamertag → XUID de quienes entraron mientras MercHosting miraba la consola.
+    pub fn player_xuids(&self, id: InstanceId) -> Vec<(String, String)> {
+        self.slot(id)
+            .map(|s| s.lock().xuids.iter().map(|(n, x)| (n.clone(), x.clone())).collect())
+            .unwrap_or_default()
+    }
+
     /// Líneas con `seq > after` (para que la UI se reconecte sin perder ni duplicar).
     pub fn console_since(&self, id: InstanceId, after: u64) -> Vec<ConsoleLine> {
         self.slot(id)
@@ -495,6 +505,7 @@ impl Supervisor {
                     required_files.push(u.clone());
                 }
             }
+            LaunchTarget::Native { exe } => required_files.push(exe.clone()),
         }
         for rel in &required_files {
             let rel_s = rel.to_string_lossy();
@@ -506,22 +517,39 @@ impl Supervisor {
             }
         }
 
-        let probe = probe_java(&spec.profile.java, Duration::from_secs(15))
-            .map_err(|e| SupervisorError::Java(e.to_string()))?;
-        if let Some(req) = spec.mc_version.as_deref().and_then(required_java) {
-            if probe.major < req.min_major {
-                return Err(SupervisorError::JavaTooOld {
-                    required: req.min_major,
-                    found: probe.major,
-                });
+        // Bedrock Dedicated Server es un ejecutable nativo: no hay Java que comprobar.
+        let native = match &spec.profile.target {
+            LaunchTarget::Native { exe } => Some(
+                sandbox
+                    .resolve(&exe.to_string_lossy())
+                    .map_err(|e| SupervisorError::MissingFile(e.to_string()))?,
+            ),
+            _ => None,
+        };
+        if native.is_none() {
+            let probe = probe_java(&spec.profile.java, Duration::from_secs(15))
+                .map_err(|e| SupervisorError::Java(e.to_string()))?;
+            if let Some(req) = spec.mc_version.as_deref().and_then(required_java) {
+                if probe.major < req.min_major {
+                    return Err(SupervisorError::JavaTooOld {
+                        required: req.min_major,
+                        found: probe.major,
+                    });
+                }
             }
         }
 
         let props = ServerProperties::read(&root).map_err(|e| SupervisorError::InvalidRoot(e.to_string()))?;
+        let default_port = if native.is_some() {
+            merc_core::properties::BEDROCK_DEFAULT_PORT
+        } else {
+            merc_core::properties::DEFAULT_PORT
+        };
         let port = props
             .as_ref()
+            .filter(|p| p.port_explicit)
             .map(|p| p.port)
-            .unwrap_or(merc_core::properties::DEFAULT_PORT);
+            .unwrap_or(default_port);
 
         // Puerto: primero contra nuestras instancias, luego contra el sistema.
         {
@@ -539,7 +567,13 @@ impl Supervisor {
         }
         // Comprobación orientativa: entre esta prueba y el arranque otro programa podría
         // tomar el puerto; en ese caso el propio servidor lo informará y se detectará.
-        if TcpListener::bind(("0.0.0.0", port)).is_err() {
+        // Java escucha por TCP; Bedrock por UDP.
+        let busy = if native.is_some() {
+            std::net::UdpSocket::bind(("0.0.0.0", port)).is_err()
+        } else {
+            TcpListener::bind(("0.0.0.0", port)).is_err()
+        };
+        if busy {
             return Err(SupervisorError::PortBusy(port));
         }
 
@@ -548,7 +582,8 @@ impl Supervisor {
             .map_err(|e| SupervisorError::Spawn(format!("log: {e}")))?;
         let log_file = log.current_path();
 
-        let mut cmd = Command::new(&spec.profile.java);
+        let program = native.clone().unwrap_or_else(|| spec.profile.java.clone());
+        let mut cmd = Command::new(&program);
         cmd.args(&args)
             .current_dir(&root)
             .stdin(Stdio::piped())
@@ -561,6 +596,11 @@ impl Supervisor {
         if std::env::var_os("LC_ALL").is_none() && std::env::var_os("LANG").is_none() {
             cmd.env("LC_ALL", "C.UTF-8");
         }
+        // BDS para Linux carga sus bibliotecas desde su propia carpeta.
+        #[cfg(not(windows))]
+        if native.is_some() {
+            cmd.env("LD_LIBRARY_PATH", ".");
+        }
 
         let mut st = slot.lock();
         st.log = Some(Arc::new(Mutex::new(log)));
@@ -568,7 +608,9 @@ impl Supervisor {
         push_line(
             &mut st,
             ConsoleStream::System,
-            format!("Iniciando: {} {}", spec.profile.java.display(), args.join(" ")),
+            format!("Iniciando: {} {}", program.display(), args.join(" "))
+                .trim_end()
+                .to_string(),
         );
 
         let mut child = cmd.spawn().map_err(|e| SupervisorError::Spawn(e.to_string()))?;
@@ -758,11 +800,15 @@ fn spawn_reader<R: Read + Send + 'static>(
                     let text = String::from_utf8_lossy(&buf).into_owned();
                     let signal = classify_line(&text);
                     let player = merc_core::readiness::player_event(&text);
+                    let xuid = merc_core::readiness::bedrock_xuid(&text);
                     let mut st = slot.lock();
                     if st.generation != generation {
                         break;
                     }
                     push_line(&mut st, stream, text);
+                    if let Some((n, x)) = xuid {
+                        st.xuids.insert(n, x);
+                    }
                     match player {
                         Some(merc_core::readiness::PlayerEvent::Joined(n)) => {
                             st.players.insert(n);

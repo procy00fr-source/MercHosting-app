@@ -29,6 +29,7 @@ export type ServerKind =
   | "quilt"
   | "mohist"
   | "arclight"
+  | "bedrock"
   | "unknown";
 export type Confidence = "verified" | "inferred" | "unknown";
 export type ConsoleStream = "stdout" | "stderr" | "system";
@@ -49,7 +50,9 @@ export type ErrorCode = (typeof ERROR_CODES)[number];
 
 export type LaunchTarget =
   | { type: "jar"; jar: string }
-  | { type: "args_file"; args_file: string; user_jvm_args: string | null };
+  | { type: "args_file"; args_file: string; user_jvm_args: string | null }
+  /** Ejecutable nativo sin Java (Bedrock Dedicated Server). */
+  | { type: "native"; exe: string };
 
 export interface LaunchProfile {
   java: string;
@@ -145,7 +148,7 @@ export interface SystemInfo {
 }
 
 /** Tipos de servidor que MercHosting sabe crear desde su fuente oficial. */
-export type Flavor = "vanilla" | "paper" | "purpur" | "spigot" | "fabric" | "quilt" | "forge" | "neo_forge" | "arclight";
+export type Flavor = "vanilla" | "paper" | "purpur" | "spigot" | "fabric" | "quilt" | "forge" | "neo_forge" | "arclight" | "bedrock";
 
 export interface CatalogEntry {
   mc_version: string;
@@ -221,6 +224,8 @@ export interface PlayerRecord {
   total_secs: number;
   online_since_unix: number | null;
   note: string | null;
+  /** Bedrock: XUID que dio el servidor al entrar (Java: null). */
+  xuid: string | null;
 }
 
 /** Actualización de la propia app (GitHub Releases, firmada). */
@@ -232,6 +237,8 @@ export interface AppUpdateCheck {
   version: string | null;
   notes: string | null;
   date: string | null;
+  /** Se actualiza sola (Windows o AppImage). Con el .deb de Linux se descarga a mano. */
+  self_install?: boolean;
 }
 
 export type ModSide = "client_only" | "server_only" | "both" | "unknown";
@@ -250,6 +257,62 @@ export interface QuarantinedMod {
   moved_at_unix: number;
   reason: string;
 }
+export type AddonKind = "behavior" | "resource";
+
+export interface AddonPack {
+  uuid: string;
+  version: [number, number, number];
+  name: string;
+  description: string;
+  kind: AddonKind;
+  /** Carpeta relativa a la raíz del servidor. */
+  folder: string;
+  /** Está en la lista de packs del mundo. */
+  active: boolean;
+  /** Parece venir con el propio servidor de Mojang (vanilla, chemistry…). */
+  bundled: boolean;
+  scripts: boolean;
+}
+
+export interface AddonImportResult {
+  installed: string[];
+  unchanged: string[];
+  replaced: string[];
+  notes: string[];
+}
+
+export type BedrockLevel = "operator" | "member" | "visitor";
+
+export interface BedrockAllowEntry {
+  name: string;
+  xuid: string | null;
+  ignores_player_limit: boolean;
+}
+
+export type BedrockAllowChange =
+  | { type: "add"; name: string; ignores_player_limit: boolean }
+  | { type: "remove"; name: string }
+  | { type: "set_ignores_limit"; name: string; value: boolean };
+
+export interface BedrockPlayersInfo {
+  allow_list_enabled: boolean;
+  online_mode: boolean;
+  default_permission: string;
+  legacy_whitelist: boolean;
+  running: boolean;
+  allowlist: BedrockAllowEntry[];
+  permissions: { xuid: string; level: BedrockLevel; name: string | null }[];
+  known: { name: string; xuid: string; online: boolean; last_seen_unix: number }[];
+  online: string[];
+}
+
+export interface AddonsInfo {
+  level_name: string;
+  world_exists: boolean;
+  packs: AddonPack[];
+  last_import: AddonImportResult | null;
+}
+
 export interface ModSidesInfo {
   items: ModSideReport[];
   quarantined: QuarantinedMod[];
@@ -347,6 +410,10 @@ export interface AutomationInfo {
   autostart: boolean;
   startup_available: boolean;
   startup_enabled: boolean;
+  /** No suspender la PC mientras haya un servidor encendido (ajuste de toda la app). */
+  keep_awake: boolean;
+  /** Windows confirmó la petición y está vigente ahora. */
+  keep_awake_active: boolean;
 }
 
 export interface LoaderOption {
@@ -658,11 +725,13 @@ export interface RemoteServer {
 
 export interface InviteInfo {
   invite_id: string;
-  server: InstanceId;
+  /** null = invitación de control total de la PC (servidor casero). */
+  server: InstanceId | null;
   server_name: string;
   perms: Perm[];
   created_at_unix_ms: number;
   expires_at_unix_ms: number;
+  host_admin: boolean;
 }
 
 export interface CompanionInfo {
@@ -673,6 +742,8 @@ export interface CompanionInfo {
   last_seen_unix_ms: number | null;
   connected: boolean;
   servers: RemoteServer[];
+  /** Control total de esta PC (todos los servidores y crear nuevos). */
+  host_admin: boolean;
 }
 
 export interface CompanionsInfo {
@@ -696,6 +767,8 @@ export interface RemoteHost {
   servers: RemoteServer[];
   last_ok_unix_ms: number | null;
   last_error: string | null;
+  /** Es tu servidor casero: tienes control total y puedes crear servidores allí. */
+  host_admin: boolean;
 }
 
 export interface Tunnel {
@@ -750,6 +823,21 @@ export interface ConnectionInfo {
   ports_in_use: { port: number; server: string }[];
   voice: VoiceInfo | null;
   layers: ConnLayer[];
+  /** Geyser (jugadores de Bedrock), si está instalado. */
+  bedrock: BedrockInfo | null;
+}
+
+export interface BedrockInfo {
+  geyser: string;
+  geyser_enabled: boolean;
+  floodgate: string | null;
+  floodgate_enabled: boolean;
+  config: string | null;
+  port: number;
+  port_from_config: boolean;
+  lan: string[];
+  tunnels: Tunnel[];
+  tests: AddressTest[];
 }
 
 export type LayerState = "operativo" | "degradado" | "caido" | "desconocido";
@@ -1128,6 +1216,7 @@ export type RequestBody =
   | { op: "playit_login_url" }
   | { op: "connection"; id: InstanceId }
   | { op: "test_address"; id: InstanceId; address: string }
+  | { op: "test_bedrock_address"; id: InstanceId; address: string }
   | { op: "set_voice_config"; id: InstanceId; voice_host?: string | null; port?: number | null }
   | { op: "install_java"; major: number }
   | { op: "diagnose"; id: InstanceId }
@@ -1140,6 +1229,14 @@ export type RequestBody =
   | { op: "player_history"; id: InstanceId }
   | { op: "set_player_note"; id: InstanceId; name: string; note: string }
   | { op: "clear_player_history"; id: InstanceId }
+  | { op: "addons"; id: InstanceId }
+  | { op: "bedrock_players"; id: InstanceId }
+  | { op: "bedrock_allowlist"; id: InstanceId; change: BedrockAllowChange }
+  | { op: "bedrock_allowlist_enabled"; id: InstanceId; enabled: boolean }
+  | { op: "bedrock_permission"; id: InstanceId; xuid: string; level: BedrockLevel | null }
+  | { op: "addon_import"; id: InstanceId; source: string }
+  | { op: "addon_set_active"; id: InstanceId; uuid: string; active: boolean }
+  | { op: "addon_remove"; id: InstanceId; uuid: string }
   | { op: "mod_sides"; id: InstanceId }
   | { op: "quarantine_mods"; id: InstanceId; files: string[] }
   | { op: "restore_mods"; id: InstanceId; files: string[] }
@@ -1151,6 +1248,7 @@ export type RequestBody =
   | { op: "automation"; id: InstanceId }
   | { op: "set_automation"; id: InstanceId; auto_restart?: boolean | null; autostart?: boolean | null }
   | { op: "set_startup"; enabled: boolean }
+  | { op: "set_keep_awake"; enabled: boolean }
   | { op: "supporter" }
   | { op: "activate_supporter"; license_key: string }
   | { op: "refresh_supporter" }
@@ -1164,6 +1262,7 @@ export type RequestBody =
   | { op: "companions" }
   | { op: "set_companions_enabled"; enabled: boolean }
   | { op: "create_invite"; id: InstanceId; perms: Perm[]; minutes: number }
+  | { op: "create_host_invite"; minutes: number }
   | { op: "cancel_invite"; invite_id: string }
   | { op: "set_companion_perms"; companion: string; id: InstanceId; perms: Perm[] }
   | { op: "remove_companion"; companion: string }
@@ -1232,6 +1331,8 @@ export type ResponseBody =
   | { kind: "automation"; data: AutomationInfo }
   | { kind: "player_history"; data: PlayerRecord[] }
   | { kind: "mod_sides"; data: ModSidesInfo }
+  | { kind: "addons"; data: AddonsInfo }
+  | { kind: "bedrock_players"; data: BedrockPlayersInfo }
   | { kind: "zip_extracted"; data: ZipExtracted }
   | { kind: "modpack_status"; data: ModpackStatusInfo }
   | { kind: "modpack_update_plan"; data: ModpackUpdatePlan }

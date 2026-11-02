@@ -271,7 +271,7 @@ export function HealthPanel({ sup, id, state, alerts }: Props) {
         {shareWarn ? (
           <p className="warn-text">
             <TriangleAlert size={14} aria-hidden="true" /> El servidor puede usar hasta {formatSize(xmx)} de los{" "}
-            {formatSize(memTotal ?? 0)} de esta PC. Si además juegas aquí, el juego y Windows pueden quedarse sin memoria: baja la
+            {formatSize(memTotal ?? 0)} de esta PC. Si además juegas aquí, el juego y el sistema pueden quedarse sin memoria: baja la
             memoria del servidor o usa el modo «Ligero».
           </p>
         ) : (

@@ -313,6 +313,7 @@ export function BackupsPanel({ api, sup, id, state, hasConsole, remote = false }
                 >
                   <ShieldCheck size={14} aria-hidden="true" /> Verificar
                 </button>
+                {api.canTransfer !== false && (
                 <button
                   type="button"
                   className="btn btn-sm"
@@ -336,6 +337,7 @@ export function BackupsPanel({ api, sup, id, state, hasConsole, remote = false }
                 >
                   <Download size={14} aria-hidden="true" /> Descargar
                 </button>
+                )}
                 <button
                   type="button"
                   className="btn btn-sm btn-go"

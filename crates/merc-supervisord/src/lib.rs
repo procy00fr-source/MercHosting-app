@@ -4,12 +4,16 @@
 //! servidores siguen funcionando y al volver a abrirla se recupera el control (estado, consola
 //! acumulada, comandos). Solo puede haber un supervisor por carpeta de datos.
 
+mod addons;
 mod alerts_watch;
 mod automation;
+mod awake;
 mod backups;
+mod bedrock_players;
 mod companions;
 mod diagnose;
 mod friendpack;
+mod headless;
 mod health;
 mod icon;
 mod java;
@@ -22,6 +26,7 @@ mod playit;
 mod rpbrowse;
 mod security;
 mod servers;
+pub mod service;
 mod supporter;
 mod tasks;
 mod updates;
@@ -204,6 +209,7 @@ fn sources() -> Sources {
             ("MERC_SOURCE_ARCLIGHT", &mut s.arclight_releases),
             ("MERC_SOURCE_SPIGOT", &mut s.spigot_versions),
             ("MERC_SOURCE_BUILDTOOLS", &mut s.buildtools_url),
+            ("MERC_SOURCE_BEDROCK", &mut s.bedrock_links),
         ] {
             if let Ok(v) = std::env::var(var) {
                 if merc_install::http::url_allowed(&v) {
@@ -285,7 +291,7 @@ fn content_err(e: merc_content::ContentError) -> ApiError {
 }
 
 /// Carpeta por defecto para servidores nuevos: `%USERPROFILE%\MercHosting\Servidores`.
-fn default_servers_dir() -> PathBuf {
+pub(crate) fn default_servers_dir() -> PathBuf {
     if let Some(dir) = std::env::var_os("MERC_SERVERS_DIR") {
         return PathBuf::from(dir);
     }
@@ -1150,7 +1156,8 @@ impl Daemon {
                     Err(merc_admin::AdminError::NotFound(_)) => String::new(),
                     Err(e) => return Err(admin_err(e)),
                 };
-                let text = merc_admin::props::apply_changes(&current, &changes).map_err(admin_err)?;
+                let raw = inst.kind == ServerKind::Bedrock;
+                let text = merc_admin::props::apply_changes_for(&current, &changes, raw).map_err(admin_err)?;
                 ex.write_text("server.properties", &text, expected_modified)
                     .map_err(admin_err)?;
                 let detail = changes
@@ -1711,30 +1718,44 @@ impl Daemon {
             return Err(api(ErrorCode::BadRequest, "La carpeta debe ser una ruta completa"));
         }
         merc_install::check_target(&p.path).map_err(install_err)?;
-        if !p.java.is_absolute() || !p.java.is_file() {
+        let native = p.flavor.is_native();
+        if native {
+            // Bedrock: ejecutable nativo de Mojang. Sin Java, sin modpacks de Java ni reglas de Java.
+            if p.modpack_version.is_some() {
+                return Err(api(ErrorCode::BadRequest, "Bedrock no usa modpacks de Java"));
+            }
+            if !p.game_rules.is_empty() {
+                return Err(api(
+                    ErrorCode::BadRequest,
+                    "Las reglas del juego de Bedrock se cambian desde la consola una vez creado",
+                ));
+            }
+        } else if !p.java.is_absolute() || !p.java.is_file() {
             return Err(api(
                 ErrorCode::BadRequest,
                 "Indica la ruta completa del ejecutable de Java",
             ));
         }
-        merc_install::validate_user_properties(&p.properties).map_err(install_err)?;
+        merc_install::validate_properties_for(p.flavor, &p.properties).map_err(install_err)?;
         if p.game_rules.len() > merc_admin::gamerules::RULES.len() {
             return Err(api(ErrorCode::BadRequest, "Demasiadas reglas del juego"));
         }
         for (k, v) in &p.game_rules {
             merc_admin::gamerules::set_command(k, v.trim(), Some(&p.mc_version)).map_err(admin_err)?;
         }
-        LaunchProfile {
-            java: p.java.clone(),
-            min_memory_mb: p.min_memory_mb,
-            max_memory_mb: p.max_memory_mb,
-            extra_jvm_args: vec![],
-            target: merc_core::launch::LaunchTarget::Jar {
-                jar: "server.jar".into(),
-            },
+        if !native {
+            LaunchProfile {
+                java: p.java.clone(),
+                min_memory_mb: p.min_memory_mb,
+                max_memory_mb: p.max_memory_mb,
+                extra_jvm_args: vec![],
+                target: merc_core::launch::LaunchTarget::Jar {
+                    jar: "server.jar".into(),
+                },
+            }
+            .validate()
+            .map_err(|e| api(ErrorCode::BadRequest, e.to_string()))?;
         }
-        .validate()
-        .map_err(|e| api(ErrorCode::BadRequest, e.to_string()))?;
         let job = self
             .jobs
             .create(name.clone(), p.path.clone())
@@ -1839,21 +1860,37 @@ impl Daemon {
             } else {
                 0
             });
-        match merc_core::java::probe_java(&p.java, Duration::from_secs(15)) {
-            Ok(probe) if probe.major >= min => {
-                job.log(format!("Java {} encontrado en {}", probe.major, p.java.display()))
+        if p.flavor.is_native() {
+            job.log("Bedrock Dedicated Server no usa Java");
+        } else {
+            let legacy_forge =
+                p.flavor == Flavor::Forge && merc_install::catalog::forge_is_legacy(&resolved.mc_version);
+            match merc_core::java::probe_java(&p.java, Duration::from_secs(15)) {
+                Ok(probe) if legacy_forge && probe.major != 8 => {
+                    return job.finish(
+                        JobState::Failed,
+                        Some(format!(
+                            "Forge {} solo funciona con Java 8 y el elegido es Java {}. Elige o instala Java 8.",
+                            resolved.mc_version, probe.major
+                        )),
+                        None,
+                    )
+                }
+                Ok(probe) if probe.major >= min => {
+                    job.log(format!("Java {} encontrado en {}", probe.major, p.java.display()))
+                }
+                Ok(probe) => {
+                    return job.finish(
+                        JobState::Failed,
+                        Some(format!(
+                            "Minecraft {} necesita Java {min} o superior y el elegido es Java {}",
+                            resolved.mc_version, probe.major
+                        )),
+                        None,
+                    )
+                }
+                Err(e) => return job.finish(JobState::Failed, Some(format!("No se pudo usar ese Java: {e}")), None),
             }
-            Ok(probe) => {
-                return job.finish(
-                    JobState::Failed,
-                    Some(format!(
-                        "Minecraft {} necesita Java {min} o superior y el elegido es Java {}",
-                        resolved.mc_version, probe.major
-                    )),
-                    None,
-                )
-            }
-            Err(e) => return job.finish(JobState::Failed, Some(format!("No se pudo usar ese Java: {e}")), None),
         }
         if job.cancel.load(Ordering::SeqCst) {
             return job.finish(JobState::Cancelled, None, None);
@@ -1967,7 +2004,7 @@ impl Daemon {
             mc_version: Some(resolved.mc_version.clone()),
             loader_version: det.loader_version.or(resolved.loader_version),
             launch: LaunchProfile {
-                java: p.java,
+                java: if p.flavor.is_native() { PathBuf::new() } else { p.java },
                 min_memory_mb: p.min_memory_mb,
                 max_memory_mb: p.max_memory_mb,
                 extra_jvm_args: vec![],
@@ -2072,15 +2109,20 @@ impl Daemon {
                 if !path.is_absolute() || !path.is_dir() {
                     return Err(api(ErrorCode::BadRequest, "La carpeta del servidor no existe"));
                 }
-                if !java.is_absolute() || !java.is_file() {
+                let root = std::fs::canonicalize(&path).map_err(|e| api(ErrorCode::BadRequest, e.to_string()))?;
+                let root = strip_verbatim(&root);
+                let det = detect_server(&root);
+                // Bedrock Dedicated Server es nativo: no necesita Java.
+                let java = if det.kind == ServerKind::Bedrock {
+                    PathBuf::new()
+                } else if !java.is_absolute() || !java.is_file() {
                     return Err(api(
                         ErrorCode::BadRequest,
                         "Indica la ruta completa del ejecutable de Java",
                     ));
-                }
-                let root = std::fs::canonicalize(&path).map_err(|e| api(ErrorCode::BadRequest, e.to_string()))?;
-                let root = strip_verbatim(&root);
-                let det = detect_server(&root);
+                } else {
+                    java
+                };
                 let Some(target) = det.launch.clone() else {
                     return Err(api(
                         ErrorCode::BadRequest,
@@ -2274,7 +2316,7 @@ impl Daemon {
                         api(
                             ErrorCode::Internal,
                             format!(
-                                "Windows no pudo mandar la carpeta a la Papelera ({e}). No se quitó nada de la lista."
+                                "El sistema no pudo mandar la carpeta a la Papelera ({e}). No se quitó nada de la lista."
                             ),
                         )
                     })?;
@@ -2482,6 +2524,7 @@ impl Daemon {
             | R::PlayitLoginUrl
             | R::Connection { .. }
             | R::TestAddress { .. }
+            | R::TestBedrockAddress { .. }
             | R::SetVoiceConfig { .. }) => self.handle_playit(client, b)?,
             b @ (R::Diagnose { .. } | R::SetLaunch { .. }) => self.handle_diagnose(client, b)?,
             b @ R::SecurityReport { .. } => self.handle_security(b)?,
@@ -2490,7 +2533,7 @@ impl Daemon {
             b @ (R::LoaderVersions { .. } | R::CloneServer { .. } | R::SetArchived { .. }) => {
                 self.handle_servers(client, b)?
             }
-            b @ (R::Automation { .. } | R::SetAutomation { .. } | R::SetStartup { .. }) => {
+            b @ (R::Automation { .. } | R::SetAutomation { .. } | R::SetStartup { .. } | R::SetKeepAwake { .. }) => {
                 self.handle_automation(client, b)?
             }
             b @ (R::PlayerCommand { .. }
@@ -2504,6 +2547,13 @@ impl Daemon {
             | R::ModpackUpdateApply { .. }
             | R::ModpackLink { .. }
             | R::ModpackUnlink { .. }) => self.handle_modpacks(client, b)?,
+            b @ (R::BedrockPlayers { .. }
+            | R::BedrockAllowlist { .. }
+            | R::BedrockAllowlistEnabled { .. }
+            | R::BedrockPermission { .. }) => self.handle_bedrock_players(client, b)?,
+            b @ (R::Addons { .. } | R::AddonImport { .. } | R::AddonSetActive { .. } | R::AddonRemove { .. }) => {
+                self.handle_addons(client, b)?
+            }
             b @ (R::ModSides { .. } | R::QuarantineMods { .. } | R::RestoreMods { .. }) => {
                 self.handle_mod_sides(client, b)?
             }
@@ -2520,6 +2570,7 @@ impl Daemon {
             b @ (R::Companions
             | R::SetCompanionsEnabled { .. }
             | R::CreateInvite { .. }
+            | R::CreateHostInvite { .. }
             | R::CancelInvite { .. }
             | R::SetCompanionPerms { .. }
             | R::RemoveCompanion { .. }
@@ -2776,7 +2827,7 @@ pub fn run_with(data_dir: PathBuf, at_login: bool) -> Result<RunOutcome, String>
         if at_login {
             daemon
                 .log
-                .line("arrancado al iniciar Windows: se encienden los servidores marcados");
+                .line("arrancado al iniciar sesión: se encienden los servidores marcados");
             let d = daemon.clone();
             std::thread::spawn(move || d.start_at_login());
         }

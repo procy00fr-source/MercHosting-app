@@ -2,7 +2,7 @@
 
 > «Tu primer servidor no debería necesitar una mensualidad».
 
-**MercHosting** es una app gratuita y de código abierto para **Windows 10/11** que crea y administra servidores de Minecraft **en tu propia PC**: sin cuotas mensuales, sin cuentas y sin telemetría.
+**MercHosting** es una app gratuita y de código abierto para **Windows 10/11** (y Linux de escritorio, todavía sin probar en una distribución real: [docs/LINUX.md](docs/LINUX.md)) que crea y administra servidores de Minecraft **en tu propia PC**: sin cuotas mensuales, sin cuentas y sin telemetría.
 
 **Código:** este repositorio · **Descargar:** [última versión](https://github.com/procy00fr-source/MercHosting-releases/releases/latest) · Guía: [docs/INSTALACION.md](docs/INSTALACION.md)
 
@@ -15,6 +15,7 @@
 - **Copias de seguridad** comprobadas (también con el servidor encendido), **tareas programadas**, **salud** (CPU, memoria, TPS, disco) y **alertas**.
 - **Jugar con amigos**: red local y por Internet con **Playit.gg** sin abrir puertos, **Simple Voice Chat** y prueba real de la conexión.
 - **Compañeros**: un amigo administra tu servidor desde su PC con los permisos que elijas, por un canal cifrado P2P (iroh), sin cuentas.
+- **Servidor casero sin pantalla**: deja MercHosting como servicio en una PC vieja o un servidor Linux (`merc servicio instalar`) y manéjalo entero desde tu PC con un código de control total. Guía: [docs/SERVIDOR_CASERO.md](docs/SERVIDOR_CASERO.md).
 - **Diagnóstico** de crashes y conflictos con su prueba, y arreglos reversibles.
 - Español e inglés. Supporter Edition opcional (US$8, pago único) **solo cosmética**.
 
@@ -50,7 +51,7 @@ npm --prefix app ci
 npm --prefix app test
 ```
 
-En Windows, `scripts\abrir-app.ps1` compila y abre la app; `scripts\verificar-windows.ps1` comprueba las herramientas y pasa todas las pruebas. Publicar una versión: [docs/PUBLICAR_VERSION.md](docs/PUBLICAR_VERSION.md).
+En Windows, `scripts\abrir-app.ps1` compila y abre la app; `scripts\verificar-windows.ps1` comprueba las herramientas y pasa todas las pruebas. Publicar una versión: [docs/PUBLICAR_VERSION.md](docs/PUBLICAR_VERSION.md); la de Linux sale de GitHub Actions ([docs/LINUX.md](docs/LINUX.md)), y también el APK de **MercHosting para celular**, que administra desde Android los servidores de tus PCs ([docs/MOVIL.md](docs/MOVIL.md)).
 
 **CurseForge:** su API necesita una clave que no está en el repositorio. Sin ella, MercHosting funciona igual y muestra CurseForge como no disponible.
 

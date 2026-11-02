@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Servicio en primer plano que mantiene vivo el servidor de Minecraft mientras corre. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <!-- Que el celular no se duerma del todo ni apague el wifi mientras el servidor está encendido. -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <application>
+        <!--
+          Proceso propio (":server"): la JVM del servidor se carga ahí con dlopen + JLI_Launch.
+          Si el servidor se cae o Android lo cierra, la app no se cae con él.
+          specialUse: no encaja en los tipos de Android (no es multimedia, ni ubicación, ni
+          sincronización de datos de duración corta); se explica en la propiedad de abajo.
+        -->
+        <service
+            android:name="app.merchosting.phone.ServerService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse"
+            android:process=":server">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Servidor de Minecraft que la persona enciende a mano desde la app para jugar con sus amigos; se apaga con el botón Detener de la notificación." />
+        </service>
+    </application>
+</manifest>

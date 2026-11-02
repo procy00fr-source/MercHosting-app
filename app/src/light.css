@@ -499,6 +499,18 @@
   background: rgba(20, 30, 70, 0.048);
 }
 
+:root[data-mode="light"] .bp-list li {
+  background: rgba(20, 30, 70, 0.048);
+}
+
+:root[data-mode="light"] .mode247 {
+  background: rgba(20, 30, 70, 0.048);
+}
+
+:root[data-mode="light"] .domain-box {
+  background: rgba(20, 30, 70, 0.032);
+}
+
 :root[data-mode="light"] .layer-list li {
   background: rgba(20, 30, 70, 0.048);
 }
@@ -589,6 +601,22 @@
 
 :root[data-mode="light"] .hl-h {
   color: rgb(37, 122, 148);
+}
+
+:root[data-mode="light"] .home-server-help {
+  background: rgba(20, 30, 70, 0.032);
+}
+
+:root[data-mode="light"] .mobile-server {
+  background: rgba(20, 30, 70, 0.064);
+}
+
+:root[data-mode="light"] .mobile-nav {
+  background: rgba(255, 255, 255, 0.96);
+}
+
+:root[data-mode="light"] .license-text {
+  background: rgba(255, 255, 255, 0.65);
 }
 }
 

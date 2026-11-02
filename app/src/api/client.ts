@@ -27,6 +27,10 @@ import type {
   PlayerRecord,
   LuckPermsInfo,
   FriendPackPlan,
+  AddonsInfo,
+  BedrockAllowChange,
+  BedrockLevel,
+  BedrockPlayersInfo,
   ModSidesInfo,
   ModpackStatusInfo,
   ModpackUpdatePlan,
@@ -99,6 +103,8 @@ export interface MercApi {
   appUpdateInstall(onProgress: (downloaded: number, total: number | null) => void): Promise<void>;
   /** Archivos de la PC arrastrados sobre la ventana. Devuelve la función para dejar de escuchar. */
   onFileDrop(handler: (e: FileDropEvent) => void): () => void;
+  /** Se pueden traer archivos a este dispositivo y subirlos desde él (no en el celular). Sin valor = sí. */
+  canTransfer?: boolean;
 }
 
 /** Arrastrar archivos desde el Explorador: «enter» al entrar, «drop» al soltar, «leave» al salir o cancelar. */
@@ -384,6 +390,9 @@ export class Supervisor {
   async testAddress(id: InstanceId, address: string): Promise<ConnectionInfo> {
     return expect(await this.api.call({ op: "test_address", id, address }), "connection").data;
   }
+  async testBedrockAddress(id: InstanceId, address: string): Promise<ConnectionInfo> {
+    return expect(await this.api.call({ op: "test_bedrock_address", id, address }), "connection").data;
+  }
   async installJava(major: number): Promise<JobSnapshot> {
     return expect(await this.api.call({ op: "install_java", major }), "job").data;
   }
@@ -434,6 +443,30 @@ export class Supervisor {
   async setPlayerNote(id: InstanceId, name: string, note: string): Promise<PlayerRecord[]> {
     return expect(await this.api.call({ op: "set_player_note", id, name, note }), "player_history").data;
   }
+  async bedrockPlayers(id: InstanceId): Promise<BedrockPlayersInfo> {
+    return expect(await this.api.call({ op: "bedrock_players", id }), "bedrock_players").data;
+  }
+  async bedrockAllowlist(id: InstanceId, change: BedrockAllowChange): Promise<BedrockPlayersInfo> {
+    return expect(await this.api.call({ op: "bedrock_allowlist", id, change }), "bedrock_players").data;
+  }
+  async bedrockAllowlistEnabled(id: InstanceId, enabled: boolean): Promise<BedrockPlayersInfo> {
+    return expect(await this.api.call({ op: "bedrock_allowlist_enabled", id, enabled }), "bedrock_players").data;
+  }
+  async bedrockPermission(id: InstanceId, xuid: string, level: BedrockLevel | null): Promise<BedrockPlayersInfo> {
+    return expect(await this.api.call({ op: "bedrock_permission", id, xuid, level }), "bedrock_players").data;
+  }
+  async addons(id: InstanceId): Promise<AddonsInfo> {
+    return expect(await this.api.call({ op: "addons", id }), "addons").data;
+  }
+  async addonImport(id: InstanceId, source: string): Promise<AddonsInfo> {
+    return expect(await this.api.call({ op: "addon_import", id, source }), "addons").data;
+  }
+  async addonSetActive(id: InstanceId, uuid: string, active: boolean): Promise<AddonsInfo> {
+    return expect(await this.api.call({ op: "addon_set_active", id, uuid, active }), "addons").data;
+  }
+  async addonRemove(id: InstanceId, uuid: string): Promise<AddonsInfo> {
+    return expect(await this.api.call({ op: "addon_remove", id, uuid }), "addons").data;
+  }
   async modSides(id: InstanceId): Promise<ModSidesInfo> {
     return expect(await this.api.call({ op: "mod_sides", id }), "mod_sides").data;
   }
@@ -472,6 +505,9 @@ export class Supervisor {
   }
   async setStartup(enabled: boolean): Promise<void> {
     expect(await this.api.call({ op: "set_startup", enabled }), "ok");
+  }
+  async setKeepAwake(enabled: boolean): Promise<void> {
+    expect(await this.api.call({ op: "set_keep_awake", enabled }), "ok");
   }
   async supporter(): Promise<SupporterInfo> {
     return expect(await this.api.call({ op: "supporter" }), "supporter").data;
@@ -514,6 +550,9 @@ export class Supervisor {
   }
   async createInvite(id: InstanceId, perms: Perm[], minutes: number): Promise<NewInvite> {
     return expect(await this.api.call({ op: "create_invite", id, perms, minutes }), "invite").data;
+  }
+  async createHostInvite(minutes: number): Promise<NewInvite> {
+    return expect(await this.api.call({ op: "create_host_invite", minutes }), "invite").data;
   }
   async cancelInvite(invite_id: string): Promise<CompanionsInfo> {
     return expect(await this.api.call({ op: "cancel_invite", invite_id }), "companions").data;
@@ -610,7 +649,14 @@ export function remoteApi(local: MercApi, host: string): MercApi {
     },
     info: () => local.info(),
     onFileDrop: (h) => local.onFileDrop(h),
-    javaFor: ownerOnly,
+    canTransfer: local.canTransfer,
+    // Servidor casero: los Java de esa PC (sus rutas no viajan; esa PC elige al crear).
+    javaFor: async (): Promise<JavaChoice> => {
+      const r = await local.call({ op: "remote_call", host, request: { op: "find_java" } });
+      if (r.kind !== "java_candidates") throw new MercError("internal", "Respuesta inesperada de la otra PC.");
+      const candidates = r.data.map((c, i) => ({ ...c, path: `java-remoto-${i + 1}` }));
+      return { candidates, recommended: null, recommended_major: 0 };
+    },
     pickFolder: () => local.pickFolder(),
     pickFile: (filter) => local.pickFile(filter),
     pickSavePath: (name) => local.pickSavePath(name),

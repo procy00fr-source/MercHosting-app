@@ -26,7 +26,7 @@ describe("Instalador de Java", () => {
     await user.click(card.getByRole("button", { name: "Cambiar Java" }));
     const dlg = within(screen.getByRole("dialog", { name: "Elegir Java" }));
     expect(await dlg.findByText("No hay un Java compatible en esta PC.")).toBeInTheDocument();
-    expect(dlg.getByText(/no se instala nada en Windows/)).toBeInTheDocument();
+    expect(dlg.getByText(/no se instala nada en el sistema/)).toBeInTheDocument();
     await user.click(dlg.getByRole("button", { name: "Descargar Java 21 (Eclipse Temurin)" }));
     expect(fake.calls).toContainEqual({ op: "install_java", major: 21 });
     const option = await dlg.findByRole("radio", { name: /Java 21/ }, { timeout: 5000 });

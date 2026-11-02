@@ -2125,6 +2125,10 @@ fn companions_between_two_pcs() {
             min_memory_mb: None,
             max_memory_mb: None,
         },
+        // Playit es del dueño (o de quien tenga control total), no de un compañero normal.
+        RequestBody::PlayitStatus,
+        RequestBody::PlayitEnable,
+        RequestBody::PlayitLink,
     ] {
         assert_eq!(api_code(remote(&mut guest, r.clone())), ErrorCode::Forbidden, "{r:?}");
     }
@@ -2452,31 +2456,39 @@ fn security_report_uses_real_data() {
 #[test]
 fn install_java_from_temurin() {
     use sha2::{Digest, Sha256};
-    use std::io::Write;
-    let mut zip_bytes = std::io::Cursor::new(Vec::new());
+    // En Linux, Adoptium publica el JRE como .tar.gz.
+    let mut zip_bytes = Vec::new();
     {
-        let mut w = zip::ZipWriter::new(&mut zip_bytes);
-        let opts = zip::write::SimpleFileOptions::default().unix_permissions(0o755);
-        w.start_file("jdk-21.0.5+11-jre/bin/java", opts).unwrap();
-        w.write_all(b"#!/bin/sh\necho 'openjdk version \"21.0.5\" 2024-10-15' >&2\n")
-            .unwrap();
-        w.start_file("jdk-21.0.5+11-jre/release", opts).unwrap();
-        w.write_all(b"JAVA_VERSION=\"21.0.5\"\n").unwrap();
-        w.finish().unwrap();
+        let gz = flate2::write::GzEncoder::new(&mut zip_bytes, flate2::Compression::fast());
+        let mut b = tar::Builder::new(gz);
+        let files: [(&str, &[u8]); 2] = [
+            (
+                "jdk-21.0.5+11-jre/bin/java",
+                b"#!/bin/sh\necho 'openjdk version \"21.0.5\" 2024-10-15' >&2\n",
+            ),
+            ("jdk-21.0.5+11-jre/release", b"JAVA_VERSION=\"21.0.5\"\n"),
+        ];
+        for (name, body) in files {
+            let mut h = tar::Header::new_gnu();
+            h.set_size(body.len() as u64);
+            h.set_mode(0o755);
+            h.set_cksum();
+            b.append_data(&mut h, name, body).unwrap();
+        }
+        b.into_inner().unwrap().finish().unwrap();
     }
-    let zip_bytes = zip_bytes.into_inner();
     let sha = Sha256::digest(&zip_bytes)
         .iter()
         .map(|b| format!("{b:02x}"))
         .collect::<String>();
     let api = fake_modrinth(|base| {
         let json = format!(
-            r#"[{{"binary":{{"image_type":"jre","os":"windows","architecture":"x64","package":{{"link":"{base}/jre.zip","checksum":"{sha}","name":"OpenJDK21U-jre_x64_windows_hotspot_21.0.5_11.zip","size":{}}}}},"release_name":"jdk-21.0.5+11","version":{{"semver":"21.0.5+11"}}}}]"#,
+            r#"[{{"binary":{{"image_type":"jre","os":"linux","architecture":"x64","package":{{"link":"{base}/jre.tar.gz","checksum":"{sha}","name":"OpenJDK21U-jre_x64_linux_hotspot_21.0.5_11.tar.gz","size":{}}}}},"release_name":"jdk-21.0.5+11","version":{{"semver":"21.0.5+11"}}}}]"#,
             zip_bytes.len()
         );
         std::collections::HashMap::from([
             ("GET /v3/assets/latest/21/hotspot".to_string(), json.into_bytes()),
-            ("GET /jre.zip".to_string(), zip_bytes.clone()),
+            ("GET /jre.tar.gz".to_string(), zip_bytes.clone()),
         ])
     });
     let e = env();
@@ -2623,7 +2635,7 @@ fn start_with_windows_turns_on_marked_servers() {
         c.call(RequestBody::SetStartup { enabled: true }).unwrap();
         let cmd = std::fs::read_to_string(&key).unwrap();
         assert!(
-            cmd.contains("--al-iniciar-windows") && cmd.contains("--data-dir"),
+            (cmd.contains("--al-iniciar-windows") || cmd.contains("--al-iniciar-sesion")) && cmd.contains("--data-dir"),
             "{cmd}"
         );
         let a = automation(
@@ -3167,4 +3179,274 @@ fn mod_sides_classify_and_quarantine_reversibly() {
     };
     assert!(acts.iter().any(|a| a.action == "mods.quarantine"));
     assert!(acts.iter().any(|a| a.action == "mods.restore"));
+}
+
+#[test]
+fn bedrock_geyser_detected_tested_over_udp_and_keep_awake_saved() {
+    use std::io::Write;
+    let e = env();
+    let _d = spawn_daemon(&e.data);
+    let mut c = client(&e.data);
+    let id = import(&mut c, &e);
+
+    // Sin Geyser no hay sección de Bedrock.
+    let ResponseBody::Connection(conn) = c.call(RequestBody::Connection { id }).unwrap() else {
+        panic!()
+    };
+    assert!(conn.bedrock.is_none());
+
+    // Geyser se reconoce por su ficha y el puerto sale de su configuración.
+    std::fs::create_dir_all(e.server.join("plugins/Geyser-Spigot")).unwrap();
+    let f = std::fs::File::create(e.server.join("plugins/Geyser-Spigot.jar")).unwrap();
+    let mut z = zip::ZipWriter::new(f);
+    z.start_file("plugin.yml", zip::write::SimpleFileOptions::default())
+        .unwrap();
+    z.write_all(b"name: Geyser-Spigot\n").unwrap();
+    z.finish().unwrap();
+    let udp = std::net::UdpSocket::bind("127.0.0.1:0").unwrap();
+    let port = udp.local_addr().unwrap().port();
+    std::fs::write(
+        e.server.join("plugins/Geyser-Spigot/config.yml"),
+        format!("bedrock:\n  address: 0.0.0.0\n  port: {port}\nremote:\n  port: 25565\n"),
+    )
+    .unwrap();
+    let ResponseBody::Connection(conn) = c.call(RequestBody::Connection { id }).unwrap() else {
+        panic!()
+    };
+    let b = conn.bedrock.unwrap();
+    assert_eq!(b.geyser, "plugins/Geyser-Spigot.jar");
+    assert!(b.geyser_enabled && b.floodgate.is_none());
+    assert_eq!((b.port, b.port_from_config), (port, true));
+
+    // Un «servidor Bedrock» mínimo que contesta el ping de RakNet.
+    std::thread::spawn(move || {
+        let mut buf = [0u8; 2048];
+        while let Ok((n, from)) = udp.recv_from(&mut buf) {
+            if n >= 33 && buf[0] == 0x01 {
+                let text = b"MCPE;Geyser;712;1.21.40;0;20;1;Geyser;Survival;1;19132;19133;";
+                let mut p = vec![0x1c];
+                p.extend_from_slice(&buf[1..9]);
+                p.extend_from_slice(&7u64.to_be_bytes());
+                p.extend_from_slice(&buf[9..25]);
+                p.extend_from_slice(&(text.len() as u16).to_be_bytes());
+                p.extend_from_slice(text);
+                let _ = udp.send_to(&p, from);
+            }
+        }
+    });
+    let ResponseBody::Connection(conn) = c
+        .call(RequestBody::TestBedrockAddress {
+            id,
+            address: format!("127.0.0.1:{port}"),
+        })
+        .unwrap()
+    else {
+        panic!()
+    };
+    let t = &conn.bedrock.unwrap().tests[0];
+    assert_eq!(
+        t.result.as_ref().map(|r| r.version.as_str()),
+        Some("Bedrock 1.21.40"),
+        "{:?}",
+        t.error
+    );
+    assert_eq!(activity_has(&mut c, id, "connection.test_bedrock"), 1);
+
+    // No suspender: se guarda y se informa (fuera de Windows no queda vigente).
+    let a = automation(&mut c, RequestBody::Automation { id });
+    assert!(!a.keep_awake && !a.keep_awake_active);
+    c.call(RequestBody::SetKeepAwake { enabled: true }).unwrap();
+    let a = automation(&mut c, RequestBody::Automation { id });
+    assert!(a.keep_awake);
+    assert!(e.data.join("no-suspender.json").exists());
+}
+
+/// Bedrock Dedicated Server falso (script de shell): escribe como BDS y obedece `stop`.
+#[cfg(unix)]
+#[test]
+fn bedrock_native_server_runs_without_java_and_takes_addons() {
+    use std::io::Write;
+    use std::os::unix::fs::PermissionsExt;
+    let tmp = tempfile::tempdir().unwrap();
+    let data = tmp.path().join("datos");
+    let server = tmp.path().join("Bedrock ñ");
+    std::fs::create_dir_all(&server).unwrap();
+    let port = std::net::UdpSocket::bind(("0.0.0.0", 0))
+        .unwrap()
+        .local_addr()
+        .unwrap()
+        .port();
+    std::fs::write(
+        server.join("server.properties"),
+        format!("server-name=Prueba\nserver-port={port}\nlevel-name=Mundo\n"),
+    )
+    .unwrap();
+    std::fs::write(server.join("eula.txt"), "eula=true\n").unwrap();
+    let exe = server.join("bedrock_server");
+    std::fs::write(
+        &exe,
+        "#!/bin/sh\n\
+         echo '[2026-11-01 10:00:00:001 INFO] Starting Server'\n\
+         echo '[2026-11-01 10:00:00:002 INFO] Version: 1.21.124.2'\n\
+         echo '[2026-11-01 10:00:01:000 INFO] Server started.'\n\
+         while read line; do\n\
+           if [ \"$line\" = \"stop\" ]; then echo '[2026-11-01 10:00:09:000 INFO] Server stop requested.'; echo 'Quit correctly'; exit 0; fi\n\
+           if [ \"$line\" = \"join\" ]; then echo '[2026-11-01 10:00:05:000 INFO] Player connected: Steve Craft, xuid: 2535400000000001'; fi\n\
+           echo \"RECIBIDO: $line\"\n\
+         done\n",
+    )
+    .unwrap();
+    std::fs::set_permissions(&exe, std::fs::Permissions::from_mode(0o755)).unwrap();
+    std::fs::write(server.join(merc_core::detect::BEDROCK_VERSION_FILE), "1.21.124.2\n").unwrap();
+
+    let _d = spawn_daemon(&data);
+    let mut c = client(&data);
+    // Sin Java: se importa igual (la ruta de Java no se usa).
+    let id = match c
+        .call(RequestBody::ImportInstance {
+            name: "Bedrock".into(),
+            path: server.clone(),
+            java: PathBuf::from("no-hay-java"),
+            min_memory_mb: 0,
+            max_memory_mb: 0,
+        })
+        .unwrap()
+    {
+        ResponseBody::Instance(i) => {
+            assert_eq!(i.kind, merc_core::detect::ServerKind::Bedrock);
+            assert_eq!(i.mc_version.as_deref(), Some("1.21.124.2"));
+            i.id
+        }
+        other => panic!("{other:?}"),
+    };
+
+    // Addons con el servidor apagado: se instalan y se activan en el mundo.
+    let manifest = serde_json::json!({
+        "format_version": 2,
+        "header": {"name": "Dragones", "description": "d", "uuid": "11111111-2222-3333-4444-555555555555", "version": [1, 0, 0]},
+        "modules": [{"type": "data", "uuid": "11111111-2222-3333-4444-555555555556", "version": [1, 0, 0]}]
+    });
+    let pack = tmp.path().join("dragones.mcpack");
+    {
+        let f = std::fs::File::create(&pack).unwrap();
+        let mut z = zip::ZipWriter::new(f);
+        z.start_file("manifest.json", zip::write::SimpleFileOptions::default())
+            .unwrap();
+        z.write_all(manifest.to_string().as_bytes()).unwrap();
+        z.finish().unwrap();
+    }
+    let ResponseBody::Addons(a) = c
+        .call(RequestBody::AddonImport {
+            id,
+            source: pack.clone(),
+        })
+        .unwrap()
+    else {
+        panic!()
+    };
+    assert_eq!(a.level_name, "Mundo");
+    assert_eq!(a.packs.len(), 1);
+    assert!(a.packs[0].active);
+    assert_eq!(a.last_import.unwrap().installed, vec!["Dragones 1.0.0".to_string()]);
+    assert!(server.join("worlds/Mundo/world_behavior_packs.json").is_file());
+
+    // Arranca el ejecutable nativo y reconoce las líneas de Bedrock.
+    c.call(RequestBody::Start { id }).unwrap();
+    wait_state(&mut c, id, RuntimeState::Online);
+    // Con el servidor encendido no se tocan los addons.
+    assert_eq!(
+        api_code(c.call(RequestBody::AddonRemove {
+            id,
+            uuid: "11111111-2222-3333-4444-555555555555".into()
+        })),
+        ErrorCode::InvalidState
+    );
+    c.call(RequestBody::SendCommand {
+        id,
+        command: "join".into(),
+    })
+    .unwrap();
+    let deadline = Instant::now() + Duration::from_secs(10);
+    loop {
+        if let ResponseBody::Metrics { players, .. } = c.call(RequestBody::Metrics { id }).unwrap() {
+            if players.contains(&"Steve Craft".to_string()) {
+                break;
+            }
+        }
+        assert!(Instant::now() < deadline, "no se vio al jugador");
+        std::thread::sleep(Duration::from_millis(100));
+    }
+    // Jugadores: el XUID de quien entró se recuerda y se le pueden dar permisos sin escribirlo.
+    let players = |c: &mut Client, body: RequestBody| match c.call(body).unwrap() {
+        ResponseBody::BedrockPlayers(p) => p,
+        other => panic!("{other:?}"),
+    };
+    let p = players(&mut c, RequestBody::BedrockPlayers { id });
+    assert!(p.running && !p.allow_list_enabled);
+    assert_eq!(p.known.len(), 1);
+    assert_eq!(p.known[0].name, "Steve Craft");
+    assert_eq!(p.known[0].xuid, "2535400000000001");
+    assert!(p.known[0].online);
+    let p = players(
+        &mut c,
+        RequestBody::BedrockPermission {
+            id,
+            xuid: "2535400000000001".into(),
+            level: Some(merc_admin::bedrock_players::Level::Operator),
+        },
+    );
+    assert_eq!(p.permissions.len(), 1);
+    assert_eq!(p.permissions[0].name.as_deref(), Some("Steve Craft"));
+    assert!(std::fs::read_to_string(server.join("permissions.json"))
+        .unwrap()
+        .contains("operator"));
+    assert!(console_has(&mut c, id, "RECIBIDO: permission reload"));
+    let p = players(
+        &mut c,
+        RequestBody::BedrockAllowlist {
+            id,
+            change: merc_admin::bedrock_players::AllowChange::Add {
+                name: "Alex".into(),
+                ignores_player_limit: false,
+            },
+        },
+    );
+    assert_eq!(p.allowlist.len(), 1);
+    assert!(console_has(&mut c, id, "RECIBIDO: allowlist reload"));
+    players(&mut c, RequestBody::BedrockAllowlistEnabled { id, enabled: true });
+    assert!(console_has(&mut c, id, "RECIBIDO: allowlist on"));
+    assert!(std::fs::read_to_string(server.join("server.properties"))
+        .unwrap()
+        .contains("allow-list=true"));
+    assert_eq!(
+        api_code(c.call(RequestBody::BedrockAllowlist {
+            id,
+            change: merc_admin::bedrock_players::AllowChange::Add {
+                name: "x\"; op y".into(),
+                ignores_player_limit: false,
+            },
+        })),
+        ErrorCode::BadRequest
+    );
+    c.call(RequestBody::Stop { id, timeout_secs: 20 }).unwrap();
+    wait_state(&mut c, id, RuntimeState::Stopped);
+    // Apagado también se puede (solo archivo); el XUID quedó en el historial.
+    let p = players(&mut c, RequestBody::BedrockPlayers { id });
+    assert!(!p.running && p.allow_list_enabled);
+    assert_eq!(p.known[0].xuid, "2535400000000001");
+    assert!(!p.known[0].online);
+
+    // Quitar: va a la papelera, no se borra.
+    let ResponseBody::Addons(a) = c
+        .call(RequestBody::AddonRemove {
+            id,
+            uuid: "11111111-2222-3333-4444-555555555555".into(),
+        })
+        .unwrap()
+    else {
+        panic!()
+    };
+    assert!(a.packs.is_empty());
+    assert!(!server.join("behavior_packs/Dragones_11111111").exists());
+    assert_eq!(activity_has(&mut c, id, "addons.remove"), 1);
 }

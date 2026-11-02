@@ -129,6 +129,9 @@ fn examples() -> Value {
         RequestBody::Catalog { flavor: Flavor::Paper },
         RequestBody::Catalog { flavor: Flavor::Spigot },
         RequestBody::Catalog {
+            flavor: Flavor::Bedrock,
+        },
+        RequestBody::Catalog {
             flavor: Flavor::Arclight,
         },
         RequestBody::Resolve {
@@ -321,6 +324,10 @@ fn examples() -> Value {
             id: id(),
             address: "dark-sea.joinmc.link".into(),
         },
+        RequestBody::TestBedrockAddress {
+            id: id(),
+            address: "147.185.221.20:19132".into(),
+        },
         RequestBody::SetVoiceConfig {
             id: id(),
             voice_host: Some("147.185.221.181:25732".into()),
@@ -378,6 +385,48 @@ fn examples() -> Value {
         RequestBody::ClearPlayerHistory { id: id() },
         RequestBody::LuckPerms { id: id() },
         RequestBody::FriendPack { id: id() },
+        RequestBody::Addons { id: id() },
+        RequestBody::BedrockPlayers { id: id() },
+        RequestBody::BedrockAllowlist {
+            id: id(),
+            change: merc_admin::bedrock_players::AllowChange::Add {
+                name: "Steve Craft".into(),
+                ignores_player_limit: false,
+            },
+        },
+        RequestBody::BedrockAllowlist {
+            id: id(),
+            change: merc_admin::bedrock_players::AllowChange::Remove { name: "Alex".into() },
+        },
+        RequestBody::BedrockAllowlist {
+            id: id(),
+            change: merc_admin::bedrock_players::AllowChange::SetIgnoresLimit {
+                name: "Alex".into(),
+                value: true,
+            },
+        },
+        RequestBody::BedrockAllowlistEnabled {
+            id: id(),
+            enabled: true,
+        },
+        RequestBody::BedrockPermission {
+            id: id(),
+            xuid: "2535428000000000".into(),
+            level: Some(merc_admin::bedrock_players::Level::Operator),
+        },
+        RequestBody::AddonImport {
+            id: id(),
+            source: "C:/Users/amir/Downloads/dragones.mcaddon".into(),
+        },
+        RequestBody::AddonSetActive {
+            id: id(),
+            uuid: "11111111-2222-3333-4444-555555555555".into(),
+            active: false,
+        },
+        RequestBody::AddonRemove {
+            id: id(),
+            uuid: "11111111-2222-3333-4444-555555555555".into(),
+        },
         RequestBody::ModSides { id: id() },
         RequestBody::QuarantineMods {
             id: id(),
@@ -419,6 +468,7 @@ fn examples() -> Value {
             autostart: None,
         },
         RequestBody::SetStartup { enabled: true },
+        RequestBody::SetKeepAwake { enabled: true },
         RequestBody::Supporter,
         RequestBody::ActivateSupporter {
             license_key: "ABCD1234-EFGH5678-IJKL9012-MNOP3456".into(),
@@ -454,6 +504,7 @@ fn examples() -> Value {
             perms: vec![merc_ipc::remote::Perm::Status, merc_ipc::remote::Perm::ConsoleRead],
             minutes: 60,
         },
+        RequestBody::CreateHostInvite { minutes: 60 },
         RequestBody::CancelInvite {
             invite_id: "a1b2c3d4e5f6".into(),
         },
@@ -623,6 +674,25 @@ fn examples() -> Value {
                 status: status_crashed(),
                 eula_accepted: false,
                 configured_port: None,
+                archived: false,
+            },
+            InstanceSummary {
+                instance: Instance {
+                    kind: ServerKind::Bedrock,
+                    mc_version: Some("1.21.124.2".into()),
+                    loader_version: None,
+                    launch: LaunchProfile {
+                        java: "".into(),
+                        target: LaunchTarget::Native {
+                            exe: "bedrock_server.exe".into(),
+                        },
+                        ..instance().launch
+                    },
+                    ..instance()
+                },
+                status: status_crashed(),
+                eula_accepted: true,
+                configured_port: Some(19132),
                 archived: false,
             },
         ]),
@@ -955,6 +1025,35 @@ fn examples() -> Value {
                 detail: "Escuchando en el puerto UDP 24454.".into(),
                 checked_at_unix_ms: 1_793_300_300_000,
             }],
+            bedrock: Some(BedrockInfo {
+                geyser: "plugins/Geyser-Spigot.jar".into(),
+                geyser_enabled: true,
+                floodgate: Some("plugins/floodgate-spigot.jar".into()),
+                floodgate_enabled: true,
+                config: Some("plugins/Geyser-Spigot/config.yml".into()),
+                port: 19132,
+                port_from_config: true,
+                lan: vec!["192.168.1.20:19132".into()],
+                tunnels: vec![Tunnel {
+                    display_address: "147.185.221.20:19132".into(),
+                    destination: "127.0.0.1:19132".into(),
+                    is_disabled: false,
+                    disabled_reason: None,
+                }],
+                tests: vec![AddressTest {
+                    address: "147.185.221.20:19132".into(),
+                    at_unix_ms: 1_793_300_300_000,
+                    result: Some(PingResult {
+                        tested: "147.185.221.20:19132".into(),
+                        latency_ms: 52,
+                        version: "Bedrock 1.21.40".into(),
+                        players_online: 1,
+                        players_max: 20,
+                        motd: "Survival de Amir".into(),
+                    }),
+                    error: None,
+                }],
+            }),
         })),
         ResponseBody::SecurityReport(Box::new(merc_admin::security::SecurityReport {
             checked_at_unix_ms: 1_793_300_300_000,
@@ -1001,6 +1100,7 @@ fn examples() -> Value {
             total_secs: 5400,
             online_since_unix: Some(1_793_303_600),
             note: Some("Construyó el castillo".into()),
+            xuid: None,
         }]),
         ResponseBody::LuckPerms(Box::new(merc_ipc::LuckPermsInfo {
             install: Some(merc_admin::luckperms::LpInstall {
@@ -1036,6 +1136,51 @@ fn examples() -> Value {
                 }],
             }),
             backups: vec!["2026-10-30-12-00-00.json.gz".into()],
+        })),
+        ResponseBody::BedrockPlayers(Box::new(BedrockPlayersInfo {
+            allow_list_enabled: true,
+            online_mode: true,
+            default_permission: "member".into(),
+            legacy_whitelist: false,
+            running: true,
+            allowlist: vec![merc_admin::bedrock_players::AllowEntry {
+                name: "Steve Craft".into(),
+                xuid: Some("2535428000000000".into()),
+                ignores_player_limit: false,
+            }],
+            permissions: vec![BedrockPermRow {
+                xuid: "2535428000000000".into(),
+                level: merc_admin::bedrock_players::Level::Operator,
+                name: Some("Steve Craft".into()),
+            }],
+            known: vec![BedrockKnownPlayer {
+                name: "Steve Craft".into(),
+                xuid: "2535428000000000".into(),
+                online: true,
+                last_seen_unix: 1_793_303_600,
+            }],
+            online: vec!["Steve Craft".into()],
+        })),
+        ResponseBody::Addons(Box::new(AddonsInfo {
+            level_name: "Bedrock level".into(),
+            world_exists: true,
+            packs: vec![merc_admin::addons::AddonPack {
+                uuid: "11111111-2222-3333-4444-555555555555".into(),
+                version: [1, 1, 0],
+                name: "Dragones".into(),
+                description: "Dragones que vuelan".into(),
+                kind: merc_admin::addons::PackKind::Behavior,
+                folder: "behavior_packs/Dragones_11111111".into(),
+                active: true,
+                bundled: false,
+                scripts: true,
+            }],
+            last_import: Some(merc_admin::addons::ImportResult {
+                installed: vec!["Dragones 1.1.0".into()],
+                unchanged: vec![],
+                replaced: vec![],
+                notes: vec!["«Dragones» usa scripts.".into()],
+            }),
         })),
         ResponseBody::ModSides(Box::new(merc_admin::modsides::ModSidesInfo {
             items: vec![merc_admin::modsides::ModSideReport {
@@ -1119,6 +1264,8 @@ fn examples() -> Value {
             autostart: false,
             startup_available: true,
             startup_enabled: false,
+            keep_awake: true,
+            keep_awake_active: true,
         }),
         ResponseBody::LoaderVersions(vec![merc_install::LoaderOption {
             version: "0.16.10".into(),
@@ -1235,11 +1382,12 @@ fn examples() -> Value {
             error: None,
             invites: vec![merc_ipc::remote::InviteInfo {
                 invite_id: "a1b2c3d4e5f6".into(),
-                server: id(),
+                server: Some(id()),
                 server_name: "Survival".into(),
                 perms: vec![merc_ipc::remote::Perm::Status],
                 created_at_unix_ms: 1_793_300_300_000,
                 expires_at_unix_ms: 1_793_303_900_000,
+                host_admin: false,
             }],
             companions: vec![merc_ipc::remote::CompanionInfo {
                 companion: "ab".repeat(32),
@@ -1253,17 +1401,19 @@ fn examples() -> Value {
                     name: "Survival".into(),
                     perms: vec![merc_ipc::remote::Perm::Status, merc_ipc::remote::Perm::Start],
                 }],
+                host_admin: false,
             }],
         })),
         ResponseBody::Invite(Box::new(merc_ipc::remote::NewInvite {
             code: "MH1-ABCDEF".into(),
             invite: merc_ipc::remote::InviteInfo {
                 invite_id: "a1b2c3d4e5f6".into(),
-                server: id(),
+                server: Some(id()),
                 server_name: "Survival".into(),
                 perms: vec![merc_ipc::remote::Perm::Status],
                 created_at_unix_ms: 1_793_300_300_000,
                 expires_at_unix_ms: 1_793_303_900_000,
+                host_admin: false,
             },
         })),
         ResponseBody::RemoteHosts(vec![merc_ipc::remote::RemoteHost {
@@ -1277,6 +1427,7 @@ fn examples() -> Value {
             }],
             last_ok_unix_ms: Some(1_793_300_400_000),
             last_error: None,
+            host_admin: true,
         }]),
         ResponseBody::Health(HealthReport {
             pc_cpu_percent: Some(23.5),

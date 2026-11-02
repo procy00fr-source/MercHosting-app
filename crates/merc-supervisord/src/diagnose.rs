@@ -146,6 +146,12 @@ impl Daemon {
     ) -> Result<ResponseBody, ApiError> {
         let inst = self.instance(id)?;
         self.require_stopped(id, "cambiar el Java o la memoria")?;
+        if inst.launch.is_native() {
+            return Err(api(
+                ErrorCode::BadRequest,
+                "Bedrock Dedicated Server no usa Java ni una memoria fija: no hay nada que cambiar aquí.",
+            ));
+        }
         let mut launch = inst.launch.clone();
         let mut detail = vec![];
         if let Some(j) = java {
@@ -193,7 +199,7 @@ impl Daemon {
                 return Err(api(
                     ErrorCode::BadRequest,
                     format!(
-                        "Tu PC tiene unos {} MB; deja memoria para Windows (máximo {} MB).",
+                        "Tu PC tiene unos {} MB; deja memoria para el sistema (máximo {} MB).",
                         total,
                         total * 9 / 10
                     ),

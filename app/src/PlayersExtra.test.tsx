@@ -60,8 +60,8 @@ describe("Jugadores: acciones e historial", () => {
     const { fake, user, w } = await openPlayers((f) => {
       f.players = ["Alex"];
       f.history = [
-        { name: "Alex", first_seen_unix: now - 90000, last_seen_unix: now - 600, sessions: 3, total_secs: 5400, online_since_unix: now - 600, note: null },
-        { name: "Steve", first_seen_unix: now - 90000, last_seen_unix: now - 7200, sessions: 1, total_secs: 1500, online_since_unix: null, note: "Amigo de Alex" },
+        { name: "Alex", first_seen_unix: now - 90000, last_seen_unix: now - 600, sessions: 3, total_secs: 5400, online_since_unix: now - 600, note: null, xuid: null },
+        { name: "Steve", first_seen_unix: now - 90000, last_seen_unix: now - 7200, sessions: 1, total_secs: 1500, online_since_unix: null, note: "Amigo de Alex", xuid: null },
       ];
     });
     const card = within(await w.findByRole("region", { name: "Historial de jugadores" }));

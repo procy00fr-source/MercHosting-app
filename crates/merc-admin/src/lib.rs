@@ -6,10 +6,13 @@
 //!
 //! Regla común: nada se borra de golpe ni se sobrescribe sin copia de seguridad.
 
+pub mod addons;
 pub mod backups;
+pub mod bedrock_players;
 pub mod diagnose;
 pub mod files;
 pub mod gamerules;
+pub mod geyser;
 pub mod health;
 pub mod icon;
 pub mod luckperms;

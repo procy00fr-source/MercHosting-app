@@ -97,6 +97,7 @@ const REQUEST_KEYS: Record<RequestBody["op"], string[]> = {
   playit_login_url: [],
   connection: ["id"],
   test_address: ["id", "address"],
+  test_bedrock_address: ["id", "address"],
   set_voice_config: ["id", "voice_host", "port"],
   install_java: ["major"],
   diagnose: ["id"],
@@ -109,6 +110,14 @@ const REQUEST_KEYS: Record<RequestBody["op"], string[]> = {
   player_history: ["id"],
   set_player_note: ["id", "name", "note"],
   clear_player_history: ["id"],
+  addons: ["id"],
+  bedrock_players: ["id"],
+  bedrock_allowlist: ["id", "change"],
+  bedrock_allowlist_enabled: ["id", "enabled"],
+  bedrock_permission: ["id", "xuid", "level"],
+  addon_import: ["id", "source"],
+  addon_set_active: ["id", "uuid", "active"],
+  addon_remove: ["id", "uuid"],
   mod_sides: ["id"],
   quarantine_mods: ["id", "files"],
   restore_mods: ["id", "files"],
@@ -120,6 +129,7 @@ const REQUEST_KEYS: Record<RequestBody["op"], string[]> = {
   automation: ["id"],
   set_automation: ["id", "auto_restart", "autostart"],
   set_startup: ["enabled"],
+  set_keep_awake: ["enabled"],
   supporter: [],
   activate_supporter: ["license_key"],
   refresh_supporter: [],
@@ -133,6 +143,7 @@ const REQUEST_KEYS: Record<RequestBody["op"], string[]> = {
   companions: [],
   set_companions_enabled: ["enabled"],
   create_invite: ["id", "perms", "minutes"],
+  create_host_invite: ["minutes"],
   cancel_invite: ["invite_id"],
   set_companion_perms: ["companion", "id", "perms"],
   remove_companion: ["companion"],
@@ -202,6 +213,8 @@ const RESPONSE_KINDS: ResponseBody["kind"][] = [
   "automation",
   "player_history",
   "mod_sides",
+  "addons",
+  "bedrock_players",
   "zip_extracted",
   "modpack_status",
   "modpack_update_plan",
@@ -237,7 +250,7 @@ const STATUS_KEYS = [
 ];
 
 const sorted = (a: string[]) => [...a].sort();
-const FLAVORS = ["vanilla", "paper", "purpur", "spigot", "fabric", "quilt", "forge", "neo_forge", "arclight"];
+const FLAVORS = ["vanilla", "paper", "purpur", "spigot", "fabric", "quilt", "forge", "neo_forge", "arclight", "bedrock"];
 
 describe("contrato del protocolo v1 con Rust", () => {
   it("usa la misma versión y textos fijos", () => {
@@ -276,7 +289,7 @@ describe("contrato del protocolo v1 con Rust", () => {
           expect(sorted(Object.keys(s.instance))).toEqual(sorted(INSTANCE_KEYS));
           expect(sorted(Object.keys(s.status))).toEqual(sorted(STATUS_KEYS));
           expect(KIND_LABEL[s.instance.kind as keyof typeof KIND_LABEL]).toBeTruthy();
-          expect(["jar", "args_file"]).toContain(s.instance.launch.target.type);
+          expect(["jar", "args_file", "native"]).toContain(s.instance.launch.target.type);
         }
       }
       if (r.kind === "status") expect(sorted(Object.keys(r.data))).toEqual(sorted(STATUS_KEYS));
@@ -322,8 +335,27 @@ describe("contrato del protocolo v1 con Rust", () => {
           );
         if (r.data.claim) expect(sorted(Object.keys(r.data.claim))).toEqual(["done", "error", "state", "url"]);
       }
+      if (r.kind === "bedrock_players") {
+        expect(sorted(Object.keys(r.data))).toEqual(
+          sorted(["allow_list_enabled", "online_mode", "default_permission", "legacy_whitelist", "running", "allowlist", "permissions", "known", "online"]),
+        );
+        for (const a of r.data.allowlist) expect(sorted(Object.keys(a))).toEqual(["ignores_player_limit", "name", "xuid"]);
+        for (const p of r.data.permissions) expect(sorted(Object.keys(p))).toEqual(["level", "name", "xuid"]);
+        for (const k of r.data.known) expect(sorted(Object.keys(k))).toEqual(["last_seen_unix", "name", "online", "xuid"]);
+      }
+      if (r.kind === "player_history") for (const p of r.data) expect(Object.keys(p)).toContain("xuid");
+      if (r.kind === "addons") {
+        expect(sorted(Object.keys(r.data))).toEqual(["last_import", "level_name", "packs", "world_exists"]);
+        for (const p of r.data.packs)
+          expect(sorted(Object.keys(p))).toEqual(sorted(["uuid", "version", "name", "description", "kind", "folder", "active", "bundled", "scripts"]));
+        if (r.data.last_import) expect(sorted(Object.keys(r.data.last_import))).toEqual(["installed", "notes", "replaced", "unchanged"]);
+      }
       if (r.kind === "connection") {
-        expect(sorted(Object.keys(r.data))).toEqual(["lan", "layers", "port", "ports_in_use", "tests", "tunnels", "voice"]);
+        expect(sorted(Object.keys(r.data))).toEqual(["bedrock", "lan", "layers", "port", "ports_in_use", "tests", "tunnels", "voice"]);
+        if (r.data.bedrock)
+          expect(sorted(Object.keys(r.data.bedrock))).toEqual(
+            sorted(["geyser", "geyser_enabled", "floodgate", "floodgate_enabled", "config", "port", "port_from_config", "lan", "tunnels", "tests"]),
+          );
         for (const l of r.data.layers) {
           expect(sorted(Object.keys(l))).toEqual(["checked_at_unix_ms", "detail", "key", "state"]);
           expect(["operativo", "degradado", "caido", "desconocido"]).toContain(l.state);
@@ -360,12 +392,16 @@ describe("contrato del protocolo v1 con Rust", () => {
         expect(sorted(Object.keys(r.data))).toEqual(sorted(["enabled", "online", "fingerprint", "error", "invites", "companions"]));
         for (const c of r.data.companions)
           expect(sorted(Object.keys(c))).toEqual(
-            sorted(["companion", "name", "fingerprint", "added_at_unix_ms", "last_seen_unix_ms", "connected", "servers"]),
+            sorted(["companion", "name", "fingerprint", "added_at_unix_ms", "last_seen_unix_ms", "connected", "servers", "host_admin"]),
+          );
+        for (const i of r.data.invites)
+          expect(sorted(Object.keys(i))).toEqual(
+            sorted(["invite_id", "server", "server_name", "perms", "created_at_unix_ms", "expires_at_unix_ms", "host_admin"]),
           );
       }
       if (r.kind === "remote_hosts") {
         for (const h of r.data)
-          expect(sorted(Object.keys(h))).toEqual(sorted(["host", "name", "fingerprint", "servers", "last_ok_unix_ms", "last_error"]));
+          expect(sorted(Object.keys(h))).toEqual(sorted(["host", "name", "fingerprint", "servers", "last_ok_unix_ms", "last_error", "host_admin"]));
       }
       if (r.kind === "health") {
         expect(sorted(Object.keys(r.data))).toEqual(

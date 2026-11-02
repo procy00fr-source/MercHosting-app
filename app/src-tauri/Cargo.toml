@@ -5,6 +5,11 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 
+[lib]
+# Tauri en el celular carga la app como biblioteca (Android: .so); en escritorio es un binario.
+name = "merchosting_app_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
 
@@ -17,7 +22,22 @@ tauri = { version = "2", features = ["image-png"] }
 tauri-plugin-dialog = "2"
 tauri-plugin-opener = "2"
 tauri-plugin-notification = "2"
+
+# Solo escritorio: el actualizador oficial de Tauri.
+[target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 tauri-plugin-updater = { version = "2", optional = true }
+
+# Solo celular: el canal de compañeros (la app es un compañero, sin supervisor).
+[target.'cfg(any(target_os = "android", target_os = "ios"))'.dependencies]
+merc-remote = { path = "../../crates/merc-remote" }
+# Fase 2: servidor Java dentro del propio celular.
+merc-phone = { path = "../../crates/merc-phone" }
+merc-install = { path = "../../crates/merc-install" }
+tauri-plugin-mercphone = { path = "../../crates/tauri-plugin-mercphone" }
+
+# Solo Android: el servicio del servidor llama a la biblioteca de la app por JNI.
+[target.'cfg(target_os = "android")'.dependencies]
+jni = "0.21"
 
 [features]
 # Solo en las versiones publicadas (scripts/publicar-version.mjs la activa y pasa la clave

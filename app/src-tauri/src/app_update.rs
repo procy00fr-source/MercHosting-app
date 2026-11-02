@@ -7,7 +7,7 @@
 //! - Antes de instalar se cierra el supervisor (que se niega si hay servidores en marcha), así
 //!   el instalador puede reemplazar su .exe y ningún mundo queda a medio guardar.
 
-use crate::bridge::UiError;
+use crate::error::UiError;
 use serde::Serialize;
 
 #[derive(Debug, Serialize)]
@@ -19,6 +19,14 @@ pub struct AppUpdateCheck {
     pub version: Option<String>,
     pub notes: Option<String>,
     pub date: Option<String>,
+    /// La app se puede actualizar sola: en Windows (instalador) y en Linux solo con AppImage.
+    /// Con el paquete .deb se descarga la versión nueva a mano.
+    pub self_install: bool,
+}
+
+/// En Linux el actualizador de Tauri reemplaza el AppImage; un .deb instalado no se toca.
+pub fn self_install_supported() -> bool {
+    cfg!(windows) || std::env::var_os("APPIMAGE").is_some()
 }
 
 #[cfg(not(feature = "updater"))]
@@ -31,6 +39,7 @@ pub async fn app_update_check() -> Result<AppUpdateCheck, UiError> {
         version: None,
         notes: None,
         date: None,
+        self_install: self_install_supported(),
     })
 }
 
@@ -71,6 +80,7 @@ mod real {
             version: update.as_ref().map(|u| u.version.clone()),
             notes: update.as_ref().and_then(|u| u.body.clone()),
             date: update.as_ref().and_then(|u| u.date.map(|d| d.to_string())),
+            self_install: self_install_supported(),
         })
     }
 
@@ -105,6 +115,12 @@ mod real {
 
     #[tauri::command]
     pub async fn app_update_install(app: AppHandle) -> Result<(), UiError> {
+        if !self_install_supported() {
+            return Err(UiError::new(
+                "bad_request",
+                "Esta instalación (.deb) no se actualiza sola: descarga la versión nueva desde la página de releases.",
+            ));
+        }
         let update = app
             .updater()
             .map_err(err)?

@@ -69,6 +69,7 @@ impl Fake {
             arclight_releases: format!("{}/arclight/releases", self.base),
             spigot_versions: format!("{}/spigot/versions", self.base),
             buildtools_url: format!("{}/spigot/BuildTools.jar", self.base),
+            bedrock_links: format!("{}/bedrock/links", self.base),
         }
     }
 }
@@ -393,8 +394,9 @@ fn purpur_md5_and_forge() {
     let list = list_versions(&http, &f.sources(), Flavor::Forge).unwrap();
     assert_eq!(
         list.iter().map(|e| e.mc_version.as_str()).collect::<Vec<_>>(),
-        ["26.1", "1.20.1"]
+        ["26.1", "1.20.1", "1.12.2"]
     );
+    assert_eq!(list[2].java_major, 8);
     let r = resolve(&http, &f.sources(), Flavor::Forge, "1.20.1").unwrap();
     assert_eq!(r.loader_version.as_deref(), Some("47.4.0"));
     assert!(r
@@ -637,4 +639,161 @@ fn pinned_loader_versions_for_modpacks() {
         Err(InstallError::NotAvailable(_))
     ));
     assert!(merc_install::resolve_pinned(&http, &src, Flavor::Fabric, "1.21.1", Some("../x")).is_err());
+}
+
+#[test]
+fn bedrock_end_to_end() {
+    let f = Fake::start();
+    let exe = merc_core::detect::bedrock_exe_name();
+    let mut buf = std::io::Cursor::new(Vec::new());
+    {
+        let mut z = zip::ZipWriter::new(&mut buf);
+        for (n, b) in [
+            (exe, "binario"),
+            (
+                "server.properties",
+                "server-name=Dedicated Server\n# puerto\nserver-port=19132\n",
+            ),
+            ("behavior_packs/vanilla/manifest.json", "{}"),
+        ] {
+            z.start_file(n, zip::write::SimpleFileOptions::default()).unwrap();
+            z.write_all(b.as_bytes()).unwrap();
+        }
+        z.finish().unwrap();
+    }
+    let zip_bytes = buf.into_inner();
+    let kind = if cfg!(windows) {
+        "serverBedrockWindows"
+    } else {
+        "serverBedrockLinux"
+    };
+    f.route(
+        "/bedrock/links",
+        serde_json::json!({"result": {"links": [
+            {"downloadType": kind, "downloadUrl": format!("{}/bedrock/bedrock-server-1.21.124.2.zip", f.base)}
+        ]}})
+        .to_string(),
+    );
+    f.route("/bedrock/bedrock-server-1.21.124.2.zip", zip_bytes.clone());
+    let src = f.sources();
+    let http = Http::new();
+    let list = list_versions(&http, &src, Flavor::Bedrock).unwrap();
+    assert_eq!(list.len(), 1);
+    assert_eq!(list[0].mc_version, "1.21.124.2");
+    assert!(matches!(
+        resolve(&http, &src, Flavor::Bedrock, "1.20.0"),
+        Err(InstallError::NotAvailable(_))
+    ));
+    let r = resolve(&http, &src, Flavor::Bedrock, "1.21.124.2").unwrap();
+    let d = tempfile::tempdir().unwrap();
+    let target = d.path().join("bedrock");
+    let mut properties = BTreeMap::new();
+    properties.insert("server-name".to_string(), "Mi Bedrock".to_string());
+    properties.insert("server-port".to_string(), "19140".to_string());
+    let plan = InstallPlan {
+        resolved: r,
+        target: target.clone(),
+        java: PathBuf::new(),
+        properties,
+        accept_eula: true,
+        cache_dir: None,
+    };
+    let (_ev, mut sink) = collect();
+    let out = install(&http, &plan, &mut sink, &AtomicBool::new(false)).unwrap();
+    assert_eq!(out.detected.kind, ServerKind::Bedrock);
+    assert_eq!(out.detected.mc_version.as_deref(), Some("1.21.124.2"));
+    let props = std::fs::read_to_string(target.join("server.properties")).unwrap();
+    assert!(
+        props.contains("server-name=Mi Bedrock") && props.contains("server-port=19140") && props.contains("# puerto")
+    );
+    assert!(!target.join("bedrock-server-1.21.124.2.zip").exists());
+    let sha = std::fs::read_to_string(target.join("merchosting-bedrock-sha256.txt")).unwrap();
+    assert!(sha.contains(&hex(&sha2::Sha256::digest(&zip_bytes))));
+    assert!(std::fs::read_to_string(target.join("eula.txt"))
+        .unwrap()
+        .contains("eula=true"));
+
+    // Propiedades de Java en Bedrock: se rechazan sin crear nada.
+    let mut bad = plan.clone();
+    bad.target = d.path().join("otro");
+    bad.properties = BTreeMap::from([("motd".to_string(), "x".to_string())]);
+    let (_ev, mut sink) = collect();
+    assert!(install(&http, &bad, &mut sink, &AtomicBool::new(false)).is_err());
+    assert!(!d.path().join("otro").exists());
+}
+
+/// Forge 1.12.2: el «Java» imita al instalador antiguo y deja el JAR del servidor en la
+/// carpeta (copiado de uno real con Main-Class) junto a minecraft_server y libraries.
+#[cfg(unix)]
+#[test]
+fn legacy_forge_installs_and_launches_its_jar() {
+    use std::io::Write;
+    use std::os::unix::fs::PermissionsExt;
+    let f = Fake::start();
+    f.route(
+        "/forge/promotions_slim.json",
+        r#"{"promos":{"1.12.2-recommended":"14.23.5.2859","1.12.2-latest":"14.23.5.2860"}}"#,
+    );
+    let installer = b"instalador-antiguo".to_vec();
+    let path = "/forgemaven/net/minecraftforge/forge/1.12.2-14.23.5.2859/forge-1.12.2-14.23.5.2859-installer.jar";
+    f.route(path, installer.clone());
+    f.route(&format!("{path}.sha1"), hex(&sha1::Sha1::digest(&installer)));
+    let http = Http::new();
+    let r = resolve(&http, &f.sources(), Flavor::Forge, "1.12.2").unwrap();
+    assert_eq!(r.loader_version.as_deref(), Some("14.23.5.2859"));
+    assert_eq!(r.java_major, 8);
+    assert!(r.notes.iter().any(|n| n.contains("Java 8")));
+    assert!(merc_install::resolve_pinned(&http, &f.sources(), Flavor::Forge, "1.12.2", Some("14.21.1.2387")).is_err());
+
+    let tools = tempfile::tempdir().unwrap();
+    let make_jar = |name: &str, manifest: &str| {
+        let p = tools.path().join(name);
+        let mut z = zip::ZipWriter::new(std::fs::File::create(&p).unwrap());
+        z.start_file("META-INF/MANIFEST.MF", zip::write::SimpleFileOptions::default())
+            .unwrap();
+        z.write_all(manifest.as_bytes()).unwrap();
+        z.finish().unwrap();
+        p
+    };
+    let good = make_jar(
+        "bueno.jar",
+        "Manifest-Version: 1.0\nMain-Class: net.minecraftforge.fml.relauncher.ServerLaunchWrapper\n",
+    );
+    let bad = make_jar("malo.jar", "Manifest-Version: 1.0\n");
+    let fake = |name: &str, src: &std::path::Path| {
+        let body = format!(
+            "#!/bin/sh\n[ \"$3\" = \"--installServer\" ] || exit 9\n\
+             mkdir -p libraries/net/minecraft/launchwrapper/1.12\n\
+             touch minecraft_server.1.12.2.jar\n\
+             cp '{}' forge-1.12.2-14.23.5.2859.jar\necho 'The server installed successfully'\n",
+            src.display()
+        );
+        let p = tools.path().join(name);
+        std::fs::write(&p, body).unwrap();
+        std::fs::set_permissions(&p, std::fs::Permissions::from_mode(0o755)).unwrap();
+        p
+    };
+    let d = tempfile::tempdir().unwrap();
+    let mut p = plan(r.clone(), d.path().join("ok"), true);
+    p.java = fake("java-ok", &good);
+    let out = install(&http, &p, &mut |_| {}, &AtomicBool::new(false)).unwrap();
+    assert_eq!(out.detected.kind, ServerKind::Forge);
+    assert_eq!(out.detected.mc_version.as_deref(), Some("1.12.2"));
+    assert_eq!(
+        out.detected.launch,
+        Some(merc_core::launch::LaunchTarget::Jar {
+            jar: "forge-1.12.2-14.23.5.2859.jar".into()
+        })
+    );
+    assert!(!d.path().join("ok/forge-1.12.2-14.23.5.2859-installer.jar").exists());
+
+    // Un JAR que no arranca se detecta y no queda una carpeta a medias.
+    let mut p = plan(r, d.path().join("malo"), true);
+    p.java = fake("java-malo", &bad);
+    let err = install(&http, &p, &mut |_| {}, &AtomicBool::new(false)).unwrap_err();
+    assert!(
+        matches!(&err, InstallError::InstallerFailed(m) if m.contains("Main-Class")),
+        "{err:?}"
+    );
+    assert!(!d.path().join("malo").exists());
 }

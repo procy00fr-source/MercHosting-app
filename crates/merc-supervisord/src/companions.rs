@@ -75,8 +75,11 @@ pub(crate) struct RemoteRuntime {
 struct StoredInvite {
     id: String,
     secret_sha256: String,
-    server: InstanceId,
+    /// `None` = control total de esta PC (servidor casero).
+    server: Option<InstanceId>,
     perms: Vec<Perm>,
+    #[serde(default)]
+    host_admin: bool,
     created_at_unix_ms: i64,
     expires_at_unix_ms: i64,
 }
@@ -89,6 +92,9 @@ struct StoredCompanion {
     #[serde(default)]
     last_seen_unix_ms: Option<i64>,
     grants: BTreeMap<InstanceId, Vec<Perm>>,
+    /// Control total de esta PC: todos los servidores (también los nuevos) y crear servidores.
+    #[serde(default)]
+    host_admin: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -109,6 +115,8 @@ struct StoredHost {
     #[serde(default)]
     relay: Option<String>,
     servers: Vec<RemoteServer>,
+    #[serde(default)]
+    host_admin: bool,
 }
 
 fn now_ms() -> i64 {
@@ -151,7 +159,10 @@ fn is_read(body: &RequestBody) -> bool {
             | R::Worlds { .. }
             | R::Backups { .. }
             | R::Connection { .. }
+            | R::PlayitStatus
             | R::ContentInstalled { .. }
+            | R::Addons { .. }
+            | R::BedrockPlayers { .. }
             | R::ContentPlatforms { .. }
             | R::ContentSearch { .. }
             | R::ContentProject { .. }
@@ -186,7 +197,10 @@ fn pc_name() -> String {
     std::env::var("COMPUTERNAME")
         .or_else(|_| std::env::var("HOSTNAME"))
         .ok()
-        .filter(|s| !s.trim().is_empty())
+        // Un servicio de systemd no suele tener HOSTNAME: se lee el del sistema.
+        .or_else(|| std::fs::read_to_string("/etc/hostname").ok())
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
         .unwrap_or_else(|| "PC con MercHosting".into())
 }
 
@@ -311,6 +325,22 @@ impl Daemon {
     }
 
     fn servers_of(&self, c: &StoredCompanion) -> Vec<RemoteServer> {
+        if c.host_admin {
+            let list = self
+                .store
+                .lock()
+                .unwrap_or_else(|p| p.into_inner())
+                .list_instances()
+                .unwrap_or_default();
+            return list
+                .into_iter()
+                .map(|inst| RemoteServer {
+                    id: inst.id,
+                    name: inst.name,
+                    perms: Perm::ALL.to_vec(),
+                })
+                .collect();
+        }
         c.grants
             .iter()
             .filter(|(_, p)| !p.is_empty())
@@ -341,6 +371,7 @@ impl Daemon {
                 WireResponse::Servers {
                     host_name: pc_name(),
                     servers: self.servers_of(&c),
+                    host_admin: c.host_admin,
                 }
             }
             WireRequest::Call { request } => {
@@ -384,7 +415,12 @@ impl Daemon {
             return Err(forbidden("Esta PC ya no tiene acceso a los servidores de tu amigo."));
         };
         let who = format!("companero:{}", c.name);
-        if !c.grants.get(&id).is_some_and(|p| p.contains(&perm)) {
+        let ok = if c.host_admin {
+            self.instance(id).is_ok()
+        } else {
+            c.grants.get(&id).is_some_and(|p| p.contains(&perm))
+        };
+        if !ok {
             self.audit(&who, Some(id), "companero.denegado", action);
             return Err(forbidden(format!(
                 "No tienes el permiso «{}» en este servidor.",
@@ -710,9 +746,19 @@ impl Daemon {
         };
         // Un solo uso.
         let inv = f.invites.remove(pos);
-        let Ok(inst) = self.instance(inv.server) else {
-            let _ = self.save_host_file(&f);
-            return WireResponse::Denied("Ese servidor ya no existe en la PC de tu amigo.".into());
+        let inst = match inv.server {
+            Some(id) => match self.instance(id) {
+                Ok(i) => Some(i),
+                Err(_) => {
+                    let _ = self.save_host_file(&f);
+                    return WireResponse::Denied("Ese servidor ya no existe en la PC de tu amigo.".into());
+                }
+            },
+            None if inv.host_admin => None,
+            None => {
+                let _ = self.save_host_file(&f);
+                return deny;
+            }
         };
         let key = merc_remote::hex(&peer);
         let c = match f.companions.iter_mut().find(|c| c.key == key) {
@@ -727,11 +773,17 @@ impl Daemon {
                     added_at_unix_ms: now,
                     last_seen_unix_ms: None,
                     grants: BTreeMap::new(),
+                    host_admin: false,
                 });
                 f.companions.last_mut().expect("recién añadido")
             }
         };
-        c.grants.insert(inv.server, sorted(inv.perms.clone()));
+        match inv.server {
+            Some(id) => {
+                c.grants.insert(id, sorted(inv.perms.clone()));
+            }
+            None => c.host_admin = true,
+        }
         c.last_seen_unix_ms = Some(now);
         let c = c.clone();
         if let Err(e) = self.save_host_file(&f) {
@@ -739,25 +791,45 @@ impl Daemon {
         }
         drop(_g);
         let fp = merc_remote::fingerprint(&peer);
-        self.audit(
-            &format!("companero:{name}"),
-            Some(inv.server),
-            "companero.unido",
-            &format!("PC {fp}; permisos: {:?}", inv.perms),
-        );
-        self.push_alert(
-            merc_admin::health::AlertKind::Companion,
-            merc_admin::health::AlertLevel::Info,
-            Some((inv.server, inst.name.clone())),
-            format!("{name} se unió como compañero"),
-            format!(
-                "Ya puede administrar «{}» con los permisos que elegiste (PC {fp}).",
-                inst.name
-            ),
-        );
+        match &inst {
+            Some(inst) => {
+                self.audit(
+                    &format!("companero:{name}"),
+                    Some(inst.id),
+                    "companero.unido",
+                    &format!("PC {fp}; permisos: {:?}", inv.perms),
+                );
+                self.push_alert(
+                    merc_admin::health::AlertKind::Companion,
+                    merc_admin::health::AlertLevel::Info,
+                    Some((inst.id, inst.name.clone())),
+                    format!("{name} se unió como compañero"),
+                    format!(
+                        "Ya puede administrar «{}» con los permisos que elegiste (PC {fp}).",
+                        inst.name
+                    ),
+                );
+            }
+            None => {
+                self.audit(
+                    &format!("companero:{name}"),
+                    None,
+                    "companero.unido_control_total",
+                    &format!("PC {fp}; control total de esta PC"),
+                );
+                self.push_alert(
+                    merc_admin::health::AlertKind::Companion,
+                    merc_admin::health::AlertLevel::Warning,
+                    None,
+                    format!("{name} tiene control total de esta PC"),
+                    format!("Puede administrar todos los servidores y crear nuevos (PC {fp}). Quítalo en Compañeros si no fuiste tú."),
+                );
+            }
+        }
         WireResponse::Servers {
             host_name: pc_name(),
             servers: self.servers_of(&c),
+            host_admin: c.host_admin,
         }
     }
 
@@ -773,8 +845,15 @@ impl Daemon {
         let who = format!("companero:{}", c.name);
         let need = rm::need(&body);
         let allowed = match &need {
-            Need::Any | Need::ListInstances => !c.grants.values().all(Vec::is_empty),
-            Need::On(id, perm) => c.grants.get(id).is_some_and(|p| p.contains(perm)),
+            Need::Any | Need::ListInstances => c.host_admin || !c.grants.values().all(Vec::is_empty),
+            Need::On(id, perm) => {
+                if c.host_admin {
+                    self.instance(*id).is_ok()
+                } else {
+                    c.grants.get(id).is_some_and(|p| p.contains(perm))
+                }
+            }
+            Need::Host => c.host_admin,
             Need::OwnJob(job) => self
                 .remote
                 .lock()
@@ -796,11 +875,18 @@ impl Daemon {
             self.audit(&who, instance, "companero.denegado", &action);
             return Err(forbidden(match need {
                 Need::Deny => "Esto solo lo puede hacer el dueño del servidor en su PC.".to_string(),
+                Need::Host => "Esto necesita el control total de esa PC (se da con una invitación de servidor casero)."
+                    .to_string(),
                 Need::On(_, p) => format!("No tienes el permiso «{}» en este servidor.", perm_label(p)),
                 _ => "No tienes permiso para esto.".to_string(),
             }));
         }
         let read = is_read(&body);
+        // Crear servidores desde otra PC: la carpeta y el Java los elige esta PC.
+        let body = match body {
+            RequestBody::CreateServer { .. } => super::headless::remote_create(self, body)?,
+            b => b,
+        };
         let result = self.handle(&who, body).map(|(b, _)| b);
         if !read {
             self.audit(
@@ -825,7 +911,9 @@ impl Daemon {
                 .insert(j.job_id.clone());
         }
         if let ResponseBody::Instances(list) = &mut body {
-            list.retain(|s| c.grants.get(&s.instance.id).is_some_and(|p| !p.is_empty()));
+            if !c.host_admin {
+                list.retain(|s| c.grants.get(&s.instance.id).is_some_and(|p| !p.is_empty()));
+            }
         }
         // Sin rutas de esta PC en lo que sale.
         let mut v = serde_json::to_value(&body).map_err(|e| api(ErrorCode::Internal, e.to_string()))?;
@@ -873,10 +961,15 @@ impl Daemon {
                 .map(|i| InviteInfo {
                     invite_id: i.id.clone(),
                     server: i.server,
-                    server_name: self.instance(i.server).map(|x| x.name).unwrap_or_default(),
+                    server_name: i
+                        .server
+                        .and_then(|s| self.instance(s).ok())
+                        .map(|x| x.name)
+                        .unwrap_or_default(),
                     perms: i.perms.clone(),
                     created_at_unix_ms: i.created_at_unix_ms,
                     expires_at_unix_ms: i.expires_at_unix_ms,
+                    host_admin: i.host_admin,
                 })
                 .collect(),
             companions: f
@@ -892,6 +985,7 @@ impl Daemon {
                     last_seen_unix_ms: c.last_seen_unix_ms,
                     connected: connected.contains(&c.key),
                     servers: self.servers_of(c),
+                    host_admin: c.host_admin,
                 })
                 .collect(),
         }
@@ -947,6 +1041,7 @@ impl Daemon {
                     servers: h.servers,
                     last_ok_unix_ms: ok,
                     last_error: err,
+                    host_admin: h.host_admin,
                 }
             })
             .collect()
@@ -958,6 +1053,7 @@ impl Daemon {
         name: Option<String>,
         servers: Vec<RemoteServer>,
         hints: Option<(Vec<SocketAddr>, Option<String>)>,
+        host_admin: bool,
     ) -> Result<(), ApiError> {
         let _g = self.companions_lock.lock().unwrap_or_else(|p| p.into_inner());
         let mut list = self.friends();
@@ -971,6 +1067,7 @@ impl Daemon {
                     h.relay = r;
                 }
                 h.servers = servers;
+                h.host_admin = host_admin;
             }
             None => {
                 let (a, r) = hints.unwrap_or_default();
@@ -980,6 +1077,7 @@ impl Daemon {
                     hints: a,
                     relay: r,
                     servers,
+                    host_admin,
                 })
             }
         }
@@ -1044,8 +1142,9 @@ impl Daemon {
                 let stored = StoredInvite {
                     id: uuid::Uuid::new_v4().simple().to_string()[..12].to_string(),
                     secret_sha256: sha_hex(secret_hex.as_bytes()),
-                    server: id,
+                    server: Some(id),
                     perms: perms.clone(),
+                    host_admin: false,
                     created_at_unix_ms: now,
                     expires_at_unix_ms: now + minutes as i64 * 60_000,
                 };
@@ -1079,11 +1178,77 @@ impl Daemon {
                     code,
                     invite: InviteInfo {
                         invite_id: stored.id,
-                        server: id,
+                        server: Some(id),
                         server_name: inst.name,
                         perms,
                         created_at_unix_ms: now,
                         expires_at_unix_ms: stored.expires_at_unix_ms,
+                        host_admin: false,
+                    },
+                }))
+            }
+            R::CreateHostInvite { minutes } => {
+                if !(5..=1440).contains(&minutes) {
+                    return Err(api(
+                        ErrorCode::BadRequest,
+                        "La invitación debe durar entre 5 minutos y 24 horas.",
+                    ));
+                }
+                if !self.companions_enabled.load(Ordering::SeqCst) {
+                    return Err(api(
+                        ErrorCode::InvalidState,
+                        "Activa «Permitir compañeros» antes de invitar.",
+                    ));
+                }
+                let node = self.node()?;
+                let secret_bytes: [u8; 16] = *uuid::Uuid::new_v4().as_bytes();
+                let secret_hex = merc_remote::hex(&secret_bytes);
+                let now = now_ms();
+                let stored = StoredInvite {
+                    id: uuid::Uuid::new_v4().simple().to_string()[..12].to_string(),
+                    secret_sha256: sha_hex(secret_hex.as_bytes()),
+                    server: None,
+                    perms: Perm::ALL.to_vec(),
+                    created_at_unix_ms: now,
+                    expires_at_unix_ms: now + minutes as i64 * 60_000,
+                    host_admin: true,
+                };
+                {
+                    let _g = self.companions_lock.lock().unwrap_or_else(|p| p.into_inner());
+                    let mut f = self.host_file();
+                    f.invites.retain(|i| i.expires_at_unix_ms > now);
+                    if f.invites.len() >= 20 {
+                        return Err(api(
+                            ErrorCode::Conflict,
+                            "Tienes demasiadas invitaciones abiertas. Cancela alguna.",
+                        ));
+                    }
+                    f.invites.push(stored.clone());
+                    self.save_host_file(&f)?;
+                }
+                self.audit(
+                    client,
+                    None,
+                    "companeros.invitar_control_total",
+                    &format!("{minutes} min"),
+                );
+                let code = Invite {
+                    host: node.public(),
+                    secret: secret_bytes,
+                    addrs: node.hint_addrs(),
+                    relay: node.relay_url(),
+                }
+                .encode();
+                ResponseBody::Invite(Box::new(NewInvite {
+                    code,
+                    invite: InviteInfo {
+                        invite_id: stored.id,
+                        server: None,
+                        server_name: String::new(),
+                        perms: stored.perms,
+                        created_at_unix_ms: now,
+                        expires_at_unix_ms: stored.expires_at_unix_ms,
+                        host_admin: true,
                     },
                 }))
             }
@@ -1166,6 +1331,7 @@ impl Daemon {
                     hints: inv.addrs.clone(),
                     relay: inv.relay.clone(),
                     servers: vec![],
+                    host_admin: false,
                 };
                 let resp = self.friend_call(
                     &host,
@@ -1175,12 +1341,17 @@ impl Daemon {
                     },
                 )?;
                 match resp {
-                    WireResponse::Servers { host_name, servers } => {
+                    WireResponse::Servers {
+                        host_name,
+                        servers,
+                        host_admin,
+                    } => {
                         self.update_friend(
                             &host.key,
                             Some(host_name.clone()),
                             servers,
                             Some((inv.addrs, inv.relay)),
+                            host_admin,
                         )?;
                         self.audit(client, None, "companeros.unirse", &host_name);
                     }
@@ -1196,12 +1367,14 @@ impl Daemon {
                     .find(|h| h.key == host)
                     .ok_or_else(|| api(ErrorCode::NotFound, "No tienes esa PC guardada."))?;
                 match self.friend_call(&h, &WireRequest::Servers)? {
-                    WireResponse::Servers { host_name, servers } => {
-                        self.update_friend(&h.key, Some(host_name), servers, None)?
-                    }
+                    WireResponse::Servers {
+                        host_name,
+                        servers,
+                        host_admin,
+                    } => self.update_friend(&h.key, Some(host_name), servers, None, host_admin)?,
                     WireResponse::Denied(m) => {
                         // Ya no tiene acceso: se muestra sin servidores.
-                        self.update_friend(&h.key, None, vec![], None)?;
+                        self.update_friend(&h.key, None, vec![], None, false)?;
                         self.remote
                             .lock()
                             .unwrap_or_else(|p| p.into_inner())

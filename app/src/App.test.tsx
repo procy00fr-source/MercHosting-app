@@ -181,7 +181,7 @@ describe("MercHosting: primera pantalla", () => {
     await user.click(await screen.findByRole("button", { name: "Quitar de la lista" }));
     const dialog = screen.getByRole("dialog");
     await user.click(within(dialog).getByRole("checkbox", { name: /También borrar la carpeta/ }));
-    expect(dialog).toHaveTextContent("Papelera de reciclaje");
+    expect(dialog).toHaveTextContent("Papelera");
     expect(dialog).toHaveTextContent("expórtalo antes");
     await user.click(within(dialog).getByRole("button", { name: "Quitar y mandar a la Papelera" }));
     expect(await screen.findByRole("heading", { name: "Todavía no hay servidores" })).toBeInTheDocument();

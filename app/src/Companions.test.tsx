@@ -67,6 +67,7 @@ describe("Compañeros", () => {
             last_seen_unix_ms: null,
             connected: true,
             servers: [{ id, name: "Survival", perms: ["console_read", "status"] }],
+            host_admin: false,
           },
         ],
       };
@@ -108,6 +109,7 @@ describe("Compañeros", () => {
           servers: [{ id: friendServer, name: "Server de Amir", perms: ["status", "console_read", "stop"] }],
           last_ok_unix_ms: 1,
           last_error: null,
+          host_admin: false,
         },
       };
     });
@@ -151,6 +153,7 @@ describe("Compañeros", () => {
           servers: [{ id: friendServer, name: "Server de Amir", perms: ["status", "files_list", "files_read"] }],
           last_ok_unix_ms: 1,
           last_error: null,
+          host_admin: false,
         },
       };
       f.friendHosts = [structuredClone(f.friend.host)];

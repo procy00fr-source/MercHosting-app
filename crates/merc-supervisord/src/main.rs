@@ -16,8 +16,9 @@ fn main() {
                 Some(d) => data_dir = d.into(),
                 None => std::process::exit(2),
             },
-            // Lo pone el arranque con Windows (inicio de sesión del usuario).
-            "--al-iniciar-windows" => at_login = true,
+            // Lo pone el arranque con el sistema al iniciar sesión (registro de Windows o el
+            // .desktop de ~/.config/autostart en Linux).
+            "--al-iniciar-windows" | "--al-iniciar-sesion" => at_login = true,
             "--version" => {
                 println!("merc-supervisord {}", merc_supervisord::VERSION);
                 return;

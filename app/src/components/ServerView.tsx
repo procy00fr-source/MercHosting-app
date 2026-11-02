@@ -1,4 +1,5 @@
 import {
+  Package,
   AlertTriangle,
   KeyRound,
   ArrowUpCircle,
@@ -61,12 +62,15 @@ import { BackupsPanel } from "./BackupsPanel";
 import { TasksPanel } from "./TasksPanel";
 import { HealthPanel } from "./HealthPanel";
 import { ConnectionPanel } from "./ConnectionPanel";
+import { BedrockPlayersPanel } from "./BedrockPlayersPanel";
 import { DiagnosisPanel } from "./DiagnosisPanel";
 import { AutomationCard } from "./AutomationCard";
 import { CloneDialog } from "./CloneDialog";
 import { MotdIconPanel } from "./MotdIconPanel";
 import { UpdatesPanel } from "./UpdatesPanel";
 import { ADVANCED_TABS, useUiLevel } from "../uiLevel";
+import { useShareAddress } from "../shareAddress";
+import { AddonsPanel } from "./AddonsPanel";
 import { LuckPermsPanel } from "./LuckPermsPanel";
 import { LaunchCard } from "./LaunchCard";
 import { SecurityPanel } from "./SecurityPanel";
@@ -100,7 +104,8 @@ interface Props {
   /** Abre otro servidor (la copia recién clonada). */
   onOpenServer?: (id: string) => void;
   /** Servidor de un amigo: solo lo que permiten sus permisos (su PC decide de verdad). */
-  remote?: { perms: Perm[]; hostName: string };
+  /** hostAdmin: es tu servidor casero (control total): puedes aceptar la EULA desde aquí. */
+  remote?: { perms: Perm[]; hostName: string; hostAdmin?: boolean };
 }
 
 function useNow(intervalMs: number) {
@@ -140,12 +145,15 @@ function CopyChip({ icon, label, value }: { icon: React.ReactNode; label: string
   );
 }
 
+/** Pestañas de Java que en Bedrock no aplican o darían datos equivocados. */
+const BEDROCK_HIDDEN_TABS = new Set(["diagnose", "security", "updates", "invite", "appearance", "worlds", "luckperms"]);
+
 export function ServerView({ api, summary, system, alerts = [], onChanged, onRemoved, onError, sidebar, onServers, remote, onOpenCompanions, onOpenServer }: Props) {
   const can = (p: Perm) => !remote || remote.perms.includes(p);
   const sup = useMemo(() => new Supervisor(api), [api]);
   const { instance: inst, status } = summary;
   const [tab, setTab] = useState<
-    "overview" | "console" | "diagnose" | "updates" | "appearance" | "security" | "invite" | "players" | "worlds" | "settings" | "files" | "activity" | "mod" | "plugin" | "datapack" | "backups" | "tasks" | "health" | "connection" | "luckperms"
+    "overview" | "console" | "diagnose" | "updates" | "appearance" | "security" | "invite" | "players" | "worlds" | "settings" | "files" | "activity" | "mod" | "plugin" | "datapack" | "backups" | "tasks" | "health" | "connection" | "luckperms" | "addons"
   >("overview");
   const [contentQuery, setContentQuery] = useState("");
   const [platforms, setPlatforms] = useState<Platform[]>([]);
@@ -161,6 +169,7 @@ export function ServerView({ api, summary, system, alerts = [], onChanged, onRem
     return () => window.removeEventListener("merc:tab", on);
   }, [platforms]);
   const [pending, setPending] = useState<string | null>(null);
+  const share = useShareAddress(sup, inst.id, !remote && tab === "overview");
   const [eulaChecked, setEulaChecked] = useState(false);
   const [confirmKill, setConfirmKill] = useState(false);
   const [killChecked, setKillChecked] = useState(false);
@@ -254,7 +263,10 @@ export function ServerView({ api, summary, system, alerts = [], onChanged, onRem
   const samples = running ? (metrics?.samples ?? []) : [];
   const last = samples[samples.length - 1];
   const players = running ? (metrics?.players ?? []) : [];
-  const maxMem = inst.launch.max_memory_mb * 1024 * 1024;
+  // Bedrock Dedicated Server es nativo: no tiene un máximo de memoria asignado.
+  const native = inst.launch.target.type === "native";
+  const bedrock = inst.kind === "bedrock";
+  const maxMem = native ? (system?.total_memory_bytes ?? 0) : inst.launch.max_memory_mb * 1024 * 1024;
 
   const restartLeft = restartAt !== null ? Math.max(0, Math.ceil((restartAt - now) / 1000)) : null;
   const canAct = state === "ONLINE" && status.has_console;
@@ -281,6 +293,7 @@ export function ServerView({ api, summary, system, alerts = [], onChanged, onRem
     health: "Salud y rendimiento",
     connection: "Conexión",
     luckperms: "Permisos (LuckPerms)",
+    addons: "Addons",
   };
   const TAB_PERM: Partial<Record<string, Perm[]>> = {
     console: ["console_read"],
@@ -298,6 +311,8 @@ export function ServerView({ api, summary, system, alerts = [], onChanged, onRem
   const level = useUiLevel();
   const allowed = (tabId: string) =>
     !(level === "principiante" && ADVANCED_TABS.has(tabId)) &&
+    !(bedrock && BEDROCK_HIDDEN_TABS.has(tabId)) &&
+    (tabId !== "addons" || bedrock) &&
     (!remote || (tabId !== "security" && tabId !== "luckperms" && (!TAB_PERM[tabId] || TAB_PERM[tabId]!.some((p) => can(p)))));
   // Al pasar a principiante, una pestaña avanzada abierta vuelve al resumen.
   useEffect(() => {
@@ -329,6 +344,7 @@ export function ServerView({ api, summary, system, alerts = [], onChanged, onRem
         { id: "appearance", label: "MOTD e icono", icon: <ImageIcon size={18} aria-hidden="true" /> },
         { id: "worlds", label: "Mundos", icon: <Globe size={18} aria-hidden="true" /> },
         { id: "luckperms", label: "Permisos (LuckPerms)", icon: <KeyRound size={18} aria-hidden="true" /> },
+        { id: "addons", label: "Addons", icon: <Package size={18} aria-hidden="true" /> },
         ...platforms.map((p) => ({
           id: p.kind,
           label: p.kind === "mod" ? "Mods" : p.kind === "plugin" ? "Plugins" : "Datapacks",
@@ -400,7 +416,7 @@ export function ServerView({ api, summary, system, alerts = [], onChanged, onRem
             </dt>
             <dd>
               {running && last ? formatBytes(last.memory_bytes) : "—"}
-              <span className="head-of"> / {formatMemory(inst.launch.max_memory_mb)}</span>
+              {!native && <span className="head-of"> / {formatMemory(inst.launch.max_memory_mb)}</span>}
             </dd>
           </div>
           <div>
@@ -416,13 +432,13 @@ export function ServerView({ api, summary, system, alerts = [], onChanged, onRem
       </header>
 
       <div className="notices">
-        {remote && !summary.eula_accepted && !running && (
+        {remote && !remote.hostAdmin && !summary.eula_accepted && !running && (
           <div className="notice notice-warn">
             <AlertTriangle size={18} aria-hidden="true" className="notice-icon" />
             <p>El dueño de este servidor todavía no aceptó la EULA de Minecraft en su PC. Hasta entonces no se puede iniciar.</p>
           </div>
         )}
-        {!remote && !summary.eula_accepted && !running && (
+        {(!remote || remote.hostAdmin) && !summary.eula_accepted && !running && (
           <div className="notice notice-warn">
             <AlertTriangle size={18} aria-hidden="true" className="notice-icon" />
             <div>
@@ -604,6 +620,24 @@ export function ServerView({ api, summary, system, alerts = [], onChanged, onRem
                 {system?.lan_ipv4 && (
                   <CopyChip icon={<Wifi size={16} />} label="Desde tu red (LAN)" value={`${system.lan_ipv4}:${port}`} />
                 )}
+                {share &&
+                  (share.tested ? (
+                    <CopyChip
+                      icon={<Globe size={16} />}
+                      label={share.domain ? "Para tus amigos (tu dominio)" : "Para tus amigos (Internet)"}
+                      value={share.address}
+                    />
+                  ) : (
+                    <button type="button" className="addr addr-pending" onClick={() => setTab("connection")}>
+                      <span className="addr-icon">
+                        <Globe size={16} />
+                      </span>
+                      <span className="addr-text">
+                        <span className="addr-label">Para tus amigos (Internet)</span>
+                        <span className="addr-value">Pruébala en Conexión para compartirla</span>
+                      </span>
+                    </button>
+                  ))}
               </div>
               <article className="card banner-card">
                 <VoxelScene seed={inst.id} tone={tone} />
@@ -652,10 +686,16 @@ export function ServerView({ api, summary, system, alerts = [], onChanged, onRem
                 <>
                   <p className="stat-value">{formatBytes(last.memory_bytes)}</p>
                   <p className="stat-sub">
-                    en uso, con {formatMemory(inst.launch.max_memory_mb)} asignados
-                    {system?.total_memory_bytes ? ` de ${formatBytes(system.total_memory_bytes)} de tu PC` : ""}
+                    {native ? (
+                      system?.total_memory_bytes ? `en uso de los ${formatBytes(system.total_memory_bytes)} de tu PC` : "en uso"
+                    ) : (
+                      <>
+                        en uso, con {formatMemory(inst.launch.max_memory_mb)} asignados
+                        {system?.total_memory_bytes ? ` de ${formatBytes(system.total_memory_bytes)} de tu PC` : ""}
+                      </>
+                    )}
                   </p>
-                  <Meter value={last.memory_bytes} max={maxMem} color="var(--c-ram)" />
+                  {maxMem > 0 && <Meter value={last.memory_bytes} max={maxMem} color="var(--c-ram)" />}
                   <AreaChart values={samples.map((s) => s.memory_bytes)} max={Math.max(maxMem, ...samples.map((s) => s.memory_bytes))} color="var(--c-ram)" label="Memoria en los últimos minutos" />
                 </>
               ) : (
@@ -710,7 +750,7 @@ export function ServerView({ api, summary, system, alerts = [], onChanged, onRem
                 </div>
                 <div>
                   <dt>Java</dt>
-                  <dd className="path">{inst.launch.java}</dd>
+                  <dd className="path">{native ? "No usa Java (Bedrock Dedicated Server)" : inst.launch.java}</dd>
                 </div>
                 <div>
                   <dt>Puerto</dt>
@@ -761,6 +801,8 @@ export function ServerView({ api, summary, system, alerts = [], onChanged, onRem
             </article>
           </div>
         </div>
+      ) : tab === "players" && bedrock ? (
+        <BedrockPlayersPanel sup={sup} id={inst.id} canAllow={can("whitelist")} canOp={can("op")} />
       ) : tab === "players" ? (
         <>
           {admin && !admin.maintenance && (
@@ -868,8 +910,11 @@ export function ServerView({ api, summary, system, alerts = [], onChanged, onRem
         <InvitePanel api={api} sup={sup} inst={inst} platforms={platforms} can={can} remote={!!remote} />
       ) : tab === "activity" ? (
         <ActivityPanel sup={sup} id={inst.id} />
+      ) : tab === "addons" && bedrock ? (
+        <AddonsPanel api={api} sup={sup} id={inst.id} running={running} remote={!!remote} canManage={can("content")} />
       ) : tab === "settings" ? (
         <>
+          {!native && (
           <LaunchCard
             api={api}
             sup={sup}
@@ -880,13 +925,30 @@ export function ServerView({ api, summary, system, alerts = [], onChanged, onRem
             remote={!!remote}
             onChanged={onChanged}
           />
+          )}
           {!remote && <AutomationCard sup={sup} id={inst.id} />}
-          <PropertiesPanel sup={sup} id={inst.id} running={running} mcVersion={inst.mc_version} openUrl={(u) => void api.openUrl(u)} />
+          <PropertiesPanel
+            sup={sup}
+            id={inst.id}
+            running={running}
+            mcVersion={inst.mc_version}
+            openUrl={(u) => void api.openUrl(u)}
+            bedrock={bedrock}
+          />
         </>
       ) : tab === "files" ? (
         <FilesPanel api={api} sup={sup} id={inst.id} running={running} remote={!!remote} can={can} />
       ) : tab === "connection" ? (
-        <ConnectionPanel api={api} sup={sup} id={inst.id} online={state === "ONLINE"} stopped={!running} remote={!!remote} />
+        <ConnectionPanel
+          api={api}
+          sup={sup}
+          id={inst.id}
+          online={state === "ONLINE"}
+          stopped={!running}
+          remote={!!remote}
+          bedrock={bedrock}
+          remotePlayit={!!remote?.hostAdmin}
+        />
       ) : tab === "health" ? (
         <HealthPanel sup={sup} id={inst.id} state={state} alerts={alerts} />
       ) : tab === "tasks" ? (
@@ -896,9 +958,11 @@ export function ServerView({ api, summary, system, alerts = [], onChanged, onRem
       ) : (
         <div className="console-wrap" role="tabpanel" aria-label="Consola">
           <div className="console-tools">
-            <button type="button" className="btn btn-sm btn-quiet" onClick={exportConsole}>
-              <Download size={14} aria-hidden="true" /> Exportar registro
-            </button>
+            {api.canTransfer !== false && (
+              <button type="button" className="btn btn-sm btn-quiet" onClick={exportConsole}>
+                <Download size={14} aria-hidden="true" /> Exportar registro
+              </button>
+            )}
           </div>
           <Console
             id={inst.id}
@@ -1010,7 +1074,7 @@ export function ServerView({ api, summary, system, alerts = [], onChanged, onRem
           title={`Quitar «${inst.name}» de la lista`}
           lead={
             deleteFiles
-              ? "Se quitará de MercHosting y su carpeta irá a la Papelera de reciclaje de Windows, con el mundo, los mods y todo lo demás. Desde la Papelera la puedes recuperar mientras no la vacíes."
+              ? "Se quitará de MercHosting y su carpeta irá a la Papelera, con el mundo, los mods y todo lo demás. Desde la Papelera la puedes recuperar mientras no la vacíes."
               : "MercHosting dejará de mostrar este servidor. Sus archivos, el mundo y los mods se quedan en la carpeta y no se borran."
           }
           onClose={() => {
@@ -1050,12 +1114,12 @@ export function ServerView({ api, summary, system, alerts = [], onChanged, onRem
           <p className="path">{inst.root}</p>
           <label className="check">
             <input type="checkbox" checked={deleteFiles} onChange={(e) => setDeleteFiles(e.target.checked)} />
-            <span>También borrar la carpeta del servidor (va a la Papelera de reciclaje)</span>
+            <span>También borrar la carpeta del servidor (va a la Papelera)</span>
           </label>
           {deleteFiles && (
             <p className="field-help warn-text">
               Si quieres conservar el mundo, expórtalo antes desde la pestaña Mundos. Si la carpeta es más grande de lo que cabe en
-              la Papelera, Windows te preguntará si quieres borrarla definitivamente; si dices que no, no se borra ni se quita nada.
+              la Papelera, el sistema puede preguntarte si quieres borrarla definitivamente; si dices que no, no se borra ni se quita nada.
             </p>
           )}
         </Dialog>

@@ -83,19 +83,42 @@ describe("Automatización", () => {
     render(<App api={fake} intro={false} />);
     await user.click(await screen.findByRole("button", { name: "Abrir Survival" }));
     await user.click(await screen.findByRole("tab", { name: "Ajustes" }));
-    const card = within(await screen.findByRole("region", { name: "Si se cae y al iniciar Windows" }));
+    const card = within(await screen.findByRole("region", { name: "Si se cae y al iniciar sesión" }));
     const restart = card.getByRole("checkbox", { name: /Reiniciar solo si se cae/ });
     expect(restart).not.toBeChecked();
     await user.click(restart);
     await waitFor(() => expect(restart).toBeChecked());
     expect(fake.calls).toContainEqual({ op: "set_automation", id: "a", auto_restart: true, autostart: null });
 
-    expect(card.getByText(/Necesita «Arrancar MercHosting con Windows»/)).toBeInTheDocument();
-    await user.click(card.getByRole("checkbox", { name: /^Arrancar MercHosting con Windows/ }));
+    expect(card.getByText(/Necesita «Arrancar MercHosting al iniciar sesión»/)).toBeInTheDocument();
+    await user.click(card.getByRole("checkbox", { name: /^Arrancar MercHosting al iniciar sesión/ }));
     await waitFor(() => expect(card.getByText(/Se enciende solo al iniciar sesión/)).toBeInTheDocument());
-    await user.click(card.getByRole("checkbox", { name: /Encender este servidor al iniciar Windows/ }));
+    await user.click(card.getByRole("checkbox", { name: /Encender este servidor al iniciar sesión/ }));
     await waitFor(() => expect(card.getByRole("checkbox", { name: /Encender este servidor/ })).toBeChecked());
     expect(fake.calls).toContainEqual({ op: "set_startup", enabled: true });
+  });
+
+  it("«Activar modo 24/7» enciende las cuatro cosas y se puede quitar el no suspender", async () => {
+    const fake = new FakeApi();
+    fake.servers.push(makeSummary({ id: "a", name: "Survival" }), makeSummary({ id: "b", name: "Creativo" }));
+    const user = userEvent.setup();
+    render(<App api={fake} intro={false} />);
+    await user.click(await screen.findByRole("button", { name: "Abrir Survival" }));
+    await user.click(await screen.findByRole("tab", { name: "Ajustes" }));
+    const card = within(await screen.findByRole("region", { name: "Si se cae y al iniciar sesión" }));
+    expect(card.getByText(/si apagas la PC, se va la luz o se corta el Internet/)).toBeInTheDocument();
+    await user.click(card.getByRole("button", { name: "Activar modo 24/7" }));
+    expect(await card.findByText("Está activado para este servidor.")).toBeInTheDocument();
+    expect(fake.calls).toContainEqual({ op: "set_startup", enabled: true });
+    expect(fake.calls).toContainEqual({ op: "set_keep_awake", enabled: true });
+    expect(fake.calls).toContainEqual({ op: "set_automation", id: "a", auto_restart: true, autostart: true });
+    const awake = card.getByRole("checkbox", { name: /No suspender la PC/ });
+    expect(awake).toBeChecked();
+    expect(card.getByText(/Se activa cuando enciendes un servidor/)).toBeInTheDocument();
+    await user.click(awake);
+    await waitFor(() => expect(awake).not.toBeChecked());
+    expect(fake.calls).toContainEqual({ op: "set_keep_awake", enabled: false });
+    expect(card.getByRole("button", { name: "Activar modo 24/7" })).toBeInTheDocument();
   });
 
   it("avisa si dejó de reintentar y fuera de Windows lo explica", async () => {
@@ -106,9 +129,9 @@ describe("Automatización", () => {
     render(<App api={fake} intro={false} />);
     await user.click(await screen.findByRole("button", { name: "Abrir Survival" }));
     await user.click(await screen.findByRole("tab", { name: "Ajustes" }));
-    const card = within(await screen.findByRole("region", { name: "Si se cae y al iniciar Windows" }));
+    const card = within(await screen.findByRole("region", { name: "Si se cae y al iniciar sesión" }));
     expect(card.getByText(/ya no se reinicia solo hasta que lo enciendas tú/)).toBeInTheDocument();
-    expect(card.getByRole("checkbox", { name: /^Arrancar MercHosting con Windows/ })).toBeDisabled();
-    expect(card.getByText("Solo está disponible en Windows.")).toBeInTheDocument();
+    expect(card.getByRole("checkbox", { name: /^Arrancar MercHosting al iniciar sesión/ })).toBeDisabled();
+    expect(card.getByText("No está disponible en este sistema.")).toBeInTheDocument();
   });
 });

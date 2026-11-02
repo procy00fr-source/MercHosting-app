@@ -1,7 +1,7 @@
 // Compañeros: compartir la administración de servidores con amigos que también usan MercHosting
 // en su PC (sin cuentas). Tu PC decide cada acción con los permisos que elijas aquí.
 
-import { Check, Copy, Handshake, KeyRound, LogIn, Pause, Play, RefreshCw, ShieldAlert, Trash2, UserMinus, UserPlus } from "lucide-react";
+import { Check, Copy, Handshake, HardDrive, KeyRound, LogIn, Pause, Play, Plus, RefreshCw, ShieldAlert, Trash2, UserMinus, UserPlus } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import type { Supervisor } from "../api/client";
 import { errorMessage } from "../api/client";
@@ -103,9 +103,9 @@ export function PermsPicker({
                 <li key={p.perm}>
                   <strong>{p.label}</strong>
                   {p.perm === "content" &&
-                    ": podrá poner archivos JAR que Java ejecuta en tu PC con tu usuario de Windows. Un mod malicioso podría dañar tu PC; MercHosting no puede aislarlo."}
+                    ": podrá poner archivos JAR que Java ejecuta en tu PC con tu usuario. Un mod malicioso podría dañar tu PC; MercHosting no puede aislarlo."}
                   {p.perm === "console_command" &&
-                    ": podrá enviar cualquier comando de Minecraft (incluidos /op y /stop). No puede ejecutar programas de Windows."}
+                    ": podrá enviar cualquier comando de Minecraft (incluidos /op y /stop). No puede ejecutar programas en tu PC."}
                   {p.perm === "files_edit" && ": podrá cambiar y subir archivos al servidor (se guarda una copia antes de cada cambio)."}
                   {p.perm === "files_delete" && ": podrá mandar archivos a la papelera de MercHosting."}
                   {p.perm === "backups_restore" && ": podrá volver el mundo a una copia anterior (se guarda una copia del estado actual antes)."}
@@ -247,6 +247,104 @@ function InviteDialog({
   );
 }
 
+/** Código de control total de esta PC: para manejarla como servidor casero desde otra PC tuya. */
+function HostInviteDialog({ sup, onClose, onCreated }: { sup: Supervisor; onClose: () => void; onCreated: () => void }) {
+  const [ack, setAck] = useState(false);
+  const [minutes, setMinutes] = useState(30);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [made, setMade] = useState<NewInvite | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  async function create() {
+    setBusy(true);
+    setError(null);
+    try {
+      setMade(await sup.createHostInvite(minutes));
+      onCreated();
+    } catch (e) {
+      setError(errorMessage(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Dialog
+      title="Control total de esta PC"
+      lead="Para manejar esta PC como tu servidor casero desde MercHosting en otra PC tuya. Quien use el código podrá administrar todos los servidores de esta PC y crear nuevos."
+      onClose={onClose}
+      footer={
+        made ? (
+          <button type="button" className="btn btn-go" onClick={onClose}>
+            Listo
+          </button>
+        ) : (
+          <>
+            <button type="button" className="btn btn-quiet" onClick={onClose}>
+              Cancelar
+            </button>
+            <button type="button" className="btn btn-go" disabled={busy || !ack} onClick={create}>
+              {busy ? "Creando…" : "Crear código"}
+            </button>
+          </>
+        )
+      }
+    >
+      {made ? (
+        <>
+          <div className="invite-code">
+            <code aria-label="Código de control total">{made.code}</code>
+            <button
+              type="button"
+              className="btn btn-sm"
+              onClick={async () => {
+                try {
+                  await navigator.clipboard.writeText(made.code);
+                  setCopied(true);
+                } catch {
+                  setError("No se pudo copiar. Selecciona el código y cópialo a mano.");
+                }
+              }}
+            >
+              {copied ? <Check size={14} aria-hidden="true" /> : <Copy size={14} aria-hidden="true" />} {copied ? "Copiado" : "Copiar"}
+            </button>
+          </div>
+          <ul className="plain-list">
+            <li>Caduca: {when(made.invite.expires_at_unix_ms)}. Sirve una sola vez.</li>
+            <li>En tu otra PC: Compañeros › «Conectar a mi servidor casero» › pega el código.</li>
+          </ul>
+        </>
+      ) : (
+        <>
+          <ul className="plain-list">
+            <li>Podrá encender, apagar, crear servidores, instalar contenido y aceptar la EULA desde lejos.</li>
+            <li>Nunca podrá ejecutar programas de esta PC, elegir carpetas fuera de la de servidores ni gestionar compañeros o Playit.</li>
+            <li>Todo queda en la Actividad con su nombre. Lo quitas aquí cuando quieras.</li>
+          </ul>
+          <label className="field">
+            <span className="field-title">El código caduca en</span>
+            <select value={minutes} onChange={(e) => setMinutes(Number(e.target.value))}>
+              <option value={30}>30 minutos</option>
+              <option value={60}>1 hora</option>
+              <option value={1440}>24 horas</option>
+            </select>
+          </label>
+          <label className="check">
+            <input type="checkbox" checked={ack} onChange={(e) => setAck(e.target.checked)} />
+            <span>Es para mí (o alguien de total confianza): entiendo que tendrá el control de todos mis servidores.</span>
+          </label>
+        </>
+      )}
+      {error && (
+        <p className="form-error" role="alert">
+          {error}
+        </p>
+      )}
+    </Dialog>
+  );
+}
+
 function EditDialog({
   sup,
   companion,
@@ -306,14 +404,17 @@ interface Props {
   servers: InstanceSummary[];
   /** Abre un servidor de un amigo. */
   onOpenRemote: (host: RemoteHost, id: InstanceId) => void;
+  /** Crear un servidor en tu servidor casero (PC con control total). */
+  onCreateRemote?: (host: RemoteHost) => void;
 }
 
-export function CompanionsPage({ sup, servers, onOpenRemote }: Props) {
+export function CompanionsPage({ sup, servers, onOpenRemote, onCreateRemote }: Props) {
   const [info, setInfo] = useState<CompanionsInfo | null>(null);
   const [hosts, setHosts] = useState<RemoteHost[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [inviting, setInviting] = useState(false);
+  const [hostInviting, setHostInviting] = useState(false);
   const [editing, setEditing] = useState<{ c: CompanionInfo; s: { id: InstanceId; name: string; perms: Perm[] } } | null>(null);
   const [removing, setRemoving] = useState<CompanionInfo | null>(null);
   const [code, setCode] = useState("");
@@ -377,7 +478,7 @@ export function CompanionsPage({ sup, servers, onOpenRemote }: Props) {
           </li>
           <li>Es un canal aparte: no usa el túnel de Minecraft ni Playit.</li>
           <li>Tu PC tiene que estar encendida, conectada a Internet y con MercHosting en marcha (abierto o en segundo plano).</li>
-          <li>Tu compañero nunca entra en Windows: solo puede hacer, en el servidor que le des, lo que marques.</li>
+          <li>Tu compañero nunca entra en tu PC: solo puede hacer, en el servidor que le des, lo que marques.</li>
         </ul>
         {info === null ? (
           <p className="wiz-loading">Cargando…</p>
@@ -410,6 +511,11 @@ export function CompanionsPage({ sup, servers, onOpenRemote }: Props) {
                   <UserPlus size={14} aria-hidden="true" /> Invitar a un compañero
                 </button>
               )}
+              {info.enabled && (
+                <button type="button" className="btn btn-sm" disabled={busy !== null} onClick={() => setHostInviting(true)}>
+                  <HardDrive size={14} aria-hidden="true" /> Control total (servidor casero)
+                </button>
+              )}
             </div>
             {info.fingerprint && (
               <p className="field-help">
@@ -425,7 +531,14 @@ export function CompanionsPage({ sup, servers, onOpenRemote }: Props) {
                   {info.invites.map((i) => (
                     <li key={i.invite_id}>
                       <span>
-                        <strong translate="no">{i.server_name}</strong> · {ROLE_LABEL[roleOf(i.perms)]} · caduca {when(i.expires_at_unix_ms)}
+                        {i.host_admin ? (
+                          <strong>Control total de esta PC</strong>
+                        ) : (
+                          <>
+                            <strong translate="no">{i.server_name}</strong> · {ROLE_LABEL[roleOf(i.perms)]}
+                          </>
+                        )}{" "}
+                        · caduca {when(i.expires_at_unix_ms)}
                       </span>
                       <button
                         type="button"
@@ -464,7 +577,12 @@ export function CompanionsPage({ sup, servers, onOpenRemote }: Props) {
                         <UserMinus size={14} aria-hidden="true" /> Quitar
                       </button>
                     </div>
-                    {c.servers.length === 0 ? (
+                    {c.host_admin ? (
+                      <p className="warn-text">
+                        <HardDrive size={13} aria-hidden="true" /> Control total de esta PC: todos los servidores (también los nuevos) y
+                        crear servidores. Para quitárselo, pulsa «Quitar».
+                      </p>
+                    ) : c.servers.length === 0 ? (
                       <p className="field-help">Sin acceso a ningún servidor.</p>
                     ) : (
                       <ul className="row-list">
@@ -502,6 +620,22 @@ export function CompanionsPage({ sup, servers, onOpenRemote }: Props) {
         <h2>
           <LogIn size={16} aria-hidden="true" /> Administrar servidores de un amigo
         </h2>
+        <details className="home-server-help" aria-label="Conectar a mi servidor casero">
+          <summary>
+            <HardDrive size={14} aria-hidden="true" /> Conectar a mi servidor casero (una PC sin pantalla)
+          </summary>
+          <ol className="plain-list">
+            <li>
+              En esa PC, con MercHosting instalado, abre una terminal y ejecuta <code>merc servicio instalar</code> (queda funcionando en
+              segundo plano).
+            </li>
+            <li>
+              Luego <code>merc compañeros invitar --control-total</code>: te muestra un código.
+            </li>
+            <li>Pégalo aquí abajo con tu nombre. Desde aquí podrás crear servidores en esa PC y manejarlos como si fueran tuyos.</li>
+          </ol>
+          <p className="field-help">También sirve una PC con pantalla: en su MercHosting, Compañeros › «Control total (servidor casero)».</p>
+        </details>
         <form
           className="join-form"
           onSubmit={(e) => {
@@ -553,8 +687,22 @@ export function CompanionsPage({ sup, servers, onOpenRemote }: Props) {
                   </button>
                 </div>
                 {h.last_error && <p className="warn-text">{h.last_error}</p>}
+                {h.host_admin && (
+                  <div className="files-bar">
+                    <span className="ok-text">
+                      <HardDrive size={14} aria-hidden="true" /> Tu servidor casero: tienes el control total
+                    </span>
+                    {onCreateRemote && (
+                      <button type="button" className="btn btn-sm btn-go" onClick={() => onCreateRemote(h)}>
+                        <Plus size={14} aria-hidden="true" /> Crear servidor aquí
+                      </button>
+                    )}
+                  </div>
+                )}
                 {h.servers.length === 0 ? (
-                  <p className="field-help">No tienes acceso a ningún servidor de esta PC.</p>
+                  <p className="field-help">
+                    {h.host_admin ? "Todavía no hay servidores en esa PC." : "No tienes acceso a ningún servidor de esta PC."}
+                  </p>
                 ) : (
                   <ul className="row-list">
                     {h.servers.map((s) => (
@@ -576,6 +724,7 @@ export function CompanionsPage({ sup, servers, onOpenRemote }: Props) {
       </section>
 
       {inviting && <InviteDialog sup={sup} servers={servers} onClose={() => setInviting(false)} onCreated={load} />}
+      {hostInviting && <HostInviteDialog sup={sup} onClose={() => setHostInviting(false)} onCreated={load} />}
       {editing && (
         <EditDialog
           sup={sup}

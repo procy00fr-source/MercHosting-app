@@ -1,5 +1,5 @@
 // Botón «Descargar Java»: baja Eclipse Temurin (JRE) de la API oficial de Adoptium, comprueba su
-// SHA-256 y lo deja en la carpeta de MercHosting (no instala nada en Windows).
+// SHA-256 y lo deja en la carpeta de MercHosting (no instala nada en el sistema).
 
 import { Download } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -75,7 +75,7 @@ export function JavaInstall({ sup, minMajor, onInstalled, pollMs = 700 }: Props)
       )}
       <p className="field-help">
         Gratis, de la fuente oficial (Adoptium). Se comprueba su huella SHA-256 y queda en la carpeta de MercHosting: no se instala
-        nada en Windows.
+        nada en el sistema.
       </p>
     </div>
   );

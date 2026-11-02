@@ -144,6 +144,9 @@ pub enum Need {
     On(InstanceId, Perm),
     /// Seguimiento de una tarea en curso que inició el mismo compañero.
     OwnJob(String),
+    /// Algo de la PC entera (crear servidores, instalar Java, aceptar la EULA): solo un
+    /// compañero con «control total» (el dueño administrando su servidor casero).
+    Host,
     /// No se permite desde otra PC.
     Deny,
 }
@@ -209,7 +212,10 @@ pub fn need(body: &RequestBody) -> Need {
         | R::SetGameRule { id, .. }
         | R::SetMaintenance { id, .. }
         | R::SetBackupSettings { id, .. } => On(*id, Settings),
-        R::Connection { id } | R::TestAddress { id, .. } | R::SetVoiceConfig { id, .. } => On(*id, Network),
+        R::Connection { id }
+        | R::TestAddress { id, .. }
+        | R::TestBedrockAddress { id, .. }
+        | R::SetVoiceConfig { id, .. } => On(*id, Network),
         R::Diagnose { id } => On(*id, Logs),
         R::ServerUpdateCheck { id } => On(*id, Status),
         R::ServerIcon { id } => On(*id, Status),
@@ -226,10 +232,39 @@ pub fn need(body: &RequestBody) -> Need {
         | R::ModpackLink { id, .. }
         | R::ModpackUnlink { id } => On(*id, Content),
         R::ModSides { id } | R::QuarantineMods { id, .. } | R::RestoreMods { id, .. } => On(*id, Content),
+        R::Addons { id } => On(*id, Status),
+        R::BedrockPlayers { id } => On(*id, Players),
+        R::BedrockAllowlist { id, .. } | R::BedrockAllowlistEnabled { id, .. } => On(*id, Whitelist),
+        R::BedrockPermission { id, .. } => On(*id, Op),
+        R::AddonSetActive { id, .. } | R::AddonRemove { id, .. } => On(*id, Content),
+        // Lee un archivo de la PC del dueño: no se permite desde otra PC.
+        R::AddonImport { .. } => Need::Deny,
         // Escribe un archivo en la PC del dueño.
         R::ExportFriendPack { .. } => Need::Deny,
         R::SetLaunch { id, .. } => On(*id, Settings),
         R::Job { job_id, .. } | R::CancelJob { job_id } => Need::OwnJob(job_id.clone()),
+        // Servidor casero: crear servidores desde otra PC. El anfitrión elige la carpeta (dentro
+        // de su carpeta de servidores) y el Java (entre los suyos): nunca los decide la otra PC.
+        R::FindJava
+        | R::Catalog { .. }
+        | R::Resolve { .. }
+        | R::LoaderVersions { .. }
+        | R::CreationDefaults
+        | R::ModpackSearch { .. }
+        | R::ModpackProject { .. }
+        | R::ModpackInspect { .. }
+        | R::CreateServer { .. }
+        | R::InstallJava { .. } => Need::Host,
+        // La EULA la acepta la persona en su pantalla (queda en el historial quién y cuándo).
+        R::AcceptEula { .. } => Need::Host,
+        // Playit en el servidor casero, solo con control total: activar el agente oficial
+        // (descarga verificada), vincularlo a la cuenta de playit.gg de la persona (el enlace se
+        // abre en el navegador de su celular o su otra PC), verlo y apagarlo. Sirve para que sus
+        // amigos JUEGUEN; la administración sigue yendo siempre por Compañeros, nunca por Playit.
+        // Un compañero normal (permisos de un servidor) no puede tocarlo.
+        R::PlayitStatus | R::PlayitEnable | R::PlayitDisable | R::PlayitLink | R::PlayitUnlink | R::PlayitLoginUrl => {
+            Need::Host
+        }
         // Rutas de esta PC, EULA, crear o borrar servidores, Playit, compañeros, apagar el
         // supervisor, descargas y subidas por ruta local…: solo el propietario.
         _ => Need::Deny,
@@ -283,11 +318,15 @@ pub struct RemoteServer {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct InviteInfo {
     pub invite_id: String,
-    pub server: InstanceId,
+    /// `None` = invitación de control total de la PC.
+    pub server: Option<InstanceId>,
     pub server_name: String,
     pub perms: Vec<Perm>,
     pub created_at_unix_ms: i64,
     pub expires_at_unix_ms: i64,
+    /// Control total de la PC (servidor casero).
+    #[serde(default)]
+    pub host_admin: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -301,6 +340,9 @@ pub struct CompanionInfo {
     pub last_seen_unix_ms: Option<i64>,
     pub connected: bool,
     pub servers: Vec<RemoteServer>,
+    /// Tiene control total de esta PC (todos los servidores y crear nuevos).
+    #[serde(default)]
+    pub host_admin: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -334,6 +376,9 @@ pub struct RemoteHost {
     pub servers: Vec<RemoteServer>,
     pub last_ok_unix_ms: Option<i64>,
     pub last_error: Option<String>,
+    /// Esta PC tiene control total de esa PC (es tu servidor casero): puede crear servidores.
+    #[serde(default)]
+    pub host_admin: bool,
 }
 
 #[cfg(test)]
@@ -365,10 +410,10 @@ mod tests {
                 id,
                 delete_files: false,
             },
-            R::AcceptEula { id, accepted: true },
-            R::PlayitStatus,
-            R::FindJava,
             R::Alerts,
+            R::CreateHostInvite { minutes: 60 },
+            R::CheckTarget { path: "C:/x".into() },
+            R::Detect { path: "C:/x".into() },
             R::DownloadFile {
                 id,
                 path: "x".into(),
@@ -388,6 +433,11 @@ mod tests {
                 loader_version: "130".into(),
             },
             R::SetStartup { enabled: true },
+            R::SetKeepAwake { enabled: true },
+            R::AddonImport {
+                id,
+                source: "C:/x.mcpack".into(),
+            },
             R::ClearPlayerHistory { id },
             R::LuckPerms { id },
             R::ExportFriendPack {
@@ -419,5 +469,28 @@ mod tests {
             Need::On(id, Perm::ConsoleCommand)
         );
         assert_eq!(need(&R::Start { id }), Need::On(id, Perm::Start));
+    }
+
+    #[test]
+    fn host_level_needs_full_control() {
+        let id = InstanceId::new();
+        use crate::protocol::RequestBody as R;
+        for r in [
+            R::FindJava,
+            R::CreationDefaults,
+            R::AcceptEula { id, accepted: true },
+            R::InstallJava { major: 21 },
+            R::PlayitStatus,
+            R::PlayitEnable,
+            R::PlayitLink,
+            R::PlayitLoginUrl,
+            R::PlayitUnlink,
+            R::PlayitDisable,
+        ] {
+            assert_eq!(need(&r), Need::Host, "{r:?}");
+        }
+        // Lo que lee o escribe rutas de la PC del anfitrión sigue siendo solo local.
+        assert_eq!(need(&R::CheckTarget { path: "/x".into() }), Need::Deny);
+        assert_eq!(need(&R::Unregister { id, delete_files: true }), Need::Deny);
     }
 }

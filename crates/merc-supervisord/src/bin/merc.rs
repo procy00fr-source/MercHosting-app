@@ -1,7 +1,8 @@
-//! `merc`: herramienta de DESARROLLO para hablar con el supervisor.
+//! `merc`: herramienta de terminal para hablar con el supervisor.
 //!
-//! No es la interfaz para usuarios finales (esa será la aplicación de escritorio). Sirve para
-//! probar el supervisor con servidores reales mientras se construye la interfaz.
+//! La interfaz normal es la aplicación de escritorio. `merc` sirve para probar el supervisor y
+//! para el **servidor casero sin pantalla**: dejarlo como servicio (`merc servicio …`) y
+//! emparejarlo con la app de otra PC (`merc compañeros …`).
 
 use merc_core::InstanceId;
 use merc_ipc::*;
@@ -10,7 +11,7 @@ use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
 const AYUDA: &str = "\
-merc — herramienta de desarrollo de MercHosting
+merc — MercHosting desde la terminal (pruebas y servidor casero sin pantalla)
 
 Uso: merc [--data-dir <carpeta>] <orden> [opciones]
 
@@ -37,6 +38,25 @@ Uso: merc [--data-dir <carpeta>] <orden> [opciones]
   forzar-cierre <servidor> --confirmo  Cierra sin guardar (puede perder datos)
   quitar <servidor>                    Quita de la lista (no borra archivos)
   apagar-supervisor                    Cierra el supervisor si no hay servidores en marcha
+
+Servidor casero sin pantalla:
+  servicio instalar                    Deja MercHosting funcionando en segundo plano (Linux:
+                                       servicio de usuario de systemd; Windows: al iniciar sesión)
+  servicio quitar                      Lo quita (no borra servidores ni datos)
+  servicio estado
+  compañeros activar | pausar          Permite (o no) que otras PCs se conecten con un código
+  compañeros invitar --control-total [--minutos N]
+                                       Código para manejar ESTA PC entera desde tu MercHosting
+                                       de otra PC (todos los servidores y crear nuevos)
+  compañeros invitar --servidor <servidor> [--rol observador|moderador|operador|administrador]
+                     [--minutos N]     Código para un amigo, solo para ese servidor
+  compañeros lista                     Quién tiene acceso, invitaciones abiertas y la huella
+  compañeros quitar <nombre o huella>  Le quita el acceso al momento
+  playit activar                       Descarga el agente oficial de Playit (verificado) y lo arranca
+  playit vincular                      Muestra el enlace de playit.gg para vincular tu cuenta (ábrelo
+                                       en el navegador de cualquier dispositivo) y espera la aprobación
+  playit estado                        Estado del agente y sus túneles (direcciones para tus amigos)
+  playit desvincular | desactivar      Quita la vinculación de esta PC o apaga el agente
 
 <servidor> puede ser el nombre o el comienzo del identificador.";
 
@@ -148,8 +168,9 @@ fn parse_flavor(s: &str) -> merc_install::Flavor {
         "arclight" => Flavor::Arclight,
         "fabric" => Flavor::Fabric,
         "neoforge" => Flavor::NeoForge,
+        "bedrock" => Flavor::Bedrock,
         _ => fail(format!(
-            "tipo desconocido: {s} (usa vanilla, paper, purpur, spigot, fabric, quilt, forge, neoforge o arclight)"
+            "tipo desconocido: {s} (usa vanilla, paper, purpur, spigot, fabric, quilt, forge, neoforge, arclight o bedrock)"
         )),
     }
 }
@@ -181,8 +202,23 @@ fn main() {
         return;
     }
 
+    if cmd == "servicio" {
+        need(&args, 1);
+        servicio(&args[0], &data_dir);
+        return;
+    }
+
     let mut c = connect(&data_dir);
     match cmd.as_str() {
+        "compañeros" | "companeros" => {
+            need(&args, 1);
+            let sub = args.remove(0);
+            companeros(&mut c, &sub, &mut args);
+        }
+        "playit" => {
+            need(&args, 1);
+            playit(&mut c, &args[0]);
+        }
         "ping" => {
             if let ResponseBody::Pong {
                 server_version,
@@ -583,5 +619,424 @@ fn main() {
             println!("Quitado de la lista. Los archivos del servidor no se tocaron.");
         }
         other => fail(format!("orden desconocida «{other}». Ejecuta «merc --help»")),
+    }
+}
+
+fn print_invite(inv: &remote::NewInvite) {
+    let minutes = (inv.invite.expires_at_unix_ms - inv.invite.created_at_unix_ms) / 60_000;
+    println!();
+    println!("{}", inv.code);
+    println!();
+    if inv.invite.host_admin {
+        println!("Código de CONTROL TOTAL de esta PC. Vale {minutes} min y sirve una sola vez.");
+        println!("En tu MercHosting de la otra PC: Compañeros › Conectar a mi servidor casero › pega el código.");
+        println!("Quien lo use podrá administrar todos los servidores de esta PC y crear nuevos.");
+        println!("No lo compartas con nadie más.");
+    } else {
+        println!(
+            "Código para «{}». Vale {minutes} min y sirve una sola vez.",
+            inv.invite.server_name
+        );
+        println!("Tu amigo lo pega en Compañeros › Unirme con un código.");
+    }
+}
+
+fn parse_role(s: &str) -> remote::Role {
+    use remote::Role;
+    match s.to_lowercase().as_str() {
+        "observador" => Role::Observador,
+        "moderador" => Role::Moderador,
+        "operador" => Role::Operador,
+        "administrador" => Role::Administrador,
+        _ => fail(format!(
+            "rol desconocido: {s} (usa observador, moderador, operador o administrador)"
+        )),
+    }
+}
+
+fn playit_info(c: &mut Client, body: RequestBody) -> PlayitInfo {
+    match call(c, body) {
+        ResponseBody::Playit(p) => *p,
+        other => fail(format!("respuesta inesperada: {other:?}")),
+    }
+}
+
+fn print_playit(p: &PlayitInfo) {
+    if !p.supported {
+        println!("{}", merc_net::playit::LINUX_NOT_VERIFIED);
+        return;
+    }
+    if !p.enabled {
+        println!("Playit está desactivado. Actívalo con «merc playit activar».");
+        return;
+    }
+    println!(
+        "Agente oficial de Playit {}: {}",
+        p.agent_version,
+        if p.running { "en marcha" } else { "sin responder" }
+    );
+    if let Some(e) = &p.agent_error {
+        println!("  ! {e}");
+    }
+    if let Some(a) = &p.agent {
+        println!("Estado: {:?}", a.phase);
+        if a.tunnels.is_empty() {
+            println!(
+                "Sin túneles todavía: créalos en playit.gg (Minecraft Java o Bedrock, hacia el puerto del servidor)."
+            );
+        }
+        for t in &a.tunnels {
+            println!(
+                "  {}  →  {}{}",
+                t.display_address,
+                t.destination,
+                if t.is_disabled {
+                    "  (desactivado en playit.gg)"
+                } else {
+                    ""
+                }
+            );
+        }
+    }
+}
+
+fn playit(c: &mut Client, sub: &str) {
+    match sub {
+        "activar" => {
+            let p = playit_info(c, RequestBody::PlayitEnable);
+            print_playit(&p);
+            if p.agent
+                .as_ref()
+                .is_some_and(|a| a.phase == merc_net::playit::AgentPhase::WaitingForSecret)
+            {
+                println!("Siguiente paso: «merc playit vincular».");
+            }
+        }
+        "vincular" => {
+            let p = playit_info(c, RequestBody::PlayitLink);
+            let Some(claim) = p.claim.clone() else {
+                print_playit(&p);
+                return;
+            };
+            println!("Abre este enlace en el navegador (puede ser tu celular) y aprueba «MercHosting»:");
+            println!();
+            println!("  {}", claim.url);
+            println!();
+            println!("Esperando la aprobación… (Ctrl+C para salir; puedes volver a intentarlo luego)");
+            let deadline = Instant::now() + Duration::from_secs(15 * 60);
+            loop {
+                std::thread::sleep(Duration::from_secs(2));
+                let p = playit_info(c, RequestBody::PlayitStatus);
+                match &p.claim {
+                    Some(cl) if cl.done => {
+                        println!("Vinculado. Ahora crea el túnel en playit.gg y míralo con «merc playit estado».");
+                        print_playit(&p);
+                        return;
+                    }
+                    Some(cl) if cl.error.is_some() => fail(cl.error.clone().unwrap_or_default()),
+                    None if p
+                        .agent
+                        .as_ref()
+                        .is_some_and(|a| a.phase == merc_net::playit::AgentPhase::Running) =>
+                    {
+                        println!("Vinculado.");
+                        print_playit(&p);
+                        return;
+                    }
+                    _ => {}
+                }
+                if Instant::now() > deadline {
+                    fail("se acabó el tiempo de espera. Ejecuta «merc playit vincular» otra vez.");
+                }
+            }
+        }
+        "estado" => print_playit(&playit_info(c, RequestBody::PlayitStatus)),
+        "desvincular" => {
+            print_playit(&playit_info(c, RequestBody::PlayitUnlink));
+            println!("Esta PC ya no está vinculada a tu cuenta de Playit.");
+        }
+        "desactivar" => {
+            playit_info(c, RequestBody::PlayitDisable);
+            println!("Playit desactivado. Tus amigos ya no podrán entrar por la dirección de Playit.");
+        }
+        _ => fail("usa: merc playit activar | vincular | estado | desvincular | desactivar"),
+    }
+}
+
+fn companeros(c: &mut Client, sub: &str, args: &mut Vec<String>) {
+    match sub {
+        "activar" | "pausar" => {
+            call(
+                c,
+                RequestBody::SetCompanionsEnabled {
+                    enabled: sub == "activar",
+                },
+            );
+            println!(
+                "{}",
+                if sub == "activar" {
+                    "Compañeros activado: esta PC acepta conexiones con código."
+                } else {
+                    "Compañeros en pausa: nadie puede conectarse hasta que lo actives."
+                }
+            );
+        }
+        "invitar" => {
+            let minutes: u32 = opt(args, "--minutos")
+                .map(|m| m.parse().unwrap_or_else(|_| fail("--minutos debe ser un número")))
+                .unwrap_or(30);
+            let total = flag(args, "--control-total");
+            let servidor = opt(args, "--servidor");
+            let rol = opt(args, "--rol");
+            if total == servidor.is_some() {
+                fail("elige --control-total (tu servidor casero) o --servidor <servidor> (un amigo)");
+            }
+            let ResponseBody::Companions(info) = call(c, RequestBody::Companions) else {
+                fail("respuesta inesperada")
+            };
+            if !info.enabled {
+                call(c, RequestBody::SetCompanionsEnabled { enabled: true });
+                println!("Compañeros activado.");
+            }
+            let body = if total {
+                RequestBody::CreateHostInvite { minutes }
+            } else {
+                let id = resolve(c, servidor.as_deref().unwrap_or_default());
+                let perms = parse_role(rol.as_deref().unwrap_or("observador")).perms();
+                RequestBody::CreateInvite { id, perms, minutes }
+            };
+            if let ResponseBody::Invite(inv) = call(c, body) {
+                print_invite(&inv);
+            }
+        }
+        "lista" => {
+            let ResponseBody::Companions(info) = call(c, RequestBody::Companions) else {
+                fail("respuesta inesperada")
+            };
+            println!(
+                "Compañeros: {}{}",
+                if info.enabled { "activado" } else { "en pausa" },
+                info.fingerprint
+                    .as_deref()
+                    .map(|f| format!(" · huella de esta PC: {f}"))
+                    .unwrap_or_default()
+            );
+            if let Some(e) = &info.error {
+                println!("Problema del canal: {e}");
+            }
+            if info.companions.is_empty() {
+                println!("Nadie tiene acceso todavía.");
+            }
+            for comp in &info.companions {
+                let what = if comp.host_admin {
+                    "CONTROL TOTAL".to_string()
+                } else {
+                    comp.servers
+                        .iter()
+                        .map(|s| format!("{} ({} permisos)", s.name, s.perms.len()))
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                };
+                println!(
+                    "· {} · PC {}{} · {what}",
+                    comp.name,
+                    comp.fingerprint,
+                    if comp.connected { " · conectado" } else { "" }
+                );
+            }
+            for i in &info.invites {
+                println!(
+                    "Invitación abierta {} · {}",
+                    i.invite_id,
+                    if i.host_admin {
+                        "control total".to_string()
+                    } else {
+                        i.server_name.clone()
+                    }
+                );
+            }
+        }
+        "quitar" => {
+            if args.is_empty() {
+                fail("indica el nombre o la huella del compañero");
+            }
+            let q = args.join(" ").to_lowercase();
+            let ResponseBody::Companions(info) = call(c, RequestBody::Companions) else {
+                fail("respuesta inesperada")
+            };
+            let found: Vec<_> = info
+                .companions
+                .iter()
+                .filter(|x| x.name.to_lowercase() == q || x.fingerprint.to_lowercase() == q)
+                .collect();
+            match found.as_slice() {
+                [one] => {
+                    call(
+                        c,
+                        RequestBody::RemoveCompanion {
+                            companion: one.companion.clone(),
+                        },
+                    );
+                    println!("Acceso quitado a {} (PC {}).", one.name, one.fingerprint);
+                }
+                [] => fail(format!("no hay ningún compañero «{q}». Mira «merc compañeros lista»")),
+                _ => fail("hay varios con ese nombre: usa la huella"),
+            }
+        }
+        other => fail(format!(
+            "orden desconocida «compañeros {other}» (usa activar, pausar, invitar, lista o quitar)"
+        )),
+    }
+}
+
+fn servicio(sub: &str, data_dir: &Path) {
+    #[cfg(windows)]
+    {
+        // En Windows se usa el mismo «Arrancar con el sistema» de la app (inicio de sesión).
+        let mut c = connect(data_dir);
+        match sub {
+            "instalar" | "quitar" => {
+                call(
+                    &mut c,
+                    RequestBody::SetStartup {
+                        enabled: sub == "instalar",
+                    },
+                );
+                println!(
+                    "{}",
+                    if sub == "instalar" {
+                        "Listo: MercHosting arrancará en segundo plano al iniciar sesión en Windows. Para que arranque sin que nadie inicie sesión, configura el inicio de sesión automático de Windows."
+                    } else {
+                        "Quitado del inicio de sesión. Tus servidores y datos siguen igual."
+                    }
+                );
+            }
+            "estado" => {
+                if let ResponseBody::Pong { server_version, .. } = call(&mut c, RequestBody::Ping) {
+                    println!("Supervisor {server_version} en marcha. El arranque al iniciar sesión se ve en la app (Ajustes de un servidor).");
+                }
+            }
+            other => fail(format!(
+                "orden desconocida «servicio {other}» (usa instalar, quitar o estado)"
+            )),
+        }
+    }
+    #[cfg(not(windows))]
+    {
+        use merc_supervisord::service as svc;
+        let home = std::env::var_os("HOME")
+            .map(PathBuf::from)
+            .unwrap_or_else(|| fail("no se encontró la carpeta personal (HOME)"));
+        let xdg = std::env::var_os("XDG_CONFIG_HOME").map(PathBuf::from);
+        let dir = svc::unit_dir(xdg.as_deref(), &home);
+        let unit = dir.join(svc::UNIT_NAME);
+        let user = svc::current_user();
+        let systemctl = |a: &[&str]| -> Option<(bool, String)> {
+            let mut all = vec!["--user"];
+            all.extend_from_slice(a);
+            svc::run("systemctl", &all)
+        };
+        let linger =
+            || svc::run("loginctl", &["show-user", &user, "-p", "Linger"]).map(|(_, out)| svc::linger_on(&out));
+        match sub {
+            "instalar" => {
+                let exe = merc_ipc::launcher::find_supervisor_exe()
+                    .unwrap_or_else(|| fail("no se encontró merc-supervisord junto a merc. Reinstala MercHosting"));
+                // Desde un AppImage el archivo desaparece al cerrarlo: se usa una copia estable.
+                let exe = if std::env::var_os("APPIMAGE").is_some() {
+                    merc_ipc::launcher::stable_copy(&exe, data_dir).unwrap_or_else(|e| fail(e))
+                } else {
+                    exe
+                };
+                std::fs::create_dir_all(&dir).unwrap_or_else(|e| fail(e));
+                let tmp = unit.with_extension("service.nuevo");
+                std::fs::write(&tmp, svc::unit_text(&exe, data_dir)).unwrap_or_else(|e| fail(e));
+                std::fs::rename(&tmp, &unit).unwrap_or_else(|e| fail(e));
+                println!("Servicio escrito en {}", unit.display());
+                // Si ya hay un supervisor abierto a mano, se cierra para que lo lleve systemd.
+                if let Ok(mut c) = Client::connect(data_dir, "merc-cli") {
+                    match c.call(RequestBody::Shutdown) {
+                        Ok(_) => std::thread::sleep(Duration::from_millis(800)),
+                        Err(e) => println!(
+                            "Aviso: el supervisor actual sigue abierto ({e}). El servicio tomará el control cuando lo cierres o reinicies la PC."
+                        ),
+                    }
+                }
+                match systemctl(&["daemon-reload"]).and_then(|_| systemctl(&["enable", "--now", svc::UNIT_NAME])) {
+                    Some((true, _)) => {
+                        println!("Servicio activado: MercHosting funciona en segundo plano y arranca con el sistema.")
+                    }
+                    Some((false, out)) => {
+                        println!("systemd no pudo activarlo:\n{}", out.trim());
+                        println!("Prueba a mano: systemctl --user enable --now {}", svc::UNIT_NAME);
+                    }
+                    None => {
+                        println!("No se encontró systemctl. En este sistema arranca MercHosting a mano o con tu gestor de servicios:");
+                        println!(
+                            "  {} --data-dir \"{}\" --al-iniciar-sesion",
+                            exe.display(),
+                            data_dir.display()
+                        );
+                    }
+                }
+                match linger() {
+                    Some(true) => println!("El servicio sigue funcionando aunque cierres sesión (linger activado)."),
+                    _ => {
+                        println!();
+                        println!("Para que MercHosting funcione también sin que nadie inicie sesión (por ejemplo tras un corte");
+                        println!("de luz), un administrador de esta PC tiene que ejecutar UNA vez:");
+                        println!("  sudo loginctl enable-linger {user}");
+                        println!("(MercHosting no lo ejecuta por ti porque necesita permisos de administrador.)");
+                    }
+                }
+                println!();
+                println!("Siguiente paso: merc compañeros invitar --control-total");
+            }
+            "quitar" => {
+                if unit.exists() {
+                    if let Some((false, out)) = systemctl(&["disable", "--now", svc::UNIT_NAME]) {
+                        println!("Aviso de systemd: {}", out.trim());
+                    }
+                    std::fs::remove_file(&unit).unwrap_or_else(|e| fail(e));
+                    let _ = systemctl(&["daemon-reload"]);
+                    println!("Servicio quitado. Tus servidores y datos siguen igual.");
+                    println!("Si tenías servidores encendidos, siguen funcionando: deténlos desde la app o con «merc detener».");
+                } else {
+                    println!("No hay servicio instalado ({}).", unit.display());
+                }
+            }
+            "estado" => {
+                println!(
+                    "Servicio: {}",
+                    if unit.exists() {
+                        unit.display().to_string()
+                    } else {
+                        "no instalado".into()
+                    }
+                );
+                if let Some((_, out)) = systemctl(&["is-enabled", svc::UNIT_NAME]) {
+                    println!("Arranca con el sistema: {}", out.trim());
+                }
+                if let Some((_, out)) = systemctl(&["is-active", svc::UNIT_NAME]) {
+                    println!("Activo: {}", out.trim());
+                }
+                match linger() {
+                    Some(true) => println!("Sin iniciar sesión: sí (linger)"),
+                    Some(false) => println!("Sin iniciar sesión: no (sudo loginctl enable-linger {user})"),
+                    None => println!("Sin iniciar sesión: no se pudo comprobar (falta loginctl)"),
+                }
+                match Client::connect(data_dir, "merc-cli") {
+                    Ok(mut c) => {
+                        if let Ok(ResponseBody::Pong { server_version, .. }) = c.call(RequestBody::Ping) {
+                            println!("Supervisor {server_version} en marcha.");
+                        }
+                    }
+                    Err(_) => println!("El supervisor no está en marcha."),
+                }
+            }
+            other => fail(format!(
+                "orden desconocida «servicio {other}» (usa instalar, quitar o estado)"
+            )),
+        }
     }
 }

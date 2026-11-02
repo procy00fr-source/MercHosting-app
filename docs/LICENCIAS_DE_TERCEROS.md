@@ -4,7 +4,7 @@ Componentes que van dentro de MercHosting (dependencias de Rust para Windows y d
 
 Lo que MercHosting **descarga a petición** desde su fuente oficial y no incluye (Java de Eclipse Temurin, el agente de Playit, los programas de servidor de Minecraft, mods y plugins) tiene su propia licencia: ver `docs/CREDITOS.md`.
 
-Total: 438 componentes.
+Total: 443 componentes.
 
 | Componente | Versión | Licencia | Origen |
 |---|---|---|---|
@@ -66,6 +66,8 @@ Total: 438 componentes.
 | cordyceps | 0.3.5 | MIT | https://github.com/hawkw/mycelium |
 | cpufeatures | 0.2.17 | MIT OR Apache-2.0 | https://github.com/RustCrypto/utils |
 | cpufeatures | 0.3.1 | MIT OR Apache-2.0 | https://github.com/RustCrypto/utils |
+| crc | 3.4.0 | MIT OR Apache-2.0 | https://github.com/mrhooray/crc-rs.git |
+| crc-catalog | 2.5.0 | MIT OR Apache-2.0 | https://github.com/akhilles/crc-catalog.git |
 | crc32fast | 1.5.3 | MIT OR Apache-2.0 | https://github.com/srijs/rust-crc32fast |
 | crossbeam-channel | 0.5.17 | MIT OR Apache-2.0 | https://github.com/crossbeam-rs/crossbeam |
 | crossbeam-utils | 0.8.23 | MIT OR Apache-2.0 | https://github.com/crossbeam-rs/crossbeam |
@@ -116,6 +118,7 @@ Total: 438 componentes.
 | fastrand | 2.5.0 | Apache-2.0 OR MIT | https://github.com/smol-rs/fastrand |
 | fax | 0.2.7 | MIT | https://github.com/pdf-rs/fax |
 | fdeflate | 0.3.7 | MIT OR Apache-2.0 | https://github.com/image-rs/fdeflate |
+| filetime | 0.2.29 | MIT/Apache-2.0 | https://github.com/alexcrichton/filetime |
 | flate2 | 1.1.10 | MIT OR Apache-2.0 | https://github.com/rust-lang/flate2-rs |
 | fnv | 1.0.7 | Apache-2.0 / MIT | https://github.com/servo/rust-fnv |
 | foldhash | 0.2.0 | Zlib | https://github.com/orlp/foldhash |
@@ -200,6 +203,7 @@ Total: 438 componentes.
 | lru | 0.18.5 | MIT | https://github.com/jeromefroe/lru-rs.git |
 | lru-slab | 0.1.3 | MIT OR Apache-2.0 OR Zlib | https://github.com/Ralith/lru-slab |
 | lucide-react | 1.65.0 | ISC | https://github.com/lucide-icons/lucide |
+| lzma-rs | 0.3.0 | MIT | https://github.com/gendx/lzma-rs |
 | mac-addr | 0.3.0 | MIT | https://github.com/shellrow/mac-addr |
 | markup5ever | 0.39.0 | MIT OR Apache-2.0 | https://github.com/servo/html5ever |
 | md-5 | 0.10.6 | MIT OR Apache-2.0 | https://github.com/RustCrypto/hashes |
@@ -339,6 +343,7 @@ Total: 438 componentes.
 | synstructure | 0.14.0 | MIT | https://github.com/mystor/synstructure |
 | sysinfo | 0.40.0 | MIT | https://github.com/GuillaumeGomez/sysinfo |
 | tao | 0.37.2 | Apache-2.0 | https://github.com/tauri-apps/tao |
+| tar | 0.4.46 | MIT OR Apache-2.0 | https://github.com/composefs/tar-rs |
 | tauri | 2.12.5 | Apache-2.0 OR MIT | https://github.com/tauri-apps/tauri |
 | tauri-codegen | 2.7.4 | Apache-2.0 OR MIT | https://github.com/tauri-apps/tauri |
 | tauri-macros | 2.7.4 | Apache-2.0 OR MIT | https://github.com/tauri-apps/tauri |

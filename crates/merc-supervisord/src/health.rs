@@ -173,6 +173,7 @@ impl Daemon {
                 }
             }
             self.run_due_restarts();
+            self.keep_awake_tick();
             self.tunnel_watch();
             // Discos: el de cada servidor y el de las copias de seguridad.
             let mut paths: Vec<(PathBuf, String)> =
@@ -227,7 +228,7 @@ impl Daemon {
                         "La memoria de la PC está casi llena ({:.0} %)",
                         used as f64 * 100.0 / total as f64
                     ),
-                    "Puede ir lento todo: el juego, el servidor y Windows. Cierra programas que no uses o baja la memoria asignada al servidor."
+                    "Puede ir lento todo: el juego, el servidor y el sistema. Cierra programas que no uses o baja la memoria asignada al servidor."
                         .into(),
                 );
             }

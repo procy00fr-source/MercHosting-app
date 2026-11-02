@@ -106,7 +106,7 @@ export function WelcomeDialog({ system, level, onLevel, onClose }: Props) {
               <li>Los mods y plugins son programas que se ejecutan en tu PC. Instálalos solo de fuentes de confianza.</li>
               <li>Deja activado «Comprobar cuentas oficiales» y usa la lista blanca si solo juegas con amigos.</li>
               <li>Da acceso de compañero solo a personas de confianza: los archivos de tus servidores son archivos reales de tu PC.</li>
-              <li>MercHosting nunca te pedirá tu contraseña de Minecraft ni de Windows.</li>
+              <li>MercHosting nunca te pedirá tu contraseña de Minecraft ni la de tu PC.</li>
             </ul>
           </section>
         )}

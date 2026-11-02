@@ -118,7 +118,7 @@ impl Daemon {
         job.set_step(Step::Installing, "Descomprimiendo");
         let staging = root.join(format!(".instalando-{}", uuid::Uuid::new_v4().simple()));
         let result = (|| {
-            let java = temurin::extract(&zip, &staging).map_err(|e| e.to_string())?;
+            let java = temurin::extract_package(&zip, &staging).map_err(|e| e.to_string())?;
             job.set_step(Step::Finishing, "Comprobando que funciona");
             let probe = merc_core::java::probe_java(&java, Duration::from_secs(20))
                 .map_err(|e| format!("el Java descargado no arranca: {e}"))?;

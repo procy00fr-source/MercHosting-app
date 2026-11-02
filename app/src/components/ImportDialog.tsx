@@ -41,7 +41,8 @@ export function ImportDialog({ api, onClose, onImported }: Props) {
       const det = await sup.detect(picked);
       setDetected(det);
       setName(folderName(picked));
-      if (det.launch) {
+      // Bedrock Dedicated Server es nativo: no necesita Java.
+      if (det.launch && det.launch.type !== "native") {
         const choice = await api.javaFor(det.mc_version);
         setJava(choice);
         setJavaPath(choice.recommended ?? "");
@@ -53,12 +54,14 @@ export function ImportDialog({ api, onClose, onImported }: Props) {
     }
   }
 
+  const native = detected?.launch?.type === "native";
+
   async function submit() {
-    if (!path || !javaPath) return;
+    if (!path || (!native && !javaPath)) return;
     setWorking(true);
     setError(null);
     try {
-      const inst = await sup.importInstance({ name, path, java: javaPath, maxMemoryMb: ram });
+      const inst = await sup.importInstance({ name, path, java: native ? "" : javaPath, maxMemoryMb: native ? 0 : ram });
       onImported(inst.id);
     } catch (e) {
       setError(errorMessage(e));
@@ -67,7 +70,7 @@ export function ImportDialog({ api, onClose, onImported }: Props) {
   }
 
   const usableJava = java?.candidates.filter((c) => c.major !== null) ?? [];
-  const canImport = !!detected?.launch && !!javaPath && name.trim().length > 0 && !working;
+  const canImport = !!detected?.launch && (native || !!javaPath) && name.trim().length > 0 && !working;
 
   return (
     <Dialog
@@ -146,6 +149,9 @@ export function ImportDialog({ api, onClose, onImported }: Props) {
             <input id="import-name" type="text" value={name} maxLength={64} onChange={(e) => setName(e.target.value)} />
           </div>
 
+          {native ? (
+            <p className="field-help">Bedrock Dedicated Server es un programa de Mojang: no usa Java ni una memoria fija.</p>
+          ) : (
           <div className="field">
             <label htmlFor="import-ram">Memoria máxima del servidor</label>
             <div className="ram-row">
@@ -161,9 +167,10 @@ export function ImportDialog({ api, onClose, onImported }: Props) {
               <span className="ram-value">{formatMemory(ram)}</span>
             </div>
             <p className="field-help">
-              Sale de la memoria de tu PC. Si también juegas en esta PC, deja suficiente para Windows y para Minecraft.
+              Sale de la memoria de tu PC. Si también juegas en esta PC, deja suficiente para el sistema y para Minecraft.
             </p>
           </div>
+          )}
 
           {java && (
             <div className="field">

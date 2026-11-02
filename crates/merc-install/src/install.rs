@@ -196,6 +196,142 @@ pub fn validate_user_properties(props: &BTreeMap<String, String>) -> Result<(), 
     Ok(())
 }
 
+/// Opciones de server.properties de Bedrock Dedicated Server que el asistente puede fijar.
+/// Las claves de Bedrock son otras (server-name, allow-list, tick-distance…).
+pub fn validate_bedrock_properties(props: &BTreeMap<String, String>) -> Result<(), InstallError> {
+    let bad = |k: &str, why: &str| Err(InstallError::InvalidInput(format!("{k}: {why}")));
+    for (k, v) in props {
+        let int = |lo: i64, hi: i64| v.parse::<i64>().ok().filter(|n| (lo..=hi).contains(n)).is_some();
+        let ok = match k.as_str() {
+            "server-port" | "server-portv6" => int(1024, 65535),
+            "max-players" => int(1, 1000),
+            "view-distance" => int(5, 96),
+            "tick-distance" => int(4, 12),
+            "gamemode" => ["survival", "creative", "adventure"].contains(&v.as_str()),
+            "difficulty" => ["peaceful", "easy", "normal", "hard"].contains(&v.as_str()),
+            "online-mode" | "allow-list" | "allow-cheats" => v == "true" || v == "false",
+            "level-seed" => v.chars().count() <= 64,
+            "server-name" | "level-name" => {
+                let n = v.chars().count();
+                (1..=64).contains(&n) && !v.contains(['/', '\\', ';'])
+            }
+            _ => return bad(k, "esta opción no se puede fijar desde el asistente"),
+        };
+        if !ok || v.contains(['\n', '\r']) {
+            return bad(k, "valor no válido");
+        }
+    }
+    Ok(())
+}
+
+/// Opciones válidas según el tipo de servidor.
+pub fn validate_properties_for(flavor: Flavor, props: &BTreeMap<String, String>) -> Result<(), InstallError> {
+    if flavor.is_native() {
+        validate_bedrock_properties(props)
+    } else {
+        validate_user_properties(props)
+    }
+}
+
+/// Cambia (o añade) claves en un server.properties existente conservando el resto, comentarios
+/// incluidos. Bedrock lee el archivo como texto UTF-8, así que los valores van tal cual.
+pub fn merge_properties(text: &str, props: &BTreeMap<String, String>) -> Result<String, InstallError> {
+    let mut lines: Vec<String> = text.lines().map(str::to_string).collect();
+    for (k, v) in props {
+        if !valid_property_key(k) || v.contains(['\n', '\r']) || v.len() > 1024 {
+            return Err(InstallError::InvalidInput(format!("opción no válida: {k:?}")));
+        }
+        let new = format!("{k}={v}");
+        match lines.iter().position(|l| {
+            let t = l.trim_start();
+            !t.starts_with('#') && t.split_once('=').is_some_and(|(key, _)| key.trim() == k)
+        }) {
+            Some(i) => lines[i] = new,
+            None => lines.push(new),
+        }
+    }
+    let mut out = lines.join("\n");
+    out.push('\n');
+    Ok(out)
+}
+
+/// Archivo con la huella SHA-256 del .zip oficial que se instaló (Mojang no la publica).
+pub const BEDROCK_SHA_FILE: &str = "merchosting-bedrock-sha256.txt";
+/// Límites al extraer el .zip oficial de Bedrock (ronda 100 MB y unos cientos de archivos).
+const BEDROCK_MAX_ENTRIES: usize = 20_000;
+const BEDROCK_MAX_BYTES: u64 = 2 * 1024 * 1024 * 1024;
+
+fn sha256_file(path: &Path) -> Result<String, InstallError> {
+    use sha2::Digest as _;
+    let mut f = std::fs::File::open(path).map_err(|e| io(path, e))?;
+    let mut h = sha2::Sha256::new();
+    std::io::copy(&mut f, &mut h).map_err(|e| io(path, e))?;
+    Ok(h.finalize().iter().map(|b| format!("{b:02x}")).collect())
+}
+
+/// Extrae el .zip oficial en `dir` con rutas seguras, sin enlaces y con límites.
+pub fn extract_bedrock_zip(zip_path: &Path, dir: &Path, cancel: &AtomicBool) -> Result<usize, InstallError> {
+    let f = std::fs::File::open(zip_path).map_err(|e| io(zip_path, e))?;
+    let mut z = zip::ZipArchive::new(f).map_err(|e| InstallError::Integrity(format!("el .zip no es válido: {e}")))?;
+    if z.len() > BEDROCK_MAX_ENTRIES {
+        return Err(InstallError::Integrity("el .zip tiene demasiados archivos".into()));
+    }
+    let mut total: u64 = 0;
+    let mut files = 0;
+    for i in 0..z.len() {
+        if cancel.load(Ordering::Relaxed) {
+            return Err(InstallError::Cancelled);
+        }
+        let mut e = z
+            .by_index(i)
+            .map_err(|e| InstallError::Integrity(format!("el .zip está dañado: {e}")))?;
+        let Some(rel) = e.enclosed_name() else {
+            return Err(InstallError::Integrity(format!(
+                "ruta no permitida en el .zip: {}",
+                e.name().map(|n| n.into_owned()).unwrap_or_default()
+            )));
+        };
+        if e.is_symlink() {
+            return Err(InstallError::Integrity(format!(
+                "el .zip trae un enlace: {}",
+                e.name().map(|n| n.into_owned()).unwrap_or_default()
+            )));
+        }
+        let out = dir.join(&rel);
+        if e.is_dir() {
+            std::fs::create_dir_all(&out).map_err(|er| io(&out, er))?;
+            continue;
+        }
+        total = total.saturating_add(e.size());
+        if total > BEDROCK_MAX_BYTES {
+            return Err(InstallError::TooLarge("el contenido del .zip de Bedrock".into()));
+        }
+        if let Some(p) = out.parent() {
+            std::fs::create_dir_all(p).map_err(|er| io(p, er))?;
+        }
+        let mut w = std::fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&out)
+            .map_err(|er| io(&out, er))?;
+        std::io::copy(&mut e, &mut w).map_err(|er| io(&out, er))?;
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let mode = e.unix_mode().unwrap_or(0o644) & 0o755;
+            let exe = rel
+                .file_name()
+                .is_some_and(|n| n == merc_core::detect::bedrock_exe_name());
+            let _ = std::fs::set_permissions(
+                &out,
+                std::fs::Permissions::from_mode(if exe { 0o755 } else { mode | 0o600 }),
+            );
+        }
+        files += 1;
+    }
+    Ok(files)
+}
+
 pub fn render_properties(props: &BTreeMap<String, String>) -> Result<String, InstallError> {
     let mut text =
         String::from("#Creado por MercHosting. Minecraft agregara el resto de opciones en el primer arranque.\n");
@@ -239,6 +375,7 @@ fn flavor_name(f: Flavor) -> &'static str {
         Flavor::Forge => "Forge",
         Flavor::NeoForge => "NeoForge",
         Flavor::Arclight => "Arclight",
+        Flavor::Bedrock => "Bedrock Dedicated Server",
     }
 }
 
@@ -347,8 +484,13 @@ pub fn install(
     cancel: &AtomicBool,
 ) -> Result<InstallOutcome, InstallError> {
     // Validar todo lo que no depende de la red antes de crear nada.
-    let props_text = render_properties(&plan.properties)?;
-    if !crate::catalog::valid_jar_name(&plan.resolved.artifact.file_name) {
+    let props_text = if plan.resolved.flavor.is_native() {
+        validate_bedrock_properties(&plan.properties)?;
+        String::new()
+    } else {
+        render_properties(&plan.properties)?
+    };
+    if !crate::catalog::valid_download_name(plan.resolved.flavor, &plan.resolved.artifact.file_name) {
         return Err(InstallError::InvalidInput("nombre de archivo no válido".into()));
     }
     events(InstallEvent::Step(
@@ -430,6 +572,28 @@ fn install_inner(
         None => format!("{} descargado por HTTPS (la fuente no publica huella)", art.file_name),
     }));
 
+    if r.flavor.is_native() {
+        events(InstallEvent::Step(
+            Step::Installing,
+            "Extrayendo Bedrock Dedicated Server".into(),
+        ));
+        let sha = sha256_file(&dest)?;
+        events(InstallEvent::Log(format!("SHA-256 del .zip descargado: {sha}")));
+        let n = extract_bedrock_zip(&dest, dir, cancel)?;
+        events(InstallEvent::Log(format!("{n} archivos extraídos")));
+        let _ = std::fs::remove_file(&dest);
+        write_new(
+            &dir.join(merc_core::detect::BEDROCK_VERSION_FILE),
+            &format!("{}\n", r.mc_version),
+        )?;
+        write_new(
+            &dir.join(BEDROCK_SHA_FILE),
+            &format!(
+                "# Huella del archivo oficial descargado por MercHosting (Mojang no la publica).\n{sha}  {}\n{}\n",
+                art.file_name, art.url
+            ),
+        )?;
+    }
     if let Some(args) = &r.installer_args {
         events(InstallEvent::Step(
             Step::Installing,
@@ -451,6 +615,10 @@ fn install_inner(
         run_installer(&plan.java, &dest, &args, &work, events, cancel)?;
         // El instalador ya no hace falta; su registro (.log) se conserva.
         let _ = std::fs::remove_file(&dest);
+        if r.flavor == Flavor::Forge && crate::catalog::forge_is_legacy(&r.mc_version) {
+            let jar = check_legacy_forge(dir)?;
+            events(InstallEvent::Log(format!("JAR del servidor de Forge: {jar}")));
+        }
     }
     if cancel.load(Ordering::Relaxed) {
         return Err(InstallError::Cancelled);
@@ -461,18 +629,29 @@ fn install_inner(
         "Guardando la configuración elegida".into(),
     ));
     let props_path = dir.join("server.properties");
-    if props_path.exists() {
+    if r.flavor.is_native() {
+        // El .zip de Bedrock trae su server.properties con comentarios: se cambian solo las
+        // claves elegidas.
+        let text = std::fs::read_to_string(&props_path).unwrap_or_default();
+        let merged = merge_properties(&text, &plan.properties)?;
+        std::fs::write(&props_path, merged).map_err(|e| io(&props_path, e))?;
+    } else if props_path.exists() {
         // Ningún instalador oficial la crea; si apareciera, no la pisamos.
         return Err(InstallError::InstallerFailed(
             "el instalador creó server.properties inesperadamente; revisa la carpeta".into(),
         ));
     }
-    write_new(&props_path, props_text)?;
+    if !r.flavor.is_native() {
+        write_new(&props_path, props_text)?;
+    }
     if plan.accept_eula {
-        write_new(
-            &dir.join("eula.txt"),
-            "#Aceptado expresamente por el usuario en MercHosting (https://aka.ms/MinecraftEULA)\neula=true\n",
-        )?;
+        let text = if r.flavor.is_native() {
+            "#Aceptados expresamente por el usuario en MercHosting: EULA y Politica de privacidad de Minecraft (https://aka.ms/MinecraftEULA).\n\
+             #Bedrock Dedicated Server no lee este archivo; MercHosting lo usa para no encenderlo sin tu aceptacion.\neula=true\n"
+        } else {
+            "#Aceptado expresamente por el usuario en MercHosting (https://aka.ms/MinecraftEULA)\neula=true\n"
+        };
+        write_new(&dir.join("eula.txt"), text)?;
     }
 
     events(InstallEvent::Step(Step::Finishing, "Comprobando la instalación".into()));
@@ -487,9 +666,80 @@ fn install_inner(
     Ok(InstallOutcome { detected })
 }
 
+/// Forge antiguo: el instalador deja `forge-<mc>-<build>[-universal].jar` en la carpeta. Se
+/// busca (no se supone su nombre) y se comprueba que es ejecutable (`Main-Class` en su
+/// manifiesto); si no, el error lo dice en vez de dejar un servidor que no arranca.
+pub fn check_legacy_forge(dir: &Path) -> Result<String, InstallError> {
+    let (jar, _, _) = merc_core::detect::legacy_forge_jar(dir).ok_or_else(|| {
+        InstallError::InstallerFailed(
+            "el instalador de Forge terminó, pero no dejó el JAR del servidor (forge-<versión>.jar). \
+             Revisa el archivo .log del instalador en la carpeta"
+                .into(),
+        )
+    })?;
+    if !jar_has_main_class(&dir.join(&jar)) {
+        return Err(InstallError::InstallerFailed(format!(
+            "{jar} no es un JAR ejecutable (no tiene Main-Class en su manifiesto)"
+        )));
+    }
+    Ok(jar)
+}
+
+fn jar_has_main_class(path: &Path) -> bool {
+    use std::io::Read;
+    let Ok(f) = std::fs::File::open(path) else {
+        return false;
+    };
+    let Ok(mut zip) = zip::ZipArchive::new(f) else {
+        return false;
+    };
+    let Ok(mut m) = zip.by_name("META-INF/MANIFEST.MF") else {
+        return false;
+    };
+    if m.size() > 1024 * 1024 {
+        return false;
+    }
+    let mut text = String::new();
+    if m.read_to_string(&mut text).is_err() {
+        return false;
+    }
+    text.lines()
+        .any(|l| l.strip_prefix("Main-Class:").is_some_and(|v| !v.trim().is_empty()))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn jar(path: &Path, manifest: &str) {
+        use std::io::Write;
+        let f = std::fs::File::create(path).unwrap();
+        let mut z = zip::ZipWriter::new(f);
+        z.start_file("META-INF/MANIFEST.MF", zip::write::SimpleFileOptions::default())
+            .unwrap();
+        z.write_all(manifest.as_bytes()).unwrap();
+        z.finish().unwrap();
+    }
+
+    #[test]
+    fn legacy_forge_jar_must_be_executable() {
+        let d = tempfile::tempdir().unwrap();
+        assert!(matches!(check_legacy_forge(d.path()), Err(InstallError::InstallerFailed(m)) if m.contains(".log")));
+        jar(
+            &d.path().join("forge-1.12.2-14.23.5.2860.jar"),
+            "Manifest-Version: 1.0\r\n",
+        );
+        assert!(
+            matches!(check_legacy_forge(d.path()), Err(InstallError::InstallerFailed(m)) if m.contains("Main-Class"))
+        );
+        jar(
+            &d.path().join("forge-1.12.2-14.23.5.2860.jar"),
+            "Manifest-Version: 1.0\r\nMain-Class: net.minecraftforge.fml.relauncher.ServerLaunchWrapper\r\n",
+        );
+        assert_eq!(check_legacy_forge(d.path()).unwrap(), "forge-1.12.2-14.23.5.2860.jar");
+        std::fs::write(d.path().join("roto.jar"), "no es zip").unwrap();
+        assert!(!jar_has_main_class(&d.path().join("roto.jar")));
+    }
 
     #[test]
     fn properties_escape() {
@@ -520,6 +770,56 @@ mod tests {
         assert!(validate_user_properties(&mk("online-mode", "false")).is_ok());
         assert!(validate_user_properties(&mk("enable-rcon", "true")).is_err());
         assert!(validate_user_properties(&mk("motd", "Hola ñandú")).is_ok());
+    }
+
+    #[test]
+    fn bedrock_properties() {
+        let mk = |k: &str, v: &str| BTreeMap::from([(k.to_string(), v.to_string())]);
+        assert!(validate_bedrock_properties(&mk("server-name", "Mi server ñ")).is_ok());
+        assert!(validate_bedrock_properties(&mk("gamemode", "spectator")).is_err());
+        assert!(validate_bedrock_properties(&mk("motd", "x")).is_err());
+        assert!(validate_bedrock_properties(&mk("allow-list", "true")).is_ok());
+        assert!(validate_properties_for(Flavor::Bedrock, &mk("white-list", "true")).is_err());
+        assert!(validate_properties_for(Flavor::Paper, &mk("white-list", "true")).is_ok());
+        let text = "# comentario\nserver-name=Dedicated Server\n# server-port=1\nserver-port=19132\n";
+        let mut p = BTreeMap::new();
+        p.insert("server-port".to_string(), "19140".to_string());
+        p.insert("level-seed".to_string(), "123".to_string());
+        let out = merge_properties(text, &p).unwrap();
+        assert_eq!(
+            out,
+            "# comentario\nserver-name=Dedicated Server\n# server-port=1\nserver-port=19140\nlevel-seed=123\n"
+        );
+    }
+
+    #[test]
+    fn bedrock_zip_extraction_is_safe() {
+        use std::io::Write;
+        let d = tempfile::tempdir().unwrap();
+        let zp = d.path().join("b.zip");
+        let mk = |entries: &[(&str, &str)]| {
+            let f = std::fs::File::create(&zp).unwrap();
+            let mut z = zip::ZipWriter::new(f);
+            for (n, b) in entries {
+                z.start_file(*n, zip::write::SimpleFileOptions::default()).unwrap();
+                z.write_all(b.as_bytes()).unwrap();
+            }
+            z.finish().unwrap();
+        };
+        mk(&[
+            (merc_core::detect::bedrock_exe_name(), "exe"),
+            ("server.properties", "server-port=19132\n"),
+            ("behavior_packs/vanilla/manifest.json", "{}"),
+        ]);
+        let out = d.path().join("srv");
+        std::fs::create_dir(&out).unwrap();
+        assert_eq!(extract_bedrock_zip(&zp, &out, &AtomicBool::new(false)).unwrap(), 3);
+        assert!(out.join("behavior_packs/vanilla/manifest.json").is_file());
+        mk(&[("../fuera.txt", "x")]);
+        let out2 = d.path().join("srv2");
+        std::fs::create_dir(&out2).unwrap();
+        assert!(extract_bedrock_zip(&zp, &out2, &AtomicBool::new(false)).is_err());
+        assert!(!d.path().join("fuera.txt").exists());
     }
 
     #[test]

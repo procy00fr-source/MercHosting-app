@@ -333,6 +333,7 @@ export function WorldsPanel({ api, sup, id, running, online, remote = false }: P
                 >
                   <Copy size={15} />
                 </button>
+                {api.canTransfer !== false && (
                 <button
                   type="button"
                   className="icon-btn"
@@ -343,6 +344,7 @@ export function WorldsPanel({ api, sup, id, running, online, remote = false }: P
                 >
                   <Download size={15} />
                 </button>
+                )}
                 <button
                   type="button"
                   className="icon-btn icon-danger"

@@ -2,7 +2,9 @@
 //!
 //! - [`playit`]: agente oficial de Playit.gg (descarga verificada, vinculación oficial, estado).
 //! - [`slp`]: prueba real de que una dirección llega a un servidor de Minecraft.
+//! - [`bedrock`]: la misma prueba para Minecraft Bedrock (RakNet por UDP).
 
+pub mod bedrock;
 pub mod playit;
 pub mod slp;
 

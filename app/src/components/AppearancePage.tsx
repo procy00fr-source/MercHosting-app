@@ -157,7 +157,7 @@ export function AppearancePage({ prefs, supporter, onChange, onOpenSupporter, on
             );
           })}
         </div>
-        <p className="field-help">Si Windows tiene activado «reducir animaciones», los fondos se quedan quietos.</p>
+        <p className="field-help">Si tu sistema tiene activado «reducir animaciones», los fondos se quedan quietos.</p>
       </section>
 
       <section className="props-card" aria-label="Icono de la app">

@@ -17,3 +17,4 @@ curseforge-api-key.txt
 app/.shot/
 app/src-tauri/binaries/
 __pycache__/
+videos/

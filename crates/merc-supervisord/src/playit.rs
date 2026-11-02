@@ -28,6 +28,8 @@ pub(crate) struct PlayitRuntime {
     claim_running: bool,
     /// Última prueba de cada dirección, por servidor.
     tests: HashMap<InstanceId, Vec<AddressTest>>,
+    /// Lo mismo para las direcciones de Bedrock (Geyser, por UDP).
+    bedrock_tests: HashMap<InstanceId, Vec<AddressTest>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -48,7 +50,10 @@ impl Daemon {
     }
 
     fn playit_exe(&self) -> PathBuf {
-        self.playit_dir().join(format!("playitd-{}.exe", pl::AGENT_VERSION))
+        let name = pl::agent_asset()
+            .map(|a| a.file_name.to_string())
+            .unwrap_or_else(|| format!("playitd-{}", pl::AGENT_VERSION));
+        self.playit_dir().join(name)
     }
 
     /// Agente ya en marcha fuera de MercHosting (solo pruebas de desarrollo).
@@ -89,7 +94,7 @@ impl Daemon {
     }
 
     fn playit_supported() -> bool {
-        cfg!(windows) || Self::playit_external().is_some()
+        pl::agent_asset().is_some() || Self::playit_external().is_some()
     }
 
     fn playit_saved(&self) -> Saved {
@@ -112,7 +117,7 @@ impl Daemon {
 
     /// Arranca el agente si está activado y no responde. Lo llama el bucle cada pocos segundos.
     fn playit_ensure_running(&self) {
-        if !self.playit_saved().enabled || Self::playit_external().is_some() || !cfg!(windows) {
+        if !self.playit_saved().enabled || Self::playit_external().is_some() || pl::agent_asset().is_none() {
             return;
         }
         let mut rt = self.playit.lock().unwrap_or_else(|p| p.into_inner());
@@ -246,15 +251,16 @@ impl Daemon {
         if exe.is_file() || Self::playit_external().is_some() {
             return Ok(());
         }
+        let asset = pl::agent_asset().ok_or_else(|| api(ErrorCode::BadRequest, pl::LINUX_NOT_VERIFIED))?;
         let dir = self.playit_dir();
         std::fs::create_dir_all(&dir).map_err(|e| api(ErrorCode::Internal, e.to_string()))?;
         let cancel = std::sync::atomic::AtomicBool::new(false);
         self.http
             .download(
-                pl::AGENT_URL,
+                asset.url,
                 &exe,
-                &merc_install::Checksum::Sha256(pl::AGENT_SHA256.into()),
-                Some(pl::AGENT_SIZE),
+                &merc_install::Checksum::Sha256(asset.sha256.into()),
+                Some(asset.size),
                 &mut |_, _| {},
                 &cancel,
             )
@@ -264,6 +270,16 @@ impl Daemon {
                     format!("No se pudo descargar el agente oficial de Playit: {e}"),
                 )
             })?;
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            std::fs::set_permissions(&exe, std::fs::Permissions::from_mode(0o755)).map_err(|e| {
+                api(
+                    ErrorCode::Internal,
+                    format!("No se pudo marcar el agente como ejecutable: {e}"),
+                )
+            })?;
+        }
         self.log
             .line(&format!("playit: agente {} descargado y verificado", pl::AGENT_VERSION));
         Ok(())
@@ -406,6 +422,7 @@ impl Daemon {
             &tests,
             voice.as_ref(),
         );
+        let bedrock = self.bedrock_info(inst, agent.as_ref());
         ConnectionInfo {
             port,
             lan,
@@ -414,7 +431,49 @@ impl Daemon {
             ports_in_use,
             voice,
             layers,
+            bedrock,
         }
+    }
+
+    /// Geyser instalado: su puerto UDP real, sus túneles y sus pruebas. `None` si no está.
+    fn bedrock_info(&self, inst: &merc_core::Instance, agent: Option<&pl::AgentStatus>) -> Option<BedrockInfo> {
+        let root = std::path::Path::new(&inst.root);
+        let (geyser, flood) = merc_admin::geyser::find(root);
+        let geyser = geyser?;
+        let config = merc_admin::geyser::read_config(root);
+        let from_config = config.as_ref().and_then(|(_, p)| *p);
+        let port = from_config.unwrap_or(merc_admin::geyser::DEFAULT_PORT);
+        let tunnels = agent
+            .map(|a| {
+                a.tunnels
+                    .iter()
+                    .filter(|t| t.local_port() == Some(port))
+                    .cloned()
+                    .collect()
+            })
+            .unwrap_or_default();
+        let tests = self
+            .playit
+            .lock()
+            .unwrap_or_else(|p| p.into_inner())
+            .bedrock_tests
+            .get(&inst.id)
+            .cloned()
+            .unwrap_or_default();
+        Some(BedrockInfo {
+            geyser: geyser.rel,
+            geyser_enabled: geyser.enabled,
+            floodgate_enabled: flood.as_ref().map(|f| f.enabled).unwrap_or(false),
+            floodgate: flood.map(|f| f.rel),
+            config: config.map(|(rel, _)| rel),
+            port,
+            port_from_config: from_config.is_some(),
+            lan: super::lan_ipv4()
+                .map(|ip| vec![format!("{ip}:{port}")])
+                .unwrap_or_default(),
+            tunnels,
+            tests,
+        })
     }
 
     pub(crate) fn handle_playit(self: &Arc<Self>, client: &str, body: RequestBody) -> Result<ResponseBody, ApiError> {
@@ -423,10 +482,7 @@ impl Daemon {
             R::PlayitStatus => ResponseBody::Playit(Box::new(self.playit_info())),
             R::PlayitEnable => {
                 if !Self::playit_supported() {
-                    return Err(api(
-                        ErrorCode::BadRequest,
-                        "El agente oficial de Playit que usa MercHosting es para Windows.",
-                    ));
+                    return Err(api(ErrorCode::BadRequest, pl::LINUX_NOT_VERIFIED));
                 }
                 self.playit_install()?;
                 self.playit_save(&Saved { enabled: true })?;
@@ -500,7 +556,12 @@ impl Daemon {
                 let inst = self.instance(id)?;
                 let address = address.trim().to_string();
                 merc_net::slp::split_address(&address).map_err(|e| api(ErrorCode::BadRequest, e.to_string()))?;
-                let r = merc_net::slp::ping_address(&address, Duration::from_secs(8));
+                // Un servidor Bedrock se prueba como lo hace el juego de Bedrock: ping UDP.
+                let r = if inst.kind == merc_core::detect::ServerKind::Bedrock {
+                    merc_net::bedrock::ping_address(&address, Duration::from_secs(6))
+                } else {
+                    merc_net::slp::ping_address(&address, Duration::from_secs(8))
+                };
                 let test = AddressTest {
                     address: address.clone(),
                     at_unix_ms: now_ms(),
@@ -518,6 +579,35 @@ impl Daemon {
                     client,
                     Some(id),
                     "connection.test",
+                    &match &test.result {
+                        Some(r) => format!("{address}: responde en {} ms", r.latency_ms),
+                        None => format!("{address}: {}", test.error.clone().unwrap_or_default()),
+                    },
+                );
+                ResponseBody::Connection(Box::new(self.connection(&inst)))
+            }
+            R::TestBedrockAddress { id, address } => {
+                let inst = self.instance(id)?;
+                let address = address.trim().to_string();
+                merc_net::slp::split_address(&address).map_err(|e| api(ErrorCode::BadRequest, e.to_string()))?;
+                let r = merc_net::bedrock::ping_address(&address, Duration::from_secs(6));
+                let test = AddressTest {
+                    address: address.clone(),
+                    at_unix_ms: now_ms(),
+                    error: r.as_ref().err().map(|e| e.to_string()),
+                    result: r.ok(),
+                };
+                {
+                    let mut rt = self.playit.lock().unwrap_or_else(|p| p.into_inner());
+                    let list = rt.bedrock_tests.entry(id).or_default();
+                    list.retain(|t| t.address != address);
+                    list.insert(0, test.clone());
+                    list.truncate(10);
+                }
+                self.audit(
+                    client,
+                    Some(id),
+                    "connection.test_bedrock",
                     &match &test.result {
                         Some(r) => format!("{address}: responde en {} ms", r.latency_ms),
                         None => format!("{address}: {}", test.error.clone().unwrap_or_default()),

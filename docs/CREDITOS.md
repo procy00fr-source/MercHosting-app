@@ -23,6 +23,9 @@ MercHosting se distribuye bajo GPL-3.0-or-later (ver `LICENSE`). Usa estos compo
 | iroh (n0, Inc.) y su relé público gratuito | Canal cifrado entre PCs para compañeros (conexión directa o por relé) | MIT OR Apache-2.0 |
 | Tokio | Ejecución asíncrona del canal de compañeros | MIT |
 | Eclipse Temurin (Adoptium; se descarga de su publicación oficial a petición, no se incluye en MercHosting) | Java para los servidores | GPLv2 con Classpath Exception |
+| Agente de Playit.gg para Android (`playitd` v1.2.0, commit `7acf13568a99707dda73028234fdb376e45b15da`, compilado para Android desde su código oficial en el workflow de Android; **sí va dentro del APK** como `libplayit.so`) | Playit en el servidor dentro del celular | BSD-2-Clause (© 2022 Developed Methods LLC; el texto completo se muestra en la app del celular › Ayuda) |
+| OpenJDK para Android de AngelAuraMC (`jre17`/`jre21-android-arm64`, github.com/AngelAuraMC/angelauramc-openjdk-build; se descarga a petición en el celular y se comprueba su SHA-256, no se incluye en el APK) | Java del servidor dentro del celular | GPLv2 con Classpath Exception (ver `legal/` dentro del paquete; código fuente en el repositorio de AngelAuraMC y en OpenJDK) |
+| lzma-rs | Descomprimir el Java para Android (.tar.xz) | MIT |
 | Simple Voice Chat (henkelmax; no se incluye ni se descarga: MercHosting solo lee y ajusta su archivo de configuración en el servidor de la persona) | Diagnóstico y túnel del chat de voz | Mod de terceros, con su propia licencia |
 | image (y png, zune-jpeg, gif, image-webp, tiff, moxcms, pxfm) | Convertir cualquier foto al icono del servidor de 64×64 | MIT / Apache-2.0 (tiff y color_quant: MIT; moxcms y pxfm: BSD-3-Clause o Apache-2.0) |
 | Gumroad (API pública de licencias; la compra se hace en su página oficial) | Comprobar la clave de Supporter Edition | Términos de Gumroad |

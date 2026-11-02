@@ -46,6 +46,10 @@ pub enum WireResponse {
     Servers {
         host_name: String,
         servers: Vec<RemoteServer>,
+        /// Esta PC tiene control total del anfitrión (servidor casero). Las versiones
+        /// anteriores no lo mandan: se entiende `false`.
+        #[serde(default)]
+        host_admin: bool,
     },
     Result(Box<ResponseResult>),
     Prepared {

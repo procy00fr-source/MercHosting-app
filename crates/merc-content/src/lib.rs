@@ -138,7 +138,8 @@ fn hybrid_mod_loaders(root: &Path) -> Vec<&'static str> {
 /// (Vanilla incluido) admiten datapacks en el mundo activo.
 pub fn platforms(kind: ServerKind, root: &Path) -> Vec<Platform> {
     let mut out = code_platforms(kind, root);
-    if kind != ServerKind::Unknown {
+    // Bedrock no tiene datapacks de Java: usa addons (behavior/resource packs), con su propio panel.
+    if kind != ServerKind::Unknown && kind != ServerKind::Bedrock {
         let mut d = platform(ContentKind::Datapack, &["datapack"], false);
         d.folder = format!("{}/datapacks", level_folder(root));
         out.push(d);
@@ -178,7 +179,7 @@ fn code_platforms(kind: ServerKind, root: &Path) -> Vec<Platform> {
             out.push(platform(Plugin, &["spigot", "bukkit"], true));
             out
         }
-        ServerKind::Vanilla | ServerKind::Unknown => vec![],
+        ServerKind::Vanilla | ServerKind::Bedrock | ServerKind::Unknown => vec![],
     }
 }
 

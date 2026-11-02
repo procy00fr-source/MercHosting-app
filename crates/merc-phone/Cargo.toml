@@ -1,0 +1,22 @@
+[package]
+name = "merc-phone"
+description = "Servidor de Minecraft Java dentro de un celular Android: JRE y Playit verificados, RAM, avisos de riesgo, servidores locales y el lanzador de la JVM en el mismo proceso."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+merc-core = { path = "../merc-core" }
+merc-install = { path = "../merc-install" }
+merc-admin = { path = "../merc-admin" }
+merc-net = { path = "../merc-net" }
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+uuid.workspace = true
+
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
+[dev-dependencies]
+tempfile.workspace = true

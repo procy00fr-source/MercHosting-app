@@ -201,6 +201,10 @@ pub enum RequestBody {
     SetStartup {
         enabled: bool,
     },
+    /// Pide a Windows no suspender la PC mientras haya un servidor encendido (para 24/7).
+    SetKeepAwake {
+        enabled: bool,
+    },
     /// Archiva o desarchiva un servidor: archivado no se puede encender y se lista aparte.
     SetArchived {
         id: InstanceId,
@@ -282,6 +286,47 @@ pub enum RequestBody {
     LuckPermsApply {
         id: InstanceId,
         change: merc_admin::luckperms::LpChange,
+    },
+    /// Bedrock: lista blanca (`allowlist.json`), permisos (`permissions.json`) y jugadores con XUID.
+    BedrockPlayers {
+        id: InstanceId,
+    },
+    /// Bedrock: añade, quita o cambia a alguien de la lista blanca.
+    BedrockAllowlist {
+        id: InstanceId,
+        change: merc_admin::bedrock_players::AllowChange,
+    },
+    /// Bedrock: activa o desactiva la lista blanca (`allow-list` en server.properties y, si está
+    /// encendido, `allowlist on/off`).
+    BedrockAllowlistEnabled {
+        id: InstanceId,
+        enabled: bool,
+    },
+    /// Bedrock: nivel de permisos de un XUID (`None` = el nivel por defecto del servidor).
+    BedrockPermission {
+        id: InstanceId,
+        xuid: String,
+        level: Option<merc_admin::bedrock_players::Level>,
+    },
+    /// Addons de un servidor Bedrock (behavior y resource packs) y si están activos en el mundo.
+    Addons {
+        id: InstanceId,
+    },
+    /// Instala un `.mcpack`/`.mcaddon` de esta PC y lo activa en el mundo. Servidor detenido.
+    AddonImport {
+        id: InstanceId,
+        source: PathBuf,
+    },
+    /// Activa o desactiva un pack en el mundo. Servidor detenido.
+    AddonSetActive {
+        id: InstanceId,
+        uuid: String,
+        active: bool,
+    },
+    /// Quita un pack: lo desactiva y manda su carpeta a la papelera. Servidor detenido.
+    AddonRemove {
+        id: InstanceId,
+        uuid: String,
     },
     /// Separador de mods: de qué lado es cada mod de `mods/` (con evidencia) y la cuarentena.
     ModSides {
@@ -533,6 +578,11 @@ pub enum RequestBody {
         id: InstanceId,
         address: String,
     },
+    /// Prueba real de una dirección de Bedrock (ping de RakNet por UDP, como el juego).
+    TestBedrockAddress {
+        id: InstanceId,
+        address: String,
+    },
     /// Cambia `voice_host` (a la dirección de un túnel de voz detectado, o vacío) y/o el
     /// puerto de Simple Voice Chat. Guarda copia del archivo anterior.
     SetVoiceConfig {
@@ -617,6 +667,13 @@ pub enum RequestBody {
     CreateInvite {
         id: InstanceId,
         perms: Vec<crate::remote::Perm>,
+        /// Validez en minutos (5 a 1440).
+        minutes: u32,
+    },
+    /// Invitación de «control total» de esta PC (servidor casero sin pantalla): quien la use
+    /// administra todos los servidores, también los que se creen después, y puede crear
+    /// servidores nuevos. Solo se crea en la propia PC (app o `merc compañeros invitar`).
+    CreateHostInvite {
         /// Validez en minutos (5 a 1440).
         minutes: u32,
     },
@@ -894,6 +951,82 @@ pub struct ConnectionInfo {
     /// Estado por capas, con la hora de cada comprobación.
     #[serde(default)]
     pub layers: Vec<ConnLayer>,
+    /// Geyser (jugadores de Bedrock en este servidor Java), si está instalado.
+    #[serde(default)]
+    pub bedrock: Option<BedrockInfo>,
+}
+
+/// Addons de un servidor Bedrock.
+/// Jugadores de un servidor Bedrock.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct BedrockPlayersInfo {
+    /// `allow-list` en server.properties.
+    pub allow_list_enabled: bool,
+    /// `online-mode`: sin él, el servidor no usa la lista blanca.
+    pub online_mode: bool,
+    /// `default-player-permission-level` (quien no está en permissions.json).
+    pub default_permission: String,
+    /// Existe `whitelist.json`: el servidor lo usa en lugar de `allowlist.json`.
+    pub legacy_whitelist: bool,
+    pub running: bool,
+    pub allowlist: Vec<merc_admin::bedrock_players::AllowEntry>,
+    pub permissions: Vec<BedrockPermRow>,
+    /// Jugadores con XUID conocido (de su entrada al servidor o de la lista blanca).
+    pub known: Vec<BedrockKnownPlayer>,
+    /// Conectados ahora (según la consola).
+    pub online: Vec<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct BedrockPermRow {
+    pub xuid: String,
+    pub level: merc_admin::bedrock_players::Level,
+    /// Gamertag, si MercHosting lo conoce.
+    pub name: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct BedrockKnownPlayer {
+    pub name: String,
+    pub xuid: String,
+    pub online: bool,
+    /// Última vez que MercHosting lo vio conectado (0 si solo se sabe por la lista blanca).
+    pub last_seen_unix: i64,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct AddonsInfo {
+    /// `level-name` de server.properties: el mundo donde se activan.
+    pub level_name: String,
+    /// El mundo ya existe (si no, se crea al encender por primera vez).
+    pub world_exists: bool,
+    pub packs: Vec<merc_admin::addons::AddonPack>,
+    /// Resultado de la última importación (solo en la respuesta a `AddonImport`).
+    #[serde(default)]
+    pub last_import: Option<merc_admin::addons::ImportResult>,
+}
+
+/// Jugadores de Bedrock por Geyser: lo instalado, el puerto UDP real y sus túneles.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct BedrockInfo {
+    /// Ruta relativa del jar de Geyser.
+    pub geyser: String,
+    pub geyser_enabled: bool,
+    /// Floodgate deja entrar a jugadores de Bedrock sin cuenta de Java.
+    pub floodgate: Option<String>,
+    pub floodgate_enabled: bool,
+    /// Ruta relativa de la configuración de Geyser (se crea al primer arranque).
+    pub config: Option<String>,
+    /// Puerto UDP en el que escucha Geyser.
+    pub port: u16,
+    /// `false` = todavía no hay configuración y se muestra el puerto por defecto.
+    pub port_from_config: bool,
+    /// Direcciones para jugar desde la misma red (`192.168.1.20:19132`).
+    pub lan: Vec<String>,
+    /// Túneles de Playit hacia ese puerto.
+    pub tunnels: Vec<Tunnel>,
+    /// Última prueba Bedrock (UDP) de cada dirección.
+    pub tests: Vec<AddressTest>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -990,6 +1123,12 @@ pub struct AutomationInfo {
     pub startup_available: bool,
     /// MercHosting está en el inicio de sesión de Windows.
     pub startup_enabled: bool,
+    /// No suspender la PC mientras haya un servidor encendido (ajuste de toda la app).
+    #[serde(default)]
+    pub keep_awake: bool,
+    /// Windows confirmó la petición y está vigente ahora.
+    #[serde(default)]
+    pub keep_awake_active: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -1337,6 +1476,8 @@ pub enum ResponseBody {
     LuckPerms(Box<LuckPermsInfo>),
     FriendPack(Box<merc_content::friendpack::FriendPackPlan>),
     ModSides(Box<merc_admin::modsides::ModSidesInfo>),
+    Addons(Box<AddonsInfo>),
+    BedrockPlayers(Box<BedrockPlayersInfo>),
     LuckPermsPreview(LuckPermsPreview),
     LuckPermsApplied(Box<LuckPermsApplied>),
     Supporter(SupporterInfo),

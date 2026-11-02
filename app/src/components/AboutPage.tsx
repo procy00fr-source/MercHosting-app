@@ -51,7 +51,7 @@ export function AboutPage({ api, version, onOpenSupporter, onOpenFeedback }: Pro
       </header>
 
       <p className="field-help">
-        App gratuita para Windows que crea y administra servidores de Minecraft en tu propia PC. Minecraft es una marca de Mojang
+        App gratuita para Windows y Linux que crea y administra servidores de Minecraft en tu propia PC. Minecraft es una marca de Mojang
         Studios y Microsoft; MercHosting no está afiliado a ellos.
       </p>
 

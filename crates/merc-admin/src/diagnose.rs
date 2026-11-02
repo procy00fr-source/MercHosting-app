@@ -169,6 +169,25 @@ fn static_checks(i: &Inputs, out: &mut Vec<Finding>) {
         }
     }
 
+    // Forge antiguo (1.16.5 o anterior) solo arranca con Java 8: con Java 9 o más nuevo se
+    // cae al cargar (su cargador de clases es de la época de Java 8).
+    if let (Some(have), Some(req)) = (i.java_major, i.mc_version.and_then(merc_core::java::required_java)) {
+        if matches!(i.kind, ServerKind::Forge | ServerKind::Mohist) && req.max_tested_major == Some(8) && have > 8 {
+            out.push(Finding {
+                code: "java_new_legacy_forge".into(),
+                title: format!(
+                    "Forge {} necesita Java 8 y este servidor usa Java {have}",
+                    i.mc_version.unwrap_or("?")
+                ),
+                confidence: Confidence::Alta,
+                explanation: "Las versiones antiguas de Forge (1.16.5 o anteriores) solo funcionan con Java 8; con un Java más nuevo el servidor se cierra al cargar. Elige Java 8 en Ajustes › Java y memoria (MercHosting puede descargarlo).".into(),
+                evidence: vec![format!("Java configurado: versión {have}")],
+                source: "Java del servidor".into(),
+                actions: vec![FixAction::ChooseJava { min_major: 8 }],
+            });
+        }
+    }
+
     if !mods_supported(i.kind) && !enabled.is_empty() {
         out.push(Finding {
             code: "mods_ignored".into(),
@@ -444,7 +463,7 @@ fn log_checks(i: &Inputs, out: &mut Vec<Finding>) {
                     title: "Al servidor se le acabó la memoria".into(),
                     confidence: Confidence::Alta,
                     explanation: format!(
-                        "Java llegó al máximo asignado ({} MB). Con muchos mods o jugadores hace falta más. Sube la memoria sin pasarte de lo que tiene tu PC (deja sitio para Windows y, si juegas aquí, para el juego).",
+                        "Java llegó al máximo asignado ({} MB). Con muchos mods o jugadores hace falta más. Sube la memoria sin pasarte de lo que tiene tu PC (deja sitio para el sistema y, si juegas aquí, para el juego).",
                         i.max_memory_mb
                     ),
                     evidence: vec![cut(line)],
@@ -708,6 +727,16 @@ mod tests {
         i.java_major = Some(17);
         let d = diagnose(&i, 1);
         assert_eq!(d.findings[0].actions, vec![FixAction::ChooseJava { min_major: 21 }]);
+        // Forge 1.12.2 con Java 17: necesita Java 8. Con Java 8, nada; Vanilla 1.12.2, nada.
+        let mut i = input(ServerKind::Forge, &[], &[]);
+        i.mc_version = Some("1.12.2");
+        i.java_major = Some(17);
+        assert_eq!(codes(&diagnose(&i, 1)), ["java_new_legacy_forge"]);
+        i.java_major = Some(8);
+        assert!(codes(&diagnose(&i, 1)).is_empty());
+        i.kind = ServerKind::Vanilla;
+        i.java_major = Some(17);
+        assert!(!codes(&diagnose(&i, 1)).contains(&"java_new_legacy_forge"));
     }
 
     #[test]

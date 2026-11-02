@@ -1,0 +1,68 @@
+# Compila MercHosting para Linux (.deb y AppImage) y lo añade a una release ya publicada desde
+# Windows. Se lanza a mano: Actions → «Linux» → «Run workflow» → escribe la versión (p. ej. 1.0.0).
+# Pasos y secretos necesarios: docs/LINUX.md.
+name: Linux
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Versión ya publicada desde Windows (por ejemplo 1.0.0)"
+        required: true
+      subir:
+        description: "Subir a la release (si no, solo compila y deja los archivos como artefacto)"
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+jobs:
+  linux:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      # Dependencias de Tauri 2 en Debian/Ubuntu (https://v2.tauri.app/start/prerequisites/).
+      - name: Dependencias del sistema
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential curl wget file \
+            libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - name: Dependencias de la interfaz
+        working-directory: app
+        run: npm ci
+
+      - name: Pruebas
+        run: |
+          cargo test --workspace
+          cd app && npx vitest run
+
+      - name: Compilar y publicar
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          GH_TOKEN: ${{ secrets.RELEASES_TOKEN }}
+          # Por variable de entorno (no pegado en el comando) para que nadie pueda inyectar
+          # órdenes con el texto de la versión; el script además exige X.Y.Z.
+          VERSION: ${{ inputs.version }}
+          SUBIR: ${{ inputs.subir }}
+        run: |
+          if [ "$SUBIR" = "true" ]; then node scripts/publicar-linux.mjs "$VERSION"; else node scripts/publicar-linux.mjs "$VERSION" --sin-subir; fi
+
+      - name: Guardar los archivos como artefacto
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: merchosting-linux
+          path: target/release-linux/
+          if-no-files-found: ignore

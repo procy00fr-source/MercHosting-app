@@ -1,7 +1,7 @@
 import { CircleHelp, FolderInput, Handshake, Heart, Info, MessageSquare, Palette, Plus } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { MercApi } from "./api/client";
-import { Supervisor, errorMessage } from "./api/client";
+import { Supervisor, errorMessage, remoteApi } from "./api/client";
 import type { AlertList, AppUpdateCheck, InstanceId, InstanceSummary, RemoteHost, SupervisorInfo, SupporterInfo, SystemInfo } from "./api/types";
 import { applyMode, applyTheme, effective, isLight, loadPrefs, reducedMotion, savePrefs, type AppearancePrefs } from "./appearance";
 import { iconSvg } from "./appIcon";
@@ -86,6 +86,8 @@ export function App({
   const [selected, setSelected] = useState<InstanceId | null>(null);
   const [importing, setImporting] = useState(false);
   const [creating, setCreating] = useState(false);
+  /** Crear un servidor en tu servidor casero (otra PC con control total). */
+  const [creatingRemote, setCreatingRemote] = useState<RemoteHost | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [introSound, setIntroSound] = useState(introSoundEnabled);
   const [view, setView] = useState<"servers" | "server" | "companions" | "remote" | "appearance" | "supporter" | "help" | "feedback" | "about">("servers");
@@ -435,6 +437,7 @@ export function App({
                       setRemote({ host, id });
                       setView("remote");
                     }}
+                    onCreateRemote={setCreatingRemote}
                   />
                 ) : (
                 <ServersHome
@@ -470,6 +473,24 @@ export function App({
                 setCreating(false);
                 open(id);
                 refresh();
+              }}
+            />
+          )}
+
+          {creatingRemote && (
+            <CreateWizard
+              api={remoteApi(api, creatingRemote.host)}
+              system={null}
+              usedPorts={[]}
+              remote={{ hostName: creatingRemote.name || "tu servidor casero" }}
+              onClose={() => setCreatingRemote(null)}
+              onCreated={async (id) => {
+                const h = creatingRemote;
+                setCreatingRemote(null);
+                // Lista de servidores de esa PC al día (ya incluye el nuevo).
+                const hosts = await sup.refreshHost(h.host).catch(() => null);
+                setRemote({ host: hosts?.find((x) => x.host === h.host) ?? h, id });
+                setView("remote");
               }}
             />
           )}

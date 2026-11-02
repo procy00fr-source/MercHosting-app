@@ -108,6 +108,48 @@ export function releaseTauriConfig(r) {
   };
 }
 
+/** Lo mismo para Linux (lo usa scripts/publicar-linux.mjs en GitHub Actions): .deb y AppImage.
+ * Solo el AppImage se actualiza solo (es lo que reemplaza el actualizador de Tauri en Linux). */
+export function releaseTauriConfigLinux(r) {
+  return {
+    bundle: {
+      active: true,
+      targets: ["deb", "appimage"],
+      createUpdaterArtifacts: true,
+      // `merc` (terminal) va también: sirve para el servidor casero sin pantalla.
+      externalBin: ["binaries/merc-supervisord", "binaries/merc"],
+      publisher: "Amercson",
+      category: "Game",
+      shortDescription: "Tu servidor de Minecraft en tu PC, sin mensualidades",
+      license: "GPL-3.0-or-later",
+      linux: { deb: { section: "games" } },
+    },
+    plugins: {
+      updater: {
+        pubkey: r.updater_pubkey.trim(),
+        endpoints: [`https://github.com/${r.releases_repo}/releases/latest/download/latest.json`],
+        requireSignedVersion: false,
+      },
+    },
+  };
+}
+
+/** Nombres fijos de Linux en cada release (para enlazarlos desde la web). */
+export const STABLE_LINUX = {
+  appimage: "MercHosting-linux-x86_64.AppImage",
+  deb: "MercHosting-linux-amd64.deb",
+  /** Solo terminal (merc + merc-supervisord) para un servidor casero sin escritorio. */
+  headless: "MercHosting-servidor-casero-linux-x86_64.tar.gz",
+};
+
+/** Añade Linux al latest.json que ya publicó Windows, sin tocar las demás plataformas. */
+export function mergeLinuxPlatform(latest, { version, signature, url }) {
+  if (!latest || typeof latest !== "object" || !latest.platforms) throw new Error("latest.json no tiene «platforms»");
+  if (latest.version !== version)
+    throw new Error(`latest.json es de la versión ${latest.version}, no de ${version}: publica primero la de Windows`);
+  return { ...latest, platforms: { ...latest.platforms, "linux-x86_64": { signature: signature.trim(), url } } };
+}
+
 export function downloadUrl(repo, version, file) {
   return `https://github.com/${repo}/releases/download/v${version}/${encodeURIComponent(file)}`;
 }

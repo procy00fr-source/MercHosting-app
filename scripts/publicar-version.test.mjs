@@ -10,9 +10,12 @@ import {
   downloadUrl,
   isNewer,
   latestJson,
+  mergeLinuxPlatform,
   quoteArg,
   releaseTauriConfig,
+  releaseTauriConfigLinux,
   sha256Line,
+  STABLE_LINUX,
 } from "./publicar-version.mjs";
 
 test("versiones", () => {
@@ -75,4 +78,33 @@ test("argumentos con espacios llegan enteros (el título «MercHosting 0.2.0»)"
   assert.equal(quoteArg("MercHosting 0.2.0"), '"MercHosting 0.2.0"');
   assert.equal(quoteArg("C:\\Users\\Ana María\\x.json"), '"C:\\Users\\Ana María\\x.json"');
   assert.equal(quoteArg("--features"), "--features");
+});
+
+test("Linux: .deb y AppImage, y latest.json con las dos plataformas", () => {
+  const r = { releases_repo: "amerc/MercHosting-releases", updater_pubkey: "QUJD" };
+  const c = releaseTauriConfigLinux(r);
+  assert.deepEqual(c.bundle.targets, ["deb", "appimage"]);
+  assert.equal(c.bundle.createUpdaterArtifacts, true);
+  assert.deepEqual(c.bundle.externalBin, ["binaries/merc-supervisord", "binaries/merc"]);
+  assert.match(STABLE_LINUX.headless, /^MercHosting-servidor-casero-linux-x86_64\.tar\.gz$/);
+  assert.equal(c.plugins.updater.pubkey, "QUJD");
+  assert.equal(c.plugins.updater.windows, undefined);
+  assert.deepEqual(c.plugins.updater.endpoints, releaseTauriConfig(r).plugins.updater.endpoints, "mismo latest.json");
+  const win = latestJson({ version: "1.0.0", notes: "- x", pubDate: "2026-11-01T00:00:00.000Z", url: "https://w", signature: "d2lu" });
+  const both = mergeLinuxPlatform(win, { version: "1.0.0", signature: "bGlu\n", url: "https://l" });
+  assert.deepEqual(both.platforms["windows-x86_64"], { signature: "d2lu", url: "https://w" });
+  assert.deepEqual(both.platforms["linux-x86_64"], { signature: "bGlu", url: "https://l" });
+  assert.equal(win.platforms["linux-x86_64"], undefined, "no modifica el original");
+  assert.throws(() => mergeLinuxPlatform(win, { version: "1.0.1", signature: "a", url: "b" }), /publica primero/);
+  assert.ok(STABLE_LINUX.appimage.endsWith(".AppImage") && STABLE_LINUX.deb.endsWith(".deb"));
+});
+
+test("la configuración de Linux la acepta el esquema de Tauri", () => {
+  const schema = JSON.parse(readFileSync(new URL("../app/node_modules/@tauri-apps/cli/config.schema.json", import.meta.url), "utf8"));
+  const bundle = schema.definitions.BundleConfig.properties;
+  for (const k of Object.keys(releaseTauriConfigLinux({ releases_repo: "a/b", updater_pubkey: "QQ==" }).bundle)) assert.ok(bundle[k], k);
+  assert.ok(schema.definitions.LinuxConfig.properties.deb);
+  assert.ok(schema.definitions.DebConfig.properties.section);
+  const types = JSON.stringify(schema.definitions.BundleType);
+  for (const t of ["deb", "appimage"]) assert.ok(types.includes(`"${t}"`), t);
 });

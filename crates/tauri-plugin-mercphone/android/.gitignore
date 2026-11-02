@@ -1,0 +1,4 @@
+/build
+/.tauri
+# Lo pone el workflow de Android (agente de Playit compilado y comprobado).
+/src/main/jniLibs/

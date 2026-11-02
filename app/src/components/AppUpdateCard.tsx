@@ -8,6 +8,7 @@ import { errorMessage } from "../api/client";
 import type { AppUpdateCheck } from "../api/types";
 import { hasProcess } from "../format";
 import { Dialog } from "./Dialog";
+import { RELEASES_URL } from "../about/links";
 
 export function AppUpdateCard({ api, sup, initial }: { api: MercApi; sup: Supervisor; initial?: AppUpdateCheck | null }) {
   const [check, setCheck] = useState<AppUpdateCheck | null>(initial ?? null);
@@ -88,9 +89,21 @@ export function AppUpdateCard({ api, sup, initial }: { api: MercApi; sup: Superv
             <strong>MercHosting {check.version}</strong> está disponible.
           </p>
           {check.notes && <pre className="app-update-notes">{check.notes}</pre>}
-          <button type="button" className="btn btn-go" disabled={!!busy} onClick={begin}>
-            Instalar la versión {check.version}
-          </button>
+          {check.self_install === false ? (
+            <>
+              <p className="field-help">
+                Instalaste MercHosting con el paquete .deb, que no se actualiza solo: descarga el .deb nuevo de la página de
+                releases e instálalo encima. Tus servidores y ajustes se conservan.
+              </p>
+              <button type="button" className="btn btn-go" onClick={() => api.openUrl(RELEASES_URL)}>
+                Abrir la página de releases
+              </button>
+            </>
+          ) : (
+            <button type="button" className="btn btn-go" disabled={!!busy} onClick={begin}>
+              Instalar la versión {check.version}
+            </button>
+          )}
         </div>
       )}
       {(!check || check.enabled) && (

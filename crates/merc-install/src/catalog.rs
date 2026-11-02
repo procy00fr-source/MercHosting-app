@@ -24,6 +24,8 @@ pub enum Flavor {
     NeoForge,
     /// Híbrido de mods (NeoForge, Forge o Fabric) + plugins de Bukkit (Arclight, GPL-3.0).
     Arclight,
+    /// Bedrock Dedicated Server oficial de Mojang (ejecutable nativo, sin Java).
+    Bedrock,
 }
 
 impl Flavor {
@@ -38,7 +40,13 @@ impl Flavor {
             Flavor::Forge => ServerKind::Forge,
             Flavor::NeoForge => ServerKind::NeoForge,
             Flavor::Arclight => ServerKind::Arclight,
+            Flavor::Bedrock => ServerKind::Bedrock,
         }
+    }
+
+    /// No usa Java (Bedrock Dedicated Server).
+    pub fn is_native(self) -> bool {
+        self == Flavor::Bedrock
     }
 }
 
@@ -416,12 +424,33 @@ pub fn purpur_resolved(base: &str, mc: &str, build: &str, detail: &Value) -> Res
 // ---------- Forge ----------
 
 /// Forge moderno (instalador con `--installServer` y `run.bat`) existe desde Minecraft 1.17.
+/// Además se ofrecen las versiones antiguas de [`forge_is_legacy`].
 fn forge_supported(mc: &str) -> bool {
+    forge_is_legacy(mc)
+        || match mc.split('.').collect::<Vec<_>>().as_slice() {
+            ["1", minor, ..] => minor.parse::<u32>().is_ok_and(|m| m >= 17),
+            [year, ..] => year.parse::<u32>().is_ok_and(|y| y >= 26),
+            _ => false,
+        }
+}
+
+/// Forge antiguo que MercHosting ofrece crear: 1.12.2 y de 1.13 a 1.16.5. Su instalador
+/// oficial también acepta `--installServer`, pero deja un JAR ejecutable en la carpeta
+/// (`forge-<mc>-<build>.jar` o `…-universal.jar`) y necesita Java 8. Las versiones anteriores
+/// a 1.12.2 no se ofrecen: sus instaladores dependen de direcciones de descarga antiguas que
+/// ya no responden de forma fiable.
+pub fn forge_is_legacy(mc: &str) -> bool {
     match mc.split('.').collect::<Vec<_>>().as_slice() {
-        ["1", minor, ..] => minor.parse::<u32>().is_ok_and(|m| m >= 17),
-        [year, ..] => year.parse::<u32>().is_ok_and(|y| y >= 26),
+        ["1", "12", "2"] => true,
+        ["1", minor] | ["1", minor, _] => minor.parse::<u32>().is_ok_and(|m| (13..=16).contains(&m)),
         _ => false,
     }
+}
+
+/// Compilaciones de Forge 1.12.2 que se ofrecen: solo la rama final 14.23.5.x (la que se
+/// usa hoy y cuya instalación de servidor sigue funcionando).
+fn forge_build_offered(mc: &str, build: &str) -> bool {
+    mc != "1.12.2" || build.starts_with("14.23.5.")
 }
 
 /// Versiones de Minecraft con Forge (de `promotions_slim.json`), la más nueva primero.
@@ -513,7 +542,11 @@ pub fn spigot_resolved(buildtools_url: &str, mc: &str) -> Resolved {
         needs_jdk: true,
         notes: vec![
             "SpigotMC no publica servidores ya hechos: se compilan en tu PC con su herramienta oficial BuildTools. Tarda entre 5 y 20 minutos y necesita Internet.".into(),
-            "Necesita un JDK (Java con compilador). En Windows, BuildTools descarga Git portátil si no lo tienes.".into(),
+            if cfg!(windows) {
+                "Necesita un JDK (Java con compilador). En Windows, BuildTools descarga Git portátil si no lo tienes.".into()
+            } else {
+                "Necesita un JDK (Java con compilador) y Git instalado en el sistema (en Linux, BuildTools no lo descarga).".into()
+            },
             "BuildTools se descarga por HTTPS desde hub.spigotmc.org (no publica huella).".into(),
             "Paper y Purpur aceptan los mismos plugins que Spigot y suelen ir más fluidos.".into(),
         ],
@@ -640,7 +673,87 @@ pub fn arclight_resolved(a: &ArclightAsset) -> Resolved {
     }
 }
 
+// ---------- Bedrock Dedicated Server (Mojang) ----------
+
+/// Tipo de descarga en la API de enlaces de minecraft.net para este sistema.
+pub fn bedrock_download_type() -> &'static str {
+    if cfg!(windows) {
+        "serverBedrockWindows"
+    } else {
+        "serverBedrockLinux"
+    }
+}
+
+/// Solo se aceptan descargas de los dominios de Mojang/Microsoft que usa la página oficial.
+fn bedrock_url_ok(url: &str) -> bool {
+    let Some(rest) = url.strip_prefix("https://") else {
+        return url.starts_with("http://127.0.0.1") || url.starts_with("http://localhost");
+    };
+    let host = rest.split(['/', '?', '#']).next().unwrap_or("").to_ascii_lowercase();
+    host == "www.minecraft.net" || host == "minecraft.net" || host == "minecraft.azureedge.net"
+}
+
+/// Lee la respuesta de `api/v1.0/download/links` (`.result.links[]` con `downloadType` y
+/// `downloadUrl`) y devuelve `(url, versión)` del servidor para `download_type`.
+pub fn parse_bedrock_links(v: &Value, download_type: &str) -> Result<(String, String), InstallError> {
+    let links = v
+        .pointer("/result/links")
+        .and_then(|l| l.as_array())
+        .ok_or_else(|| bad("minecraft.net (enlaces de Bedrock)"))?;
+    let url = links
+        .iter()
+        .find(|l| l["downloadType"].as_str() == Some(download_type))
+        .and_then(|l| l["downloadUrl"].as_str())
+        .ok_or_else(|| {
+            InstallError::NotAvailable("Mojang no ofrece ahora el servidor de Bedrock para este sistema".into())
+        })?;
+    if !bedrock_url_ok(url) {
+        return Err(InstallError::UrlNotAllowed(url.to_string()));
+    }
+    let re = regex::Regex::new(r"bedrock-server-([0-9]+(?:\.[0-9]+){1,4})\.zip$").expect("regex");
+    let version = re
+        .captures(url.split(['?', '#']).next().unwrap_or(url))
+        .map(|c| c[1].to_string())
+        .ok_or_else(|| bad("minecraft.net (nombre del archivo de Bedrock)"))?;
+    Ok((url.to_string(), version))
+}
+
+pub fn bedrock_resolved(url: &str, version: &str) -> Resolved {
+    Resolved {
+        flavor: Flavor::Bedrock,
+        mc_version: version.to_string(),
+        loader_version: None,
+        java_major: 0,
+        experimental: false,
+        artifact: Artifact {
+            url: url.to_string(),
+            mirrors: vec![],
+            file_name: format!("bedrock-server-{version}.zip"),
+            checksum: Checksum::None,
+            size: None,
+        },
+        installer_args: None,
+        installer_in_cache: false,
+        needs_jdk: false,
+        notes: vec![
+            "Mojang no publica la huella del servidor de Bedrock: se descarga por HTTPS desde minecraft.net y MercHosting anota su SHA-256 en la carpeta.".into(),
+            "Mojang solo ofrece la versión más reciente.".into(),
+        ],
+    }
+}
+
 // ---------- API pública ----------
+
+/// Nombre válido del archivo que se descarga: un .jar, o el .zip oficial para Bedrock.
+pub fn valid_download_name(flavor: Flavor, name: &str) -> bool {
+    if flavor == Flavor::Bedrock {
+        return name.len() <= 128
+            && name.to_ascii_lowercase().ends_with(".zip")
+            && !name.starts_with('.')
+            && name.bytes().all(|b| b.is_ascii_alphanumeric() || b"._-+".contains(&b));
+    }
+    valid_jar_name(name)
+}
 
 pub fn valid_jar_name(name: &str) -> bool {
     name.len() <= 128
@@ -664,6 +777,14 @@ pub fn list_versions(http: &Http, src: &Sources, flavor: Flavor) -> Result<Vec<C
             &http.get_text(&format!("{}/", src.spigot_versions))?,
         ))),
         Flavor::Arclight => Ok(entries(arclight_versions(&http.get_json(&src.arclight_releases)?))),
+        Flavor::Bedrock => {
+            let (_, v) = parse_bedrock_links(&http.get_json(&src.bedrock_links)?, bedrock_download_type())?;
+            Ok(vec![CatalogEntry {
+                mc_version: v,
+                java_major: 0,
+                latest: true,
+            }])
+        }
         Flavor::NeoForge => {
             let xml = http.get_text(&format!(
                 "{}/net/neoforged/neoforge/maven-metadata.xml",
@@ -782,7 +903,7 @@ pub fn forge_for_mc(all: &[String], promos: &Value, mc: &str) -> Vec<LoaderOptio
         .iter()
         .filter_map(|v| v.strip_prefix(&prefix))
         // Las de versiones antiguas con otro sufijo (`-1.7.10`) no son de este Minecraft.
-        .filter(|b| !b.is_empty() && !b.contains('-'))
+        .filter(|b| !b.is_empty() && !b.contains('-') && forge_build_offered(mc, b))
         .map(str::to_string)
         .collect();
     builds.sort_by(|a, b| version_cmp(b, a));
@@ -974,10 +1095,20 @@ pub fn resolve_pinned(
                 "{}/net/minecraftforge/forge/{full}/forge-{full}-installer.jar",
                 src.forge_maven
             );
+            if !forge_build_offered(mc, &build) {
+                return Err(InstallError::NotAvailable(format!(
+                    "Forge {build} para Minecraft {mc} es una compilación antigua que MercHosting no ofrece; usa una 14.23.5.x"
+                )));
+            }
             let mut notes = vec![
                 "El instalador oficial de Forge descargará librerías y el servidor de Mojang (necesita Internet)."
                     .to_string(),
             ];
+            if forge_is_legacy(mc) {
+                notes.push(format!(
+                    "Forge {mc} es una versión antigua: funciona solo con Java 8 y con mods hechos para {mc}."
+                ));
+            }
             if !recommended {
                 notes.push(format!(
                     "Forge todavía no marca una versión recomendada para {mc}; se usa la más reciente ({build})."
@@ -1061,8 +1192,17 @@ pub fn resolve_pinned(
                 .ok_or_else(|| InstallError::NotAvailable(format!("Arclight no tiene versión para Minecraft {mc}")))?;
             arclight_resolved(&asset)
         }
+        Flavor::Bedrock => {
+            let (url, v) = parse_bedrock_links(&http.get_json(&src.bedrock_links)?, bedrock_download_type())?;
+            if v != mc {
+                return Err(InstallError::NotAvailable(format!(
+                    "Mojang solo ofrece la versión más reciente de Bedrock ({v}); vuelve a elegirla."
+                )));
+            }
+            bedrock_resolved(&url, &v)
+        }
     };
-    if !valid_jar_name(&resolved.artifact.file_name) {
+    if !valid_download_name(resolved.flavor, &resolved.artifact.file_name) {
         return Err(InstallError::BadResponse("nombre de archivo no válido".into()));
     }
     Ok(resolved)
@@ -1071,6 +1211,35 @@ pub fn resolve_pinned(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn bedrock_links_parse() {
+        let v = serde_json::json!({"result": {"links": [
+            {"downloadType": "serverBedrockWindows", "downloadUrl": "https://www.minecraft.net/bedrockdedicatedserver/bin-win/bedrock-server-1.21.124.2.zip"},
+            {"downloadType": "serverBedrockLinux", "downloadUrl": "https://www.minecraft.net/bedrockdedicatedserver/bin-linux/bedrock-server-1.21.124.2.zip"},
+            {"downloadType": "serverBedrockPreviewWindows", "downloadUrl": "https://www.minecraft.net/bedrockdedicatedserver/bin-win-preview/bedrock-server-1.26.0.20.zip"}
+        ]}});
+        let (url, ver) = parse_bedrock_links(&v, "serverBedrockWindows").unwrap();
+        assert!(url.ends_with("bin-win/bedrock-server-1.21.124.2.zip"));
+        assert_eq!(ver, "1.21.124.2");
+        assert_eq!(parse_bedrock_links(&v, "serverBedrockLinux").unwrap().1, "1.21.124.2");
+        assert!(matches!(
+            parse_bedrock_links(&v, "otro"),
+            Err(InstallError::NotAvailable(_))
+        ));
+        let evil = serde_json::json!({"result": {"links": [{"downloadType": "serverBedrockWindows", "downloadUrl": "https://evil.example/bedrock-server-1.0.0.zip"}]}});
+        assert!(matches!(
+            parse_bedrock_links(&evil, "serverBedrockWindows"),
+            Err(InstallError::UrlNotAllowed(_))
+        ));
+        assert!(parse_bedrock_links(&serde_json::json!({}), "serverBedrockWindows").is_err());
+        let r = bedrock_resolved(&url, &ver);
+        assert_eq!(r.flavor, Flavor::Bedrock);
+        assert_eq!(r.artifact.file_name, "bedrock-server-1.21.124.2.zip");
+        assert!(valid_download_name(Flavor::Bedrock, &r.artifact.file_name));
+        assert!(!valid_download_name(Flavor::Paper, &r.artifact.file_name));
+        assert!(!valid_download_name(Flavor::Bedrock, "../x.zip"));
+    }
 
     #[test]
     fn loader_options_mark_stable_and_recommended() {
@@ -1248,5 +1417,45 @@ mod tests {
         let promos2 = serde_json::json!({"promos": {"1.20.2-latest": "48.0.1"}});
         let v2 = forge_for_mc(&parse_maven_versions(xml), &promos2, "1.20.2");
         assert!(v2[0].recommended);
+    }
+
+    #[test]
+    fn forge_legacy_range_and_builds() {
+        for (mc, legacy) in [
+            ("1.12.2", true),
+            ("1.13.2", true),
+            ("1.16.5", true),
+            ("1.16", true),
+            ("1.12.1", false),
+            ("1.12", false),
+            ("1.11.2", false),
+            ("1.7.10", false),
+            ("1.17.1", false),
+            ("1.20.1", false),
+        ] {
+            assert_eq!(forge_is_legacy(mc), legacy, "{mc}");
+        }
+        let promos = serde_json::json!({"promos": {
+            "1.7.10-recommended": "10.13.4.1614",
+            "1.12.2-recommended": "14.23.5.2859",
+            "1.12.2-latest": "14.23.5.2860",
+            "1.16.5-recommended": "36.2.34",
+            "1.17.1-recommended": "37.1.1",
+            "1.20.1-recommended": "47.4.0"
+        }});
+        assert_eq!(forge_versions(&promos), ["1.20.1", "1.17.1", "1.16.5", "1.12.2"]);
+        // En 1.12.2 solo la rama final 14.23.5.x.
+        let xml = "<metadata><versioning><versions>\
+            <version>1.12.2-14.21.1.2387</version>\
+            <version>1.12.2-14.23.4.2705</version>\
+            <version>1.12.2-14.23.5.2847</version>\
+            <version>1.12.2-14.23.5.2860</version>\
+            </versions></versioning></metadata>";
+        let v = forge_for_mc(&parse_maven_versions(xml), &promos, "1.12.2");
+        let names: Vec<&str> = v.iter().map(|o| o.version.as_str()).collect();
+        assert_eq!(names, ["14.23.5.2860", "14.23.5.2847", "14.23.5.2859"]);
+        assert!(v[2].recommended);
+        assert!(forge_build_offered("1.12.2", "14.23.5.2860") && !forge_build_offered("1.12.2", "14.21.1.2387"));
+        assert!(forge_build_offered("1.16.5", "36.2.34"));
     }
 }

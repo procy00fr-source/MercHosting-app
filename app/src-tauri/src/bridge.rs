@@ -17,22 +17,7 @@ pub static UPDATING: AtomicBool = AtomicBool::new(false);
 
 const CLIENT_NAME: &str = concat!("merchosting-app ", env!("CARGO_PKG_VERSION"));
 
-/// Error que recibe la interfaz: `code` coincide con `ErrorCode` del protocolo, o `unavailable`
-/// si no se pudo hablar con el supervisor.
-#[derive(Debug, Serialize, PartialEq, Eq)]
-pub struct UiError {
-    pub code: String,
-    pub message: String,
-}
-
-impl UiError {
-    pub(crate) fn new(code: &str, message: impl Into<String>) -> Self {
-        Self {
-            code: code.into(),
-            message: message.into(),
-        }
-    }
-}
+pub use crate::error::UiError;
 
 pub fn ui_error_from_client(e: ClientError) -> UiError {
     match e {

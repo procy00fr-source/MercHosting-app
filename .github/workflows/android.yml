@@ -1,0 +1,145 @@
+# Compila «MercHosting para celular» (Android) como un APK firmado. Se lanza a mano:
+# Actions → «Android» → «Run workflow» → escribe la versión (p. ej. 1.0.0).
+# Fase 1: el celular administra servidores de tus PCs por Compañeros.
+# Fase 2: además puede correr un servidor Java dentro del propio celular (Android arm64), con el
+# agente de Playit compilado aquí desde su código oficial (etiqueta y commit comprobados).
+# Pasos, secretos necesarios, riesgos e instalación en el celular: docs/MOVIL.md.
+name: Android
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Versión del APK (por ejemplo 1.0.0)"
+        required: true
+      subir:
+        description: "Subir el APK a la release vX.Y.Z de MercHosting-releases (si no, queda solo como artefacto)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Comprobar la versión
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          # Por variable de entorno y con formato estricto para que el texto no pueda inyectar órdenes.
+          echo "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$' || { echo "La versión tiene que ser X.Y.Z"; exit 1; }
+
+      # Requisitos de Tauri 2 para Android (https://v2.tauri.app/start/prerequisites/#android).
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      # ubuntu-latest ya trae el SDK y el NDK de Android (ANDROID_HOME, ANDROID_NDK_LATEST_HOME).
+      - name: NDK de Android
+        run: |
+          test -n "$ANDROID_NDK_LATEST_HOME" || { echo "El runner no trae el NDK de Android"; exit 1; }
+          echo "NDK_HOME=$ANDROID_NDK_LATEST_HOME" >> "$GITHUB_ENV"
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - name: Dependencias de la interfaz
+        working-directory: app
+        run: npm ci
+
+      - name: Pruebas
+        run: |
+          cargo test -p merc-remote -p merc-ipc -p merc-phone
+          node --test scripts/android-playit.test.mjs
+          cd app && npx vitest run
+
+      - name: Proyecto de Android
+        working-directory: app
+        run: |
+          npx tauri android init --ci
+          npx tauri icon ../assets/logo/merchosting-icono-1024.png
+
+      # Agente oficial de Playit (BSD-2-Clause) compilado para Android desde la etiqueta v1.2.0.
+      # No se usa el binario «playit-linux-aarch64» publicado: está enlazado con musl y en Android
+      # no encontraría el DNS (/etc/resolv.conf no existe). Si esta compilación falla, el APK sale
+      # SIN Playit (la app lo dice) y el workflow deja un aviso.
+      - name: Agente de Playit para Android
+        id: playit
+        continue-on-error: true
+        env:
+          PLAYIT_TAG: v1.2.0
+          PLAYIT_COMMIT: 7acf13568a99707dda73028234fdb376e45b15da
+        run: |
+          src="$RUNNER_TEMP/playit-agent"
+          git clone --depth 1 --branch "$PLAYIT_TAG" https://github.com/playit-cloud/playit-agent.git "$src"
+          got=$(git -C "$src" rev-parse HEAD)
+          if [ "$got" != "$PLAYIT_COMMIT" ]; then echo "La etiqueta $PLAYIT_TAG apunta a $got, no a $PLAYIT_COMMIT"; exit 1; fi
+          tool="$NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin"
+          export CC_aarch64_linux_android="$tool/aarch64-linux-android24-clang"
+          export AR_aarch64_linux_android="$tool/llvm-ar"
+          export CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER="$tool/aarch64-linux-android24-clang"
+          (cd "$src" && cargo build --release --locked -p playitd --target aarch64-linux-android)
+          node scripts/android-playit.mjs "$src/target/aarch64-linux-android/release/playitd" app/src-tauri/gen/android
+          sha256sum "$src/target/aarch64-linux-android/release/playitd"
+
+      - name: Aviso si el APK sale sin Playit
+        if: ${{ steps.playit.outcome != 'success' }}
+        run: echo "::warning::No se pudo compilar el agente de Playit para Android. El APK funciona, pero sin Playit dentro del celular."
+
+      - name: Firma
+        env:
+          ANDROID_KEY_BASE64: ${{ secrets.ANDROID_KEY_BASE64 }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          if [ -z "$ANDROID_KEY_BASE64" ]; then echo "Falta el secreto ANDROID_KEY_BASE64 (mira docs/MOVIL.md)"; exit 1; fi
+          echo "$ANDROID_KEY_BASE64" | base64 -d > "$RUNNER_TEMP/keystore.jks"
+          ANDROID_KEYSTORE_PATH="$RUNNER_TEMP/keystore.jks" node scripts/android-firma.mjs app/src-tauri/gen/android
+
+      - name: Compilar el APK
+        working-directory: app
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          printf '{"version":"%s"}' "$VERSION" > "$RUNNER_TEMP/version.json"
+          npx tauri android build --apk --target aarch64 --config "$RUNNER_TEMP/version.json"
+          apk=$(find src-tauri/gen/android/app/build/outputs/apk -name '*release*.apk' ! -name '*unsigned*' | head -n 1)
+          if [ -z "$apk" ]; then
+            echo "No se encontró un APK firmado. APKs generados:"; find src-tauri/gen/android/app/build/outputs -name '*.apk'; exit 1
+          fi
+          mkdir -p "$GITHUB_WORKSPACE/target/android"
+          cp "$apk" "$GITHUB_WORKSPACE/target/android/MercHosting-movil-$VERSION-arm64.apk"
+          cd "$GITHUB_WORKSPACE/target/android" && sha256sum *.apk > SHA256SUMS.txt && cat SHA256SUMS.txt
+
+      - name: Guardar el APK como artefacto
+        uses: actions/upload-artifact@v4
+        with:
+          name: merchosting-android
+          path: target/android/
+          if-no-files-found: error
+
+      - name: Subir a la release
+        if: ${{ inputs.subir }}
+        env:
+          GH_TOKEN: ${{ secrets.RELEASES_TOKEN }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          if [ -z "$GH_TOKEN" ]; then echo "Falta el secreto RELEASES_TOKEN (mira docs/MOVIL.md)"; exit 1; fi
+          repo=$(node -p "require('./release.json').releases_repo")
+          gh release upload "v$VERSION" target/android/*.apk --repo "$repo" --clobber
+
+      - name: Borrar la clave del runner
+        if: always()
+        run: rm -f "$RUNNER_TEMP/keystore.jks" app/src-tauri/gen/android/keystore.properties

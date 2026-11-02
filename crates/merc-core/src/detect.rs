@@ -23,7 +23,28 @@ pub enum ServerKind {
     Mohist,
     /// Híbrido de mods (NeoForge/Forge/Fabric) + plugins de Bukkit (Arclight).
     Arclight,
+    /// Bedrock Dedicated Server oficial de Mojang (ejecutable nativo, sin Java).
+    Bedrock,
     Unknown,
+}
+
+impl ServerKind {
+    /// Servidor de Minecraft Bedrock: ejecutable nativo, puerto UDP, addons en vez de mods.
+    pub fn is_bedrock(self) -> bool {
+        self == ServerKind::Bedrock
+    }
+}
+
+/// Archivo donde MercHosting anota la versión de Bedrock que descargó (BDS no la guarda en disco).
+pub const BEDROCK_VERSION_FILE: &str = "merchosting-bedrock-version.txt";
+
+/// Nombre del ejecutable de Bedrock Dedicated Server en esta plataforma.
+pub fn bedrock_exe_name() -> &'static str {
+    if cfg!(windows) {
+        "bedrock_server.exe"
+    } else {
+        "bedrock_server"
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -212,6 +233,54 @@ fn detect_modern_forge_like(root: &Path, kind: ServerKind, lib: &str, out: &mut 
     true
 }
 
+/// ¿Hay archivo de argumentos de Forge/NeoForge moderno (por run.bat/run.sh o en libraries)?
+fn modern_args_present(root: &Path, lib: &str) -> bool {
+    args_from_run_script(root).is_some_and(|(rel, _)| rel.starts_with(lib))
+        || list_dirs(&root.join(lib))
+            .iter()
+            .any(|v| root.join(lib).join(v).join(args_file_name()).is_file())
+}
+
+/// JAR ejecutable que deja el instalador de Forge antiguo (1.12.2 – 1.16.5) en la carpeta:
+/// `forge-1.12.2-14.23.5.2860.jar`, `forge-1.12.2-14.23.5.2847-universal.jar` o
+/// `forge-1.16.5-36.2.34.jar`. Devuelve `(archivo, mc, compilación)`; si hay varios, el más nuevo.
+pub fn legacy_forge_jar(root: &Path) -> Option<(String, String, String)> {
+    let re = Regex::new(r"^forge-(1\.[0-9]+(?:\.[0-9]+)?)-([0-9][0-9.]*[0-9])(?:-universal)?\.jar$").unwrap();
+    let mut found: Vec<(String, String, String)> = list_files(root)
+        .into_iter()
+        .filter_map(|f| {
+            let lower = f.to_ascii_lowercase();
+            let c = re.captures(&lower)?;
+            let (mc, build) = (c[1].to_string(), c[2].to_string());
+            looks_like_mc(&mc).then(|| (f.clone(), mc, build))
+        })
+        .collect();
+    found.sort_by(|a, b| version_cmp(&a.2, &b.2));
+    found.pop()
+}
+
+/// Forge antiguo: se arranca con `java -jar forge-<mc>-<build>.jar nogui` (sin archivo de
+/// argumentos). Solo si no hay un Forge moderno instalado en la misma carpeta.
+fn detect_legacy_forge(root: &Path, out: &mut DetectedServer) -> bool {
+    if modern_args_present(root, "libraries/net/minecraftforge/forge") {
+        return false;
+    }
+    let Some((jar, mc, build)) = legacy_forge_jar(root) else {
+        return false;
+    };
+    out.kind = ServerKind::Forge;
+    out.mc_version = Some(mc);
+    out.loader_version = Some(build);
+    out.launch = Some(LaunchTarget::Jar {
+        jar: PathBuf::from(&jar),
+    });
+    out.confidence = Confidence::Inferred;
+    out.evidence.push(format!(
+        "Archivo {jar} encontrado (Forge antiguo, se arranca con java -jar)"
+    ));
+    true
+}
+
 /// Analiza una carpeta. No escribe nada.
 pub fn detect_server(root: &Path) -> DetectedServer {
     let mut out = DetectedServer {
@@ -223,6 +292,30 @@ pub fn detect_server(root: &Path) -> DetectedServer {
         evidence: vec![],
         warnings: vec![],
     };
+
+    // Bedrock Dedicated Server: su ejecutable nativo junto a server.properties.
+    let exe = bedrock_exe_name();
+    if root.join(exe).is_file() {
+        out.kind = ServerKind::Bedrock;
+        out.launch = Some(LaunchTarget::Native {
+            exe: PathBuf::from(exe),
+        });
+        out.confidence = Confidence::Inferred;
+        out.evidence
+            .push(format!("Archivo {exe} encontrado (Bedrock Dedicated Server)"));
+        if let Ok(v) = std::fs::read_to_string(root.join(BEDROCK_VERSION_FILE)) {
+            let v = v.trim();
+            if !v.is_empty() && v.len() < 40 && v.bytes().all(|b| b.is_ascii_digit() || b == b'.') {
+                out.mc_version = Some(v.to_string());
+                out.evidence
+                    .push(format!("Versión {v} anotada por MercHosting al instalarlo"));
+            }
+        }
+        if !root.join("server.properties").is_file() {
+            out.warnings.push("Falta server.properties".into());
+        }
+        return out;
+    }
 
     // Arclight y Mohist descargan librerías del cargador en su primer arranque: su JAR manda
     // sobre esas carpetas. arclight-neoforge-1.21.1-1.0.1-8ec9529.jar
@@ -263,6 +356,9 @@ pub fn detect_server(root: &Path) -> DetectedServer {
     }
 
     if detect_modern_forge_like(root, ServerKind::NeoForge, "libraries/net/neoforged/neoforge", &mut out) {
+        return out;
+    }
+    if detect_legacy_forge(root, &mut out) {
         return out;
     }
     if detect_modern_forge_like(root, ServerKind::Forge, "libraries/net/minecraftforge/forge", &mut out) {
@@ -433,6 +529,57 @@ mod tests {
     }
 
     #[test]
+    fn legacy_forge_jar_is_launched_directly() {
+        let d = tempfile::tempdir().unwrap();
+        touch(d.path(), "forge-1.12.2-14.23.5.2860-installer.jar.log", "");
+        touch(d.path(), "minecraft_server.1.12.2.jar", "");
+        touch(d.path(), "forge-1.12.2-14.23.5.2847-universal.jar", "");
+        touch(d.path(), "forge-1.12.2-14.23.5.2860.jar", "");
+        touch(
+            d.path(),
+            "libraries/net/minecraft/launchwrapper/1.12/launchwrapper-1.12.jar",
+            "",
+        );
+        let r = detect_server(d.path());
+        assert_eq!(r.kind, ServerKind::Forge);
+        assert_eq!(r.mc_version.as_deref(), Some("1.12.2"));
+        assert_eq!(r.loader_version.as_deref(), Some("14.23.5.2860"));
+        assert_eq!(
+            r.launch,
+            Some(LaunchTarget::Jar {
+                jar: PathBuf::from("forge-1.12.2-14.23.5.2860.jar")
+            })
+        );
+
+        // 1.16.5: el instalador también deja libraries/…/forge/<versión> (sin archivo de
+        // argumentos): manda el JAR de la raíz.
+        let d = tempfile::tempdir().unwrap();
+        touch(d.path(), "forge-1.16.5-36.2.34.jar", "");
+        touch(
+            d.path(),
+            "libraries/net/minecraftforge/forge/1.16.5-36.2.34/forge-1.16.5-36.2.34-server.jar",
+            "",
+        );
+        let r = detect_server(d.path());
+        assert_eq!(r.kind, ServerKind::Forge);
+        assert_eq!(r.mc_version.as_deref(), Some("1.16.5"));
+        assert!(matches!(r.launch, Some(LaunchTarget::Jar { .. })));
+
+        // El instalador solo no es un servidor, y un Forge moderno no se confunde.
+        let d = tempfile::tempdir().unwrap();
+        touch(d.path(), "forge-1.12.2-14.23.5.2860-installer.jar", "");
+        assert_eq!(legacy_forge_jar(d.path()), None);
+        touch(d.path(), "forge-1.20.4-49.0.30-shim.jar", "");
+        touch(
+            d.path(),
+            &format!("libraries/net/minecraftforge/forge/1.20.4-49.0.30/{}", args_file_name()),
+            "",
+        );
+        let r = detect_server(d.path());
+        assert!(matches!(r.launch, Some(LaunchTarget::ArgsFile { .. })));
+    }
+
+    #[test]
     fn forge_without_script() {
         let d = tempfile::tempdir().unwrap();
         touch(
@@ -533,5 +680,23 @@ mod tests {
     #[test]
     fn version_ordering() {
         assert_eq!(version_cmp("21.1.10", "21.1.9"), std::cmp::Ordering::Greater);
+    }
+
+    #[test]
+    fn bedrock_native() {
+        let d = tempfile::tempdir().unwrap();
+        std::fs::write(d.path().join(bedrock_exe_name()), b"x").unwrap();
+        std::fs::write(d.path().join("server.properties"), "server-port=19132\n").unwrap();
+        std::fs::write(d.path().join(BEDROCK_VERSION_FILE), "1.21.124.2\n").unwrap();
+        let r = detect_server(d.path());
+        assert_eq!(r.kind, ServerKind::Bedrock);
+        assert_eq!(r.mc_version.as_deref(), Some("1.21.124.2"));
+        assert_eq!(
+            r.launch,
+            Some(LaunchTarget::Native {
+                exe: PathBuf::from(bedrock_exe_name())
+            })
+        );
+        assert!(r.warnings.is_empty());
     }
 }

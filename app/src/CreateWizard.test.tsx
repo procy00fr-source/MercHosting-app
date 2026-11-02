@@ -2,6 +2,7 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { App } from "./App";
+import { isLegacyForge } from "./components/CreateWizard";
 import { safeFolderName } from "./format";
 import { FakeApi } from "./test/fakeApi";
 
@@ -162,6 +163,33 @@ describe("tipos de servidor", () => {
     expect(w.getByRole("group", { name: "Mods + plugins" })).toHaveTextContent("Arclight");
   });
 
+  it("Forge 1.12.2: avisa que es antiguo y solo ofrece Java 8 (o descargarlo)", async () => {
+    const fake = new FakeApi();
+    fake.catalogs.forge = [
+      { mc_version: "1.20.1", java_major: 17, latest: true },
+      { mc_version: "1.12.2", java_major: 8, latest: false },
+    ];
+    const { user, w } = await openWizard(fake);
+    await user.click(w.getByRole("button", { name: /^Forge/ }));
+    expect(w.getByRole("button", { name: /^Forge/ })).toHaveTextContent("1.12.2 a 1.16.5");
+    await user.click(w.getByRole("button", { name: /Siguiente/ }));
+    await user.click(await w.findByRole("button", { name: /^1\.20\.1/ }));
+    await w.findByLabelText("Java que usará el servidor");
+    expect(w.queryByRole("note", { name: "Forge antiguo" })).not.toBeInTheDocument();
+    // Solo hay Java 25 y 21: para 1.12.2 no sirve ninguno y se ofrece descargar Java 8.
+    await user.click(w.getByRole("button", { name: /^1\.12\.2/ }));
+    expect(await w.findByRole("note", { name: "Forge antiguo" })).toHaveTextContent("Java 8");
+    expect(await w.findByText(/necesita Java 8 y no lo encontré/)).toBeInTheDocument();
+    expect(w.getByRole("button", { name: /Siguiente/ })).toBeDisabled();
+    fake.java = {
+      ...fake.java,
+      candidates: [...fake.java.candidates, { path: "C:\\Java8\\bin\\java.exe", major: 8, description: "", error: null, jdk: false }],
+    };
+    await user.click(w.getByRole("button", { name: "Buscar de nuevo" }));
+    const sel = (await w.findByLabelText("Java que usará el servidor")) as HTMLSelectElement;
+    expect([...sel.options].map((o) => o.value)).toEqual(["C:\\Java8\\bin\\java.exe"]);
+  });
+
   it("Spigot solo ofrece Java con compilador (JDK) y avisa si no hay", async () => {
     const { fake, user, w } = await openWizard();
     await user.click(w.getByRole("button", { name: /^Spigot/ }));
@@ -174,6 +202,13 @@ describe("tipos de servidor", () => {
     await user.click(w.getByRole("button", { name: /^26\.1\.2/ }));
     expect(await w.findByText(/necesita un JDK 25/)).toBeInTheDocument();
     expect(w.getByRole("button", { name: /Siguiente/ })).toBeDisabled();
+  });
+});
+
+describe("Forge antiguo", () => {
+  it("reconoce 1.12.2 y 1.13 – 1.16.5", () => {
+    expect(["1.12.2", "1.13.2", "1.16.5"].every(isLegacyForge)).toBe(true);
+    expect(["1.12.1", "1.7.10", "1.17.1", "1.20.1", "26.1"].some(isLegacyForge)).toBe(false);
   });
 });
 

@@ -40,6 +40,7 @@ export const KIND_LABEL: Record<ServerKind, string> = {
   quilt: "Quilt",
   mohist: "Mohist",
   arclight: "Arclight",
+  bedrock: "Bedrock",
   unknown: "Desconocido",
 };
 

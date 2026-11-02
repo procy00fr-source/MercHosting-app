@@ -7,6 +7,8 @@ use std::collections::BTreeMap;
 use std::path::Path;
 
 pub const DEFAULT_PORT: u16 = 25565;
+/// Puerto UDP por defecto de Bedrock Dedicated Server.
+pub const BEDROCK_DEFAULT_PORT: u16 = 19132;
 
 /// Archivo .properties de Java simplificado: `clave=valor`, comentarios con `#` o `!`.
 /// Conserva el orden en un BTreeMap solo para consulta; no se usa para reescribir.

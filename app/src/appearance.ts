@@ -5,13 +5,13 @@ import { ICONS, type IconVariant } from "./appIcon";
 
 export type ThemeId = "noche" | "esmeralda" | "nether" | "amatista" | "glaciar";
 export type BackgroundId = "particulas" | "sencillo" | "aurora" | "bloques";
-/** Claro u oscuro (para todos). «sistema» sigue la opción de Windows. */
+/** Claro u oscuro (para todos). «sistema» sigue la opción del sistema (Windows o el escritorio de Linux). */
 export type ModeId = "oscuro" | "claro" | "sistema";
 
 export const MODES: { id: ModeId; name: string }[] = [
   { id: "oscuro", name: "Oscuro" },
   { id: "claro", name: "Claro" },
-  { id: "sistema", name: "Igual que Windows" },
+  { id: "sistema", name: "Igual que el sistema" },
 ];
 
 export interface ThemeDef {
@@ -102,7 +102,7 @@ export function applyTheme(theme: ThemeId) {
   else document.documentElement.dataset.theme = theme;
 }
 
-/** ¿Se ve en claro? (con «sistema», según Windows) */
+/** ¿Se ve en claro? (con «sistema», según el sistema) */
 export function isLight(mode: ModeId): boolean {
   if (mode === "claro") return true;
   if (mode === "oscuro") return false;

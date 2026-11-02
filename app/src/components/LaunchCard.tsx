@@ -85,7 +85,7 @@ export function LaunchCard({ api, sup, id, launch, mcVersion, running, remote = 
         </button>
       </div>
       <p className="field-help">
-        Más memoria ayuda con muchos mods o jugadores, pero deja suficiente para Windows (y para el juego, si juegas en esta PC).
+        Más memoria ayuda con muchos mods o jugadores, pero deja suficiente para el sistema (y para el juego, si juegas en esta PC).
       </p>
       {!remote && (
         <div className="launch-row">

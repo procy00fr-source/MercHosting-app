@@ -1,6 +1,6 @@
 //! Creación de servidores nuevos desde las fuentes oficiales:
 //! Mojang (Vanilla), PaperMC Fill v3, Purpur, Fabric meta, Quilt, los maven de NeoForge y Forge
-//! y las publicaciones de Arclight en GitHub.
+//! las publicaciones de Arclight en GitHub y el Bedrock Dedicated Server de minecraft.net.
 //!
 //! Cada descarga se verifica con la huella que publica la fuente (SHA-1 de Mojang,
 //! SHA-256 de PaperMC, archivos .sha256/.sha1 del maven de NeoForge). Fabric no publica
@@ -15,7 +15,10 @@ pub use catalog::{
     list_versions, loader_versions, resolve, resolve_pinned, Artifact, CatalogEntry, Flavor, LoaderOption, Resolved,
 };
 pub use http::Http;
-pub use install::{check_target, install, validate_user_properties, InstallEvent, InstallOutcome, InstallPlan, Step};
+pub use install::{
+    check_target, install, validate_properties_for, validate_user_properties, InstallEvent, InstallOutcome,
+    InstallPlan, Step,
+};
 
 use serde::{Deserialize, Serialize};
 
@@ -34,6 +37,8 @@ pub struct Sources {
     pub arclight_releases: String,
     pub spigot_versions: String,
     pub buildtools_url: String,
+    /// API de enlaces de descarga de minecraft.net (la que usa su página de Bedrock).
+    pub bedrock_links: String,
 }
 
 impl Default for Sources {
@@ -53,6 +58,7 @@ impl Default for Sources {
             buildtools_url:
                 "https://hub.spigotmc.org/jenkins/job/BuildTools/lastSuccessfulBuild/artifact/target/BuildTools.jar"
                     .into(),
+            bedrock_links: "https://net-secondary.web.minecraft-services.net/api/v1.0/download/links".into(),
         }
     }
 }

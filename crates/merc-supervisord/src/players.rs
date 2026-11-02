@@ -15,7 +15,7 @@ impl Daemon {
         self.store_dir(id).join("jugadores.json")
     }
 
-    fn load_history(&self, id: InstanceId) -> Vec<PlayerRecord> {
+    pub(crate) fn load_history(&self, id: InstanceId) -> Vec<PlayerRecord> {
         std::fs::read_to_string(self.history_file(id))
             .ok()
             .and_then(|t| serde_json::from_str(&t).ok())
@@ -45,7 +45,11 @@ impl Daemon {
         if h.is_empty() && online.is_empty() {
             return;
         }
-        if pl::track_online(&mut h, &online, now_unix()) {
+        let mut changed = pl::track_online(&mut h, &online, now_unix());
+        if inst.kind == merc_core::detect::ServerKind::Bedrock {
+            changed |= pl::remember_xuids(&mut h, &self.sup.player_xuids(inst.id));
+        }
+        if changed {
             self.save_history(inst.id, &h);
         }
     }

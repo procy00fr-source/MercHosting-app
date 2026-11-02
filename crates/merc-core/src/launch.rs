@@ -14,6 +14,9 @@ pub enum LaunchTarget {
         args_file: PathBuf,
         user_jvm_args: Option<PathBuf>,
     },
+    /// Ejecutable nativo dentro de la carpeta del servidor, sin Java (Bedrock Dedicated Server).
+    /// La memoria y los argumentos JVM no se aplican.
+    Native { exe: PathBuf },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -62,7 +65,15 @@ fn forbidden(arg: &str) -> bool {
 }
 
 impl LaunchProfile {
+    /// No usa Java (Bedrock Dedicated Server).
+    pub fn is_native(&self) -> bool {
+        matches!(self.target, LaunchTarget::Native { .. })
+    }
+
     pub fn validate(&self) -> Result<(), LaunchError> {
+        if self.is_native() {
+            return Ok(());
+        }
         if self.max_memory_mb < MIN_MAX_MEMORY_MB {
             return Err(LaunchError::MemoryTooLow);
         }
@@ -83,6 +94,9 @@ impl LaunchProfile {
     /// último -Xmx). Los @archivos se expanden en el lugar donde aparecen.
     pub fn build_args(&self) -> Result<Vec<String>, LaunchError> {
         self.validate()?;
+        if self.is_native() {
+            return Ok(vec![]);
+        }
         let mut args = Vec::new();
         if let LaunchTarget::ArgsFile {
             user_jvm_args: Some(u), ..
@@ -107,6 +121,7 @@ impl LaunchProfile {
             LaunchTarget::ArgsFile { args_file, .. } => {
                 args.push(format!("@{}", args_file.to_string_lossy().replace('\\', "/")));
             }
+            LaunchTarget::Native { .. } => {}
         }
         args.push("nogui".into());
         Ok(args)
@@ -148,6 +163,17 @@ mod tests {
         want.extend(ENCODING_ARGS);
         want.extend(["@libraries/net/neoforged/neoforge/21.1.77/win_args.txt", "nogui"]);
         assert_eq!(p.build_args().unwrap(), want);
+    }
+
+    #[test]
+    fn native_has_no_jvm_args() {
+        let mut p = base(LaunchTarget::Native {
+            exe: "bedrock_server.exe".into(),
+        });
+        p.max_memory_mb = 0;
+        p.extra_jvm_args = vec!["-jar".into()];
+        assert!(p.is_native());
+        assert_eq!(p.build_args().unwrap(), Vec::<String>::new());
     }
 
     #[test]

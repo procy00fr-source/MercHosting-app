@@ -109,7 +109,7 @@ describe("Alertas", () => {
     expect(fake.calls).toContainEqual({ op: "mark_alerts_read", ids: [] });
     await within(dlg).findByText("Todo leído");
 
-    await user.click(within(dlg).getByRole("checkbox", { name: "Mostrar notificaciones de Windows" }));
+    await user.click(within(dlg).getByRole("checkbox", { name: "Mostrar notificaciones del sistema" }));
     await user.click(within(dlg).getByRole("checkbox", { name: "Hay una actualización del software de un servidor" }));
     expect(within(dlg).getByRole("checkbox", { name: /El túnel de Playit deja de funcionar/ })).toBeChecked();
     expect(within(dlg).getByRole("checkbox", { name: "Falla una copia de seguridad automática" })).toBeChecked();

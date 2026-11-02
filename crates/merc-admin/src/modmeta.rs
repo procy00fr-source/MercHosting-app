@@ -242,6 +242,40 @@ fn parse_plugin_yml(m: &mut ModMeta, t: &str) {
     }
 }
 
+/// `mcmod.info` de los mods de Forge antiguo (1.12.2 y anteriores): una lista JSON de mods
+/// (`[{...}]` o `{"modList": [...]}`) con `modid`, `name` y `version`. No trae el lado
+/// (cliente/servidor) ni dependencias fiables, así que solo aporta identidad.
+fn parse_mcmod_info(m: &mut ModMeta, t: &str) {
+    let Ok(v) = serde_json::from_str::<Value>(t.trim_start_matches('\u{feff}')) else {
+        return;
+    };
+    let list = match &v {
+        Value::Array(a) => a.clone(),
+        Value::Object(o) => o.get("modList").and_then(|l| l.as_array()).cloned().unwrap_or_default(),
+        _ => vec![],
+    };
+    let clean = |x: Option<&Value>| -> Option<String> {
+        let s = x?.as_str()?.trim();
+        (!s.is_empty() && !s.contains("${") && s.len() <= 128).then(|| s.to_string())
+    };
+    for (i, e) in list.iter().enumerate() {
+        let Some(id) = clean(e.get("modid")).map(|s| s.to_ascii_lowercase()) else {
+            continue;
+        };
+        m.loaders.forge = true;
+        if i == 0 || m.main_id.is_none() {
+            m.main_id.get_or_insert_with(|| id.clone());
+            if m.name.is_none() {
+                m.name = clean(e.get("name"));
+            }
+            if m.version.is_none() {
+                m.version = clean(e.get("version"));
+            }
+        }
+        m.ids.insert(id);
+    }
+}
+
 fn read_meta<R: Read + Seek>(zip: &mut zip::ZipArchive<R>, m: &mut ModMeta, depth: u8) {
     let mut nested: Vec<String> = vec![];
     if let Some(t) = read_entry(zip, "fabric.mod.json") {
@@ -255,6 +289,11 @@ fn read_meta<R: Read + Seek>(zip: &mut zip::ZipArchive<R>, m: &mut ModMeta, dept
     }
     if let Some(t) = read_entry(zip, "META-INF/mods.toml") {
         parse_mods_toml(m, &t, false);
+    }
+    if !m.loaders.forge && !m.loaders.neoforge {
+        if let Some(t) = read_entry(zip, "mcmod.info") {
+            parse_mcmod_info(m, &t);
+        }
     }
     if let Some(t) = read_entry(zip, "plugin.yml").or_else(|| read_entry(zip, "paper-plugin.yml")) {
         parse_plugin_yml(m, &t);
@@ -434,6 +473,30 @@ modId="old"
 modId="curios"
 mandatory=true
 "#;
+        // Forge 1.12.2: mcmod.info (lista o modList) da identidad, sin lado ni dependencias.
+        jar(
+            &d.path().join("mods/srp.jar"),
+            &[(
+                "mcmod.info",
+                br#"[{"modid": "srparasites", "name": "Scape and Run Parasites", "version": "1.9.21", "requiredMods": ["forge"]}]"#,
+            )],
+        );
+        let srp = read_jar(&d.path().join("mods/srp.jar")).unwrap();
+        assert!(srp.loaders.forge && !srp.client_only && srp.requires.is_empty());
+        assert_eq!(srp.main_id.as_deref(), Some("srparasites"));
+        assert_eq!(srp.name.as_deref(), Some("Scape and Run Parasites"));
+        assert_eq!(srp.version.as_deref(), Some("1.9.21"));
+        jar(
+            &d.path().join("mods/v2.jar"),
+            &[(
+                "mcmod.info",
+                b"{\"modListVersion\": 2, \"modList\": [{\"modid\": \"JEI\", \"version\": \"${version}\"}, {\"modid\": \"jei_extra\"}]}",
+            )],
+        );
+        let v2 = read_jar(&d.path().join("mods/v2.jar")).unwrap();
+        assert_eq!(v2.main_id.as_deref(), Some("jei"));
+        assert_eq!(v2.version, None);
+        assert!(v2.ids.contains("jei_extra"));
         jar(&d.path().join("mods/old.jar"), &[("META-INF/mods.toml", forge)]);
         let o = read_jar(&d.path().join("mods/old.jar")).unwrap();
         assert!(o.loaders.forge && o.requires.contains("curios"));

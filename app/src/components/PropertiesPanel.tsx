@@ -84,6 +84,67 @@ const GROUPS: { title: string; fields: Field[] }[] = [
   },
 ];
 
+/** server.properties de Bedrock Dedicated Server: otras claves (server-name, allow-list…). */
+const BEDROCK_GROUPS: { title: string; fields: Field[] }[] = [
+  {
+    title: "General",
+    fields: [
+      { key: "server-name", label: "Nombre en la lista de servidores", type: "text", max: 64 },
+      { key: "max-players", label: "Jugadores máximos", type: "int", min: 1, max: 1000 },
+      {
+        key: "gamemode",
+        label: "Modo de juego",
+        type: "choice",
+        options: [
+          ["survival", "Supervivencia"],
+          ["creative", "Creativo"],
+          ["adventure", "Aventura"],
+        ],
+      },
+      {
+        key: "difficulty",
+        label: "Dificultad",
+        type: "choice",
+        options: [
+          ["peaceful", "Pacífica"],
+          ["easy", "Fácil"],
+          ["normal", "Normal"],
+          ["hard", "Difícil"],
+        ],
+      },
+      { key: "force-gamemode", label: "Forzar el modo de juego al entrar", type: "bool" },
+      { key: "allow-cheats", label: "Permitir trucos (comandos)", help: "Necesario para que funcionen muchos comandos y addons.", type: "bool" },
+    ],
+  },
+  {
+    title: "Acceso",
+    fields: [
+      {
+        key: "online-mode",
+        label: "Comprobar cuentas de Microsoft (online-mode)",
+        help: "Recomendado. Cada jugador entra con su cuenta de Microsoft verificada.",
+        type: "bool",
+      },
+      { key: "allow-list", label: "Lista de permitidos (allow-list)", help: "Solo entran los de allowlist.json (está en Archivos).", type: "bool" },
+      { key: "server-port", label: "Puerto (UDP, IPv4)", type: "int", min: 1024, max: 65535 },
+      { key: "server-portv6", label: "Puerto (UDP, IPv6)", type: "int", min: 1024, max: 65535 },
+      { key: "player-idle-timeout", label: "Expulsar por inactividad (minutos)", help: "0 = nunca.", type: "int", min: 0, max: 10000 },
+    ],
+  },
+  {
+    title: "Mundo",
+    fields: [{ key: "level-seed", label: "Semilla", help: "Solo se usa al generar un mundo nuevo.", type: "text", max: 64 }],
+  },
+  {
+    title: "Rendimiento",
+    fields: [
+      { key: "view-distance", label: "Distancia de visión (chunks)", help: "Más alto = más memoria y CPU.", type: "int", min: 5, max: 32 },
+      { key: "tick-distance", label: "Distancia de simulación (chunks)", help: "Hasta dónde se mueven mobs y crecen cultivos.", type: "int", min: 4, max: 12 },
+    ],
+  },
+];
+const BEDROCK_KNOWN = new Set(BEDROCK_GROUPS.flatMap((g) => g.fields.map((f) => f.key)));
+
 /** Las gestiona la tarjeta «Paquete de recursos» (la huella la calcula el supervisor). */
 const PACK_KEYS = ["resource-pack", "resource-pack-sha1", "require-resource-pack"];
 // El MOTD tiene su propio editor (pestaña «MOTD e icono»), con colores y dos líneas.
@@ -105,9 +166,13 @@ interface Props {
   running: boolean;
   mcVersion?: string | null;
   openUrl?: (url: string) => void;
+  /** Servidor Bedrock: claves de Bedrock y sin paquete de recursos de Java. */
+  bedrock?: boolean;
 }
 
-export function PropertiesPanel({ sup, id, running, mcVersion = null, openUrl }: Props) {
+export function PropertiesPanel({ sup, id, running, mcVersion = null, openUrl, bedrock = false }: Props) {
+  const groups = bedrock ? BEDROCK_GROUPS : GROUPS;
+  const known = bedrock ? BEDROCK_KNOWN : KNOWN;
   const [loaded, setLoaded] = useState<{ exists: boolean; entries: PropEntry[]; modified_unix_ms: number | null } | null>(null);
   const [draft, setDraft] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
@@ -144,7 +209,7 @@ export function PropertiesPanel({ sup, id, running, mcVersion = null, openUrl }:
     });
   };
 
-  const fields = GROUPS.flatMap((g) => g.fields);
+  const fields = groups.flatMap((g) => g.fields);
   const invalid = fields.some((f) => f.key in draft && fieldError(f, draft[f.key]) !== null);
   const changes = Object.keys(draft).length;
 
@@ -196,7 +261,7 @@ export function PropertiesPanel({ sup, id, running, mcVersion = null, openUrl }:
     );
   }
 
-  const advanced = loaded.entries.filter((e) => !KNOWN.has(e.key));
+  const advanced = loaded.entries.filter((e) => !known.has(e.key));
 
   return (
     <div className="admin-panel" role="tabpanel" aria-label="Ajustes">
@@ -232,7 +297,7 @@ export function PropertiesPanel({ sup, id, running, mcVersion = null, openUrl }:
       )}
 
       <div className="props-groups">
-        {GROUPS.map((g) => {
+        {groups.map((g) => {
           const present = g.fields.filter((f) => f.key in original);
           if (present.length === 0) return null;
           return (
@@ -290,6 +355,7 @@ export function PropertiesPanel({ sup, id, running, mcVersion = null, openUrl }:
         })}
       </div>
 
+      {!bedrock && (
       <ResourcePackCard
         sup={sup}
         id={id}
@@ -305,6 +371,7 @@ export function PropertiesPanel({ sup, id, running, mcVersion = null, openUrl }:
           setDraft({});
         }}
       />
+      )}
 
       {advanced.length > 0 && (
         <section className="card props-card">

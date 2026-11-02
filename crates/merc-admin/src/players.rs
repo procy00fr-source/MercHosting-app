@@ -235,6 +235,9 @@ pub struct PlayerRecord {
     /// Nota privada del dueño (no la ve el jugador).
     #[serde(default)]
     pub note: Option<String>,
+    /// Bedrock: XUID (identificador de Xbox) que dio el servidor al entrar. Java: siempre `None`.
+    #[serde(default)]
+    pub xuid: Option<String>,
 }
 
 /// Como mucho tantos jugadores en el historial (los más antiguos sin nota se descartan).
@@ -261,6 +264,7 @@ pub fn track_online(history: &mut Vec<PlayerRecord>, online: &[String], now: i64
                     total_secs: 0,
                     online_since_unix: Some(now),
                     note: None,
+                    xuid: None,
                 });
                 changed = true;
             }
@@ -280,6 +284,20 @@ pub fn track_online(history: &mut Vec<PlayerRecord>, online: &[String], now: i64
         history.sort_by_key(|r| (r.note.is_none(), std::cmp::Reverse(r.last_seen_unix)));
         history.truncate(MAX_HISTORY);
         changed = true;
+    }
+    changed
+}
+
+/// Guarda el XUID de quienes ya lo dieron (Bedrock). Devuelve si cambió algo.
+pub fn remember_xuids(history: &mut [PlayerRecord], xuids: &[(String, String)]) -> bool {
+    let mut changed = false;
+    for (name, xuid) in xuids {
+        if let Some(r) = history.iter_mut().find(|r| r.name.eq_ignore_ascii_case(name)) {
+            if r.xuid.as_deref() != Some(xuid.as_str()) {
+                r.xuid = Some(xuid.clone());
+                changed = true;
+            }
+        }
     }
     changed
 }
@@ -416,5 +434,21 @@ mod tests {
         assert!(command_for(PlayerAction::Op, "Steve; stop", None).is_err());
         assert!(command_for(PlayerAction::Kick, "Steve", Some("a\nstop")).is_err());
         assert!(command_for(PlayerAction::Op, "nombre_demasiado_largo", None).is_err());
+    }
+
+    #[test]
+    fn xuids_are_remembered_for_known_players() {
+        let mut h = vec![];
+        track_online(&mut h, &["Steve Craft".to_string()], 100);
+        assert!(remember_xuids(&mut h, &[("steve craft".into(), "25354".into())]));
+        assert_eq!(h[0].xuid.as_deref(), Some("25354"));
+        assert!(!remember_xuids(&mut h, &[("Steve Craft".into(), "25354".into())]));
+        // Alguien que no está en el historial no se inventa.
+        assert!(!remember_xuids(&mut h, &[("Otro".into(), "1".into())]));
+        assert_eq!(h.len(), 1);
+        // Un historial guardado antes (sin xuid) se sigue leyendo.
+        let old: Vec<PlayerRecord> =
+            serde_json::from_str(r#"[{"name":"A","first_seen_unix":1,"last_seen_unix":2,"sessions":1,"total_secs":0,"online_since_unix":null}]"#).unwrap();
+        assert_eq!(old[0].xuid, None);
     }
 }

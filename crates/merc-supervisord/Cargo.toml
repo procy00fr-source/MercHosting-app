@@ -35,10 +35,12 @@ chrono = { version = "0.4", default-features = false, features = ["clock", "std"
 sysinfo.workspace = true
 
 [target.'cfg(windows)'.dependencies]
-windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_Security", "Win32_System_Registry"] }
+windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_Security", "Win32_System_Registry", "Win32_System_Power"] }
 
 [dev-dependencies]
 tempfile.workspace = true
+tar = "0.4"
+flate2 = "1"
 serde.workspace = true
 serde_json.workspace = true
 sha2 = "0.10"

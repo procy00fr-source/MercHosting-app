@@ -27,6 +27,51 @@ pub const AGENT_URL: &str =
     "https://github.com/playit-cloud/playit-agent/releases/download/v1.2.0/playitd-windows-x86_64.exe";
 pub const AGENT_SHA256: &str = "ecd1c6c236b378c3f27ae2038e6eb69726f378235f50163b0ea29fd3fca83331";
 pub const AGENT_SIZE: u64 = 5_251_584;
+
+/// Archivo del agente oficial para un sistema: dirección, huella SHA-256 y tamaño.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct AgentAsset {
+    pub url: &'static str,
+    pub sha256: &'static str,
+    pub size: u64,
+    /// Nombre con el que se guarda en la carpeta de MercHosting.
+    pub file_name: &'static str,
+}
+
+/// Agente oficial para Linux x86_64 de la MISMA publicación (v1.2.0). En esa release el binario
+/// se llama `playit-linux-amd64` y es el mismo `playitd` (mismas opciones `--secret-path`,
+/// `--socket-path`, `--log-path` y el mismo canal local). Huella y tamaño calculados del archivo
+/// descargado de la release oficial (playit-cloud/playit-agent, v1.2.0).
+pub const AGENT_URL_LINUX: &str =
+    "https://github.com/playit-cloud/playit-agent/releases/download/v1.2.0/playit-linux-amd64";
+pub const AGENT_SHA256_LINUX: &str = "602dea3288d5bad4c3addba70ecf6535b9ae085b8d4f2fc2fe9cde913bda78d0";
+pub const AGENT_SIZE_LINUX: u64 = 6_230_048;
+
+/// El agente verificado para este sistema (Windows x86_64 y Linux x86_64). En otros sistemas o
+/// arquitecturas es `None`: MercHosting dice que Playit no está disponible en vez de descargar
+/// algo sin comprobar.
+pub fn agent_asset() -> Option<AgentAsset> {
+    if cfg!(windows) {
+        Some(AgentAsset {
+            url: AGENT_URL,
+            sha256: AGENT_SHA256,
+            size: AGENT_SIZE,
+            file_name: "playitd-1.2.0.exe",
+        })
+    } else if cfg!(all(target_os = "linux", target_arch = "x86_64")) {
+        Some(AgentAsset {
+            url: AGENT_URL_LINUX,
+            sha256: AGENT_SHA256_LINUX,
+            size: AGENT_SIZE_LINUX,
+            file_name: "playitd-1.2.0",
+        })
+    } else {
+        None
+    }
+}
+
+/// Por qué Playit no está disponible en este sistema (para mostrarlo tal cual).
+pub const LINUX_NOT_VERIFIED: &str = "En este sistema MercHosting no tiene un agente de Playit verificado (solo Windows y Linux de 64 bits x86). Puedes instalar Playit por tu cuenta siguiendo la guía oficial (playit.gg/support/run-on-linux) o abrir el puerto en tu router.";
 pub const API_BASE: &str = "https://api.playit.gg";
 pub const CLAIM_BASE: &str = "https://playit.gg/claim/";
 /// Versión del canal local del agente que entiende MercHosting.
@@ -445,6 +490,25 @@ pub fn tunnel_check(agent: Option<&AgentStatus>, online_ports: &[u16]) -> Tunnel
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn agent_asset_per_system() {
+        assert!(AGENT_URL.contains(&format!("/v{AGENT_VERSION}/")));
+        assert!(AGENT_URL_LINUX.contains(&format!("/v{AGENT_VERSION}/")));
+        assert_eq!(AGENT_SHA256_LINUX.len(), 64);
+        if cfg!(windows) {
+            let a = agent_asset().unwrap();
+            assert_eq!(a.file_name, format!("playitd-{AGENT_VERSION}.exe"));
+            assert_eq!(a.sha256.len(), 64);
+        } else if cfg!(all(target_os = "linux", target_arch = "x86_64")) {
+            let a = agent_asset().unwrap();
+            assert_eq!(a.url, AGENT_URL_LINUX);
+            assert_eq!(a.file_name, format!("playitd-{AGENT_VERSION}"));
+        } else {
+            assert_eq!(agent_asset(), None);
+            assert!(LINUX_NOT_VERIFIED.contains("playit.gg/support/run-on-linux"));
+        }
+    }
 
     #[test]
     fn codes_and_urls() {

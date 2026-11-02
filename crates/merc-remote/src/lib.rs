@@ -8,6 +8,7 @@
 //!   supervisor) en cada petición.
 
 pub mod code;
+pub mod guest;
 pub mod wire;
 
 use iroh::endpoint::{presets, Connection};
@@ -338,6 +339,7 @@ mod tests {
                             name: "Survival".into(),
                             perms: vec![],
                         }],
+                        host_admin: false,
                     },
                     _ => WireResponse::Denied("no".into()),
                 }

@@ -1,5 +1,5 @@
 //! Automatización: reinicio automático tras una caída (con espera creciente y un tope para no
-//! entrar en bucle) y arrancar con Windows (el supervisor se registra en el inicio de sesión del
+//! entrar en bucle) y arrancar con el sistema (el supervisor se registra en el inicio de sesión del
 //! usuario y enciende los servidores marcados). Ambas cosas son opcionales y vienen apagadas.
 
 use super::{api, Daemon};
@@ -182,7 +182,7 @@ impl Daemon {
                     "supervisor",
                     Some(inst.id),
                     "server.autostart",
-                    "encendido al iniciar Windows",
+                    "encendido al iniciar sesión",
                 ),
                 Err(e) => self.audit("supervisor", Some(inst.id), "server.autostart.failed", &e.to_string()),
             }
@@ -191,11 +191,22 @@ impl Daemon {
 
     fn run_command(&self) -> Result<String, String> {
         let exe = std::env::current_exe().map_err(|e| e.to_string())?;
-        Ok(format!(
-            "\"{}\" --data-dir \"{}\" --al-iniciar-windows",
-            exe.display(),
-            self.data_dir.display()
-        ))
+        if cfg!(windows) {
+            Ok(format!(
+                "\"{}\" --data-dir \"{}\" --al-iniciar-windows",
+                exe.display(),
+                self.data_dir.display()
+            ))
+        } else {
+            // Línea `Exec=` de un archivo .desktop de inicio automático (XDG).
+            Ok([
+                run_key::desktop_quote(&exe.to_string_lossy()),
+                "--data-dir".into(),
+                run_key::desktop_quote(&self.data_dir.to_string_lossy()),
+                "--al-iniciar-sesion".into(),
+            ]
+            .join(" "))
+        }
     }
 
     fn automation_info(&self, id: InstanceId) -> AutomationInfo {
@@ -218,6 +229,8 @@ impl Daemon {
             autostart: s.autostart,
             startup_available: available,
             startup_enabled: enabled,
+            keep_awake: self.keep_awake_enabled(),
+            keep_awake_active: super::awake::active(),
         }
     }
 
@@ -275,9 +288,23 @@ impl Daemon {
                     None,
                     "app.startup",
                     if enabled {
-                        "arrancar con Windows: sí"
+                        "arrancar al iniciar sesión: sí"
                     } else {
-                        "arrancar con Windows: no"
+                        "arrancar al iniciar sesión: no"
+                    },
+                );
+                Ok(ResponseBody::Ok)
+            }
+            RequestBody::SetKeepAwake { enabled } => {
+                self.set_keep_awake(enabled).map_err(|e| api(ErrorCode::Internal, e))?;
+                self.audit(
+                    client,
+                    None,
+                    "app.keep_awake",
+                    if enabled {
+                        "no suspender con servidores encendidos: sí"
+                    } else {
+                        "no suspender con servidores encendidos: no"
                     },
                 );
                 Ok(ResponseBody::Ok)
@@ -420,17 +447,113 @@ mod run_key {
         }
     }
 
+    /// Argumento entre comillas para la línea `Exec=` de un .desktop (especificación de
+    /// freedesktop.org): dentro de comillas se escapan `"`, `` ` ``, `$` y `\`, y `%` se dobla;
+    /// después, el valor del archivo escapa otra vez `\`.
+    #[cfg_attr(windows, allow(dead_code))]
+    pub fn desktop_quote(arg: &str) -> String {
+        let mut out = String::from("\"");
+        for c in arg.chars() {
+            match c {
+                '"' | '`' | '$' => {
+                    out.push_str("\\\\");
+                    out.push(c);
+                }
+                '\\' => out.push_str("\\\\\\\\"),
+                '%' => out.push_str("%%"),
+                '\n' | '\r' => {}
+                c => out.push(c),
+            }
+        }
+        out.push('"');
+        out
+    }
+
+    /// Linux y otros escritorios libres: un archivo en `~/.config/autostart` (XDG Autostart),
+    /// que el escritorio ejecuta al iniciar sesión. No necesita permisos de administrador.
     #[cfg(not(windows))]
     mod imp {
-        const NO: &str = "Arrancar con Windows solo está disponible en Windows.";
-        pub fn get(_: &str) -> Result<Option<String>, String> {
-            Err(NO.into())
+        use std::path::PathBuf;
+
+        fn file(name: &str) -> Result<PathBuf, String> {
+            let base = std::env::var_os("XDG_CONFIG_HOME")
+                .map(PathBuf::from)
+                .filter(|p| p.is_absolute())
+                .or_else(|| std::env::var_os("HOME").map(|h| PathBuf::from(h).join(".config")))
+                .ok_or("No se encontró la carpeta de configuración del usuario (HOME).")?;
+            Ok(base
+                .join("autostart")
+                .join(format!("{}.desktop", name.to_ascii_lowercase())))
         }
-        pub fn set(_: &str, _: &str) -> Result<(), String> {
-            Err(NO.into())
+
+        pub fn get(name: &str) -> Result<Option<String>, String> {
+            let path = file(name)?;
+            let Ok(text) = std::fs::read_to_string(&path) else {
+                return Ok(None);
+            };
+            // Un archivo desactivado por el propio escritorio (Hidden=true) no cuenta.
+            if text.lines().any(|l| l.trim() == "Hidden=true") {
+                return Ok(None);
+            }
+            Ok(text
+                .lines()
+                .find_map(|l| l.strip_prefix("Exec="))
+                .map(|v| v.trim_end().to_string()))
         }
-        pub fn delete(_: &str) -> Result<(), String> {
-            Err(NO.into())
+
+        pub fn set(name: &str, value: &str) -> Result<(), String> {
+            let path = file(name)?;
+            if let Some(dir) = path.parent() {
+                std::fs::create_dir_all(dir).map_err(|e| e.to_string())?;
+            }
+            let text = format!(
+                "[Desktop Entry]\nType=Application\nName=MercHosting (supervisor)\nComment=Mantiene tus servidores de Minecraft al iniciar sesión\nExec={value}\nTerminal=false\nNoDisplay=true\nX-GNOME-Autostart-enabled=true\n"
+            );
+            let tmp = path.with_extension("desktop.tmp");
+            std::fs::write(&tmp, text).map_err(|e| e.to_string())?;
+            std::fs::rename(&tmp, &path).map_err(|e| e.to_string())
+        }
+
+        pub fn delete(name: &str) -> Result<(), String> {
+            let path = file(name)?;
+            match std::fs::remove_file(&path) {
+                Ok(()) => Ok(()),
+                Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(()),
+                Err(e) => Err(format!("No se pudo quitar del inicio de sesión: {e}")),
+            }
+        }
+    }
+
+    #[cfg(all(test, not(windows)))]
+    mod tests {
+        use super::*;
+
+        #[test]
+        fn desktop_quoting() {
+            assert_eq!(desktop_quote("/usr/bin/merc"), "\"/usr/bin/merc\"");
+            assert_eq!(desktop_quote("/home/a b/$x%"), "\"/home/a b/\\\\$x%%\"");
+            assert_eq!(desktop_quote("c\\d"), "\"c\\\\\\\\d\"");
+        }
+
+        #[test]
+        fn autostart_file_round_trip() {
+            let d = tempfile::tempdir().unwrap();
+            // Solo este test toca XDG_CONFIG_HOME en este binario de pruebas.
+            std::env::set_var("XDG_CONFIG_HOME", d.path());
+            assert_eq!(imp::get("MercHosting").unwrap(), None);
+            imp::set("MercHosting", "\"/opt/m\" --al-iniciar-sesion").unwrap();
+            let f = d.path().join("autostart/merchosting.desktop");
+            let text = std::fs::read_to_string(&f).unwrap();
+            assert!(text.starts_with("[Desktop Entry]\n") && text.contains("Type=Application"));
+            assert_eq!(
+                imp::get("MercHosting").unwrap().as_deref(),
+                Some("\"/opt/m\" --al-iniciar-sesion")
+            );
+            std::fs::write(&f, text.replace("NoDisplay=true", "Hidden=true")).unwrap();
+            assert_eq!(imp::get("MercHosting").unwrap(), None);
+            imp::delete("MercHosting").unwrap();
+            imp::delete("MercHosting").unwrap();
+            assert!(!f.exists());
         }
     }
 }
