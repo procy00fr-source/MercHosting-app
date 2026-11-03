@@ -2,6 +2,11 @@
 
 Cada versión nueva se describe aquí antes de publicarla (`scripts/publicar-version.ps1` toma de aquí las notas que ve la gente al actualizar).
 
+## 1.0.1
+
+- Jugadores de Bedrock en Paper, Purpur y Spigot: «Instalar Floodgate» ya funciona. Se descarga de la página oficial de GeyserMC y se comprueba con su huella (en Modrinth solo está para Fabric y NeoForge).
+- Primera versión con descargas para Linux (.deb y AppImage) y la app de Android (APK, beta).
+
 ## 1.0.0
 
 - MercHosting llega a Linux: app de escritorio en .deb y AppImage (Ubuntu y derivadas).
