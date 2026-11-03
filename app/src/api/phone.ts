@@ -132,7 +132,8 @@ export type PhoneOp =
   | { op: "content_progress" }
   | { op: "content_cancel" }
   | { op: "content_set_enabled"; id: string; file: string; enabled: boolean }
-  | { op: "content_remove"; id: string; file: string };
+  | { op: "content_remove"; id: string; file: string }
+  | { op: "thread_dump"; id: string };
 
 export interface PhoneApi {
   info(): Promise<PhoneInfo>;
@@ -165,6 +166,8 @@ export interface PhoneApi {
   contentCancel(): Promise<void>;
   contentSetEnabled(id: string, file: string, enabled: boolean): Promise<{ file: string }>;
   contentRemove(id: string, file: string): Promise<void>;
+  /** Escribe en la consola qué hace cada hilo del servidor (para diagnosticar cuelgues). */
+  threadDump(id: string): Promise<void>;
   /** Pide permiso de notificaciones (la del servidor encendido, con su botón Detener). */
   askNotifications(): Promise<boolean>;
 }
@@ -211,6 +214,7 @@ export function phoneApiFrom(send: (op: PhoneOp) => Promise<unknown>, askNotific
     contentCancel: () => c({ op: "content_cancel" }),
     contentSetEnabled: (id, file, enabled) => c({ op: "content_set_enabled", id, file, enabled }),
     contentRemove: (id, file) => c({ op: "content_remove", id, file }),
+    threadDump: (id) => c({ op: "thread_dump", id }),
     askNotifications,
   };
 }

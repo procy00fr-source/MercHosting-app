@@ -676,6 +676,17 @@ function PhoneServerView({
             </button>
           </form>
         )}
+        {on && (
+          <>
+            <button type="button" className="btn btn-sm btn-quiet" disabled={busy !== null} onClick={() => act("dump", () => phone.threadDump(server.id))}>
+              Ver qué está haciendo (diagnóstico)
+            </button>
+            <p className="field-help">
+              Si el servidor parece trabado, esto escribe en la consola lo que hace cada parte de Java. Mándale una captura a quien te
+              ayude.
+            </p>
+          </>
+        )}
       </div>
 
       {!on && (

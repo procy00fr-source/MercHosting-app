@@ -127,6 +127,10 @@ pub(crate) fn now_ms() -> i64 {
         .unwrap_or(0)
 }
 
+/// Ayudante de diagnóstico (código en `agent/src`, se recompila con `agent/build.sh`): escribe en
+/// la consola qué hace cada hilo cuando la persona lo pide (en Android no hay jstack).
+pub const AGENT_JAR: &[u8] = include_bytes!("../agent/merc-agent.jar");
+
 /// En Android el transporte de red nativo de Minecraft (epoll de Netty, hecho para Linux de PC)
 /// puede aceptar conexiones y no responder nunca: el juego se queda en «Pinging…» y «Joining».
 /// Se apaga con la opción oficial `use-native-transport=false` (las demás líneas no se tocan).
@@ -569,6 +573,12 @@ impl Phone {
             // System properties › velocity.natives-disabled).
             args.push("-Dvelocity.natives-disabled=true".to_string());
         }
+        let agent = self.ensure_agent()?;
+        args.push(format!(
+            "-javaagent:{}={}",
+            agent.display(),
+            run.join("volcado").display()
+        ));
         args.extend(["-jar".to_string(), s.jar.clone(), "nogui".to_string()]);
         Ok(LaunchSpec {
             jre: self.jre_dir(s.java_major),
@@ -639,6 +649,29 @@ impl Phone {
                 .map(|l| format!("[MercHosting] {l}")),
         );
         out
+    }
+
+    /// Copia el ayudante de diagnóstico a la carpeta de la app si falta o cambió.
+    fn ensure_agent(&self) -> Result<PathBuf, PhoneError> {
+        let dir = self.data.join("agente");
+        std::fs::create_dir_all(&dir)?;
+        let path = dir.join("merc-agent.jar");
+        if std::fs::read(&path).ok().as_deref() != Some(AGENT_JAR) {
+            let tmp = dir.join("merc-agent.jar.tmp");
+            std::fs::write(&tmp, AGENT_JAR)?;
+            std::fs::rename(&tmp, &path)?;
+        }
+        Ok(path)
+    }
+
+    /// Pide al ayudante que escriba en la consola qué hace cada hilo (tarda hasta un segundo).
+    pub fn thread_dump(&self, id: &str) -> Result<(), PhoneError> {
+        self.get(id)?;
+        if self.pid(id).is_none() {
+            return Err(PhoneError::Invalid("El servidor no está encendido.".into()));
+        }
+        std::fs::write(self.run_dir(id).join("volcado"), b"")?;
+        Ok(())
     }
 
     /// Borra los informes de fallo de la vez anterior (se llama al encender).
@@ -782,6 +815,19 @@ mod tests {
     }
 
     #[test]
+    fn agent_jar_has_its_premain() {
+        use std::io::Read;
+        let mut z = zip::ZipArchive::new(std::io::Cursor::new(AGENT_JAR)).unwrap();
+        let mut m = String::new();
+        z.by_name("META-INF/MANIFEST.MF")
+            .unwrap()
+            .read_to_string(&mut m)
+            .unwrap();
+        assert!(m.contains("Premain-Class: app.merchosting.agent.MercAgent"), "{m}");
+        assert!(z.by_name("app/merchosting/agent/MercAgent.class").is_ok());
+    }
+
+    #[test]
     fn native_transport_off_keeps_other_lines() {
         let d = tempfile::tempdir().unwrap();
         std::fs::write(
@@ -871,6 +917,22 @@ mod tests {
         assert_eq!(spec.jre, p.jre_dir(21));
         assert!(spec.companion.is_none());
         assert!(spec.args.contains(&"-XX:-UsePerfData".to_string()));
+        let ja = spec
+            .args
+            .iter()
+            .find(|a| a.starts_with("-javaagent:"))
+            .expect("ayudante");
+        assert!(ja.ends_with("volcado"), "{ja}");
+        let jar_at = spec.args.iter().position(|a| a == "-jar").unwrap();
+        assert!(
+            spec.args.iter().position(|a| a == ja).unwrap() < jar_at,
+            "antes de -jar"
+        );
+        assert_eq!(
+            std::fs::read(d.path().join("agente/merc-agent.jar")).unwrap(),
+            AGENT_JAR
+        );
+        assert!(p.thread_dump("abc").is_err(), "apagado");
         assert!(spec.args.contains(&"-Dio.netty.transport.noNative=true".to_string()));
         let props = std::fs::read_to_string(p.server_dir("abc").join("server.properties")).unwrap();
         assert!(props.lines().any(|l| l == "use-native-transport=false"), "{props}");
@@ -974,6 +1036,8 @@ mod tests {
         let run = d.path().join("ejecucion/s2");
         std::fs::create_dir_all(&run).unwrap();
         let _lock = crate::jli::lock_pid_file(&run.join("servidor.pid")).unwrap();
+        p.thread_dump("s2").unwrap();
+        assert!(run.join("volcado").is_file());
         let fifo = std::ffi::CString::new(run.join("entrada").to_str().unwrap()).unwrap();
         assert_eq!(unsafe { libc::mkfifo(fifo.as_ptr(), 0o600) }, 0);
         // Lector abierto (como el servidor).

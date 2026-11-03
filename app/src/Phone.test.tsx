@@ -219,6 +219,10 @@ class FakePhone implements PhoneApi {
     this.contentCalls.push(`remove:${file}`);
     this.installedItems = this.installedItems.filter((i) => i.file_name !== file);
   }
+  dumps = 0;
+  async threadDump() {
+    this.dumps += 1;
+  }
   async askNotifications() {
     this.asked += 1;
     return true;
@@ -320,6 +324,8 @@ describe("Servidor dentro del celular", () => {
     await user.type(view.getByLabelText("Comando"), "say hola");
     await user.click(view.getByRole("button", { name: /Enviar/ }));
     await waitFor(() => expect(phone.commands).toEqual(["say hola"]));
+    await user.click(view.getByRole("button", { name: /Ver qué está haciendo/ }));
+    await waitFor(() => expect(phone.dumps).toBe(1));
     await user.click(await view.findByRole("button", { name: /Vincular con playit.gg/ }));
     await waitFor(() => expect(opened).toContain("https://playit.gg/claim/abcdef0123"));
     phone.linked = true;
@@ -394,6 +400,7 @@ describe("Servidor dentro del celular", () => {
     await p.contentSearch("a", "ess", 20);
     await p.contentInstall("a", "v1");
     await p.contentSetEnabled("a", "x.jar", false);
+    await p.threadDump("a");
     expect(sent).toEqual([
       { op: "set_heap", id: "a", heap_mb: 2048 },
       { op: "command", id: "a", text: "say x" },
@@ -401,6 +408,7 @@ describe("Servidor dentro del celular", () => {
       { op: "content_search", id: "a", query: "ess", offset: 20 },
       { op: "content_install", id: "a", version_id: "v1" },
       { op: "content_set_enabled", id: "a", file: "x.jar", enabled: false },
+      { op: "thread_dump", id: "a" },
     ]);
   });
 });

@@ -107,6 +107,10 @@ pub enum Op {
         id: String,
         file: String,
     },
+    /// Volcado de hilos en la consola (diagnóstico).
+    ThreadDump {
+        id: String,
+    },
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize)]
@@ -348,6 +352,10 @@ impl Api {
             }
             Op::ContentSetEnabled { id, file, enabled } => {
                 json!({ "file": p.content_set_enabled(&id, &file, enabled)? })
+            }
+            Op::ThreadDump { id } => {
+                p.thread_dump(&id)?;
+                Value::Null
             }
             Op::ContentRemove { id, file } => {
                 p.content_remove(&id, &file)?;

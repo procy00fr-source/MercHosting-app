@@ -139,6 +139,15 @@ manifiesto del plugin pone `android:allowNativeHeapPointerTagging="false"` en `<
 une al manifiesto de la app al compilar). Es lo mismo que hacen los lanzadores de Minecraft Java
 para Android.
 
+### Diagnóstico: «Ver qué está haciendo»
+
+En Android no hay `jstack` ni `jcmd`. Cada servidor del celular arranca con un ayudante propio
+(`crates/merc-phone/agent`, `-javaagent:merc-agent.jar=<carpeta>/volcado`) que no abre puertos ni
+cambia nada: cada segundo mira si existe el archivo `volcado` y, si existe, lo borra y escribe en
+la consola el estado y la pila de cada hilo (líneas `[MercHosting]`). El botón «Ver qué está
+haciendo (diagnóstico)» crea ese archivo. El `.jar` va en el repositorio (con su código) y se
+recompila con `crates/merc-phone/agent/build.sh` (JDK 17+).
+
 ### Red: sin transporte nativo
 
 El transporte de red nativo de Minecraft (epoll de Netty) está hecho para Linux de PC. En el
