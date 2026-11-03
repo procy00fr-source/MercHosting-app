@@ -336,6 +336,10 @@ export class Supervisor {
   async contentInstall(id: InstanceId, kind: ContentKind, source: ContentSource, versionId: string): Promise<ContentList> {
     return expect(await this.api.call({ op: "content_install", id, kind, source, version_id: versionId }), "content_list").data;
   }
+  /** Floodgate como plugin (Paper/Purpur/Spigot) desde la API oficial de GeyserMC, con su SHA-256. */
+  async installFloodgate(id: InstanceId): Promise<ContentList> {
+    return expect(await this.api.call({ op: "install_floodgate", id }), "content_list").data;
+  }
   async contentInstalled(id: InstanceId, kind: ContentKind): Promise<ContentList> {
     return expect(await this.api.call({ op: "content_installed", id, kind }), "content_list").data;
   }

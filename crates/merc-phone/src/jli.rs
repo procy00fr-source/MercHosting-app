@@ -362,6 +362,7 @@ mod tests {
     #[cfg(all(unix, not(target_os = "android")))]
     #[test]
     fn real_jvm_runs_in_process() {
+        let _turno = crate::FORK_GUARD.lock().unwrap_or_else(|p| p.into_inner());
         let Some(jre) = system_jre() else {
             eprintln!("sin JRE en /usr/lib/jvm: prueba omitida");
             return;
@@ -431,6 +432,7 @@ mod tests {
     #[cfg(all(unix, not(target_os = "android")))]
     #[test]
     fn missing_jre_is_reported() {
+        let _turno = crate::FORK_GUARD.lock().unwrap_or_else(|p| p.into_inner());
         let d = tempfile::tempdir().unwrap();
         let spec = LaunchSpec {
             jre: d.path().join("no-hay"),

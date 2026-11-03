@@ -193,6 +193,7 @@ pub fn need(body: &RequestBody) -> Need {
         | R::ContentProject { id, .. }
         | R::ContentPlan { id, .. }
         | R::ContentInstall { id, .. }
+        | R::InstallFloodgate { id }
         | R::ContentToggle { id, .. }
         | R::ContentRemove { id, .. } => On(*id, Content),
         R::Backups { id } | R::CreateBackup { id, .. } | R::VerifyBackup { id, .. } => On(*id, Backups),

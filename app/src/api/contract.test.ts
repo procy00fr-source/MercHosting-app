@@ -167,6 +167,7 @@ const REQUEST_KEYS: Record<RequestBody["op"], string[]> = {
   content_project: ["id", "kind", "source", "project"],
   content_plan: ["id", "kind", "source", "version_id"],
   content_install: ["id", "kind", "source", "version_id"],
+  install_floodgate: ["id"],
   content_installed: ["id", "kind"],
   content_toggle: ["id", "kind", "file_name", "enabled"],
   content_remove: ["id", "kind", "file_name"],

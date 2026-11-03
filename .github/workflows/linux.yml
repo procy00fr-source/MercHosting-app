@@ -32,6 +32,13 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@stable
 
+      # Las pruebas del supervisor arrancan un servidor de prueba en Java para Minecraft 1.21,
+      # que pide Java 21 (Ubuntu 22.04 trae Java 11 por defecto).
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
       - uses: actions/setup-node@v4
         with:
           node-version: 22

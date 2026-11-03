@@ -1905,6 +1905,14 @@ export class FakeApi implements MercApi {
           });
         return { kind: "content_list", data: this.contentList(body.id, body.kind) };
       }
+      case "install_floodgate": {
+        this.requireStopped(body.id);
+        if (this.bedrock) {
+          this.bedrock.floodgate = "plugins/floodgate-spigot.jar";
+          this.bedrock.floodgate_enabled = true;
+        }
+        return { kind: "content_list", data: this.contentList(body.id, "plugin") };
+      }
       case "content_installed":
         return { kind: "content_list", data: this.contentList(body.id, body.kind) };
       case "content_toggle": {

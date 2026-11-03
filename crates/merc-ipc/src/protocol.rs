@@ -851,6 +851,11 @@ pub enum RequestBody {
         source: ContentSource,
         version_id: String,
     },
+    /// Instala Floodgate como plugin (Spigot/Paper/Purpur) desde la API oficial de GeyserMC,
+    /// comprobando su SHA-256: en Modrinth solo está para Fabric y NeoForge. Servidor detenido.
+    InstallFloodgate {
+        id: InstanceId,
+    },
     /// Lo instalado en `mods/` o `plugins/`, con datos de Modrinth si hay conexión.
     ContentInstalled {
         id: InstanceId,

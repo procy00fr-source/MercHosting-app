@@ -983,6 +983,7 @@ mod tests {
 
     #[test]
     fn status_follows_pid_and_console() {
+        let _turno = crate::FORK_GUARD.lock().unwrap_or_else(|p| p.into_inner());
         let d = tempfile::tempdir().unwrap();
         let p = phone(d.path());
         p.register(LocalServer {
@@ -1024,6 +1025,7 @@ mod tests {
     #[cfg(unix)]
     #[test]
     fn commands_go_through_the_pipe() {
+        let _turno = crate::FORK_GUARD.lock().unwrap_or_else(|p| p.into_inner());
         let d = tempfile::tempdir().unwrap();
         let p = phone(d.path());
         p.register(LocalServer {
@@ -1097,6 +1099,7 @@ mod tests {
     #[test]
     #[ignore]
     fn end_to_end_vanilla_on_linux() {
+        let _turno = crate::FORK_GUARD.lock().unwrap_or_else(|p| p.into_inner());
         let jre = Path::new("/usr/lib/jvm/java-21-openjdk-amd64");
         assert!(jre.join("lib/libjli.so").is_file(), "falta el JRE 21 del sistema");
         let d = tempfile::tempdir().unwrap();
@@ -1165,6 +1168,7 @@ mod tests {
     #[cfg(target_os = "linux")]
     #[test]
     fn fake_server_runs_and_stops() {
+        let _turno = crate::FORK_GUARD.lock().unwrap_or_else(|p| p.into_inner());
         let jdk = Path::new("/usr/lib/jvm/java-21-openjdk-amd64");
         if !jdk.join("bin/javac").is_file() || !jdk.join("lib/libjli.so").is_file() {
             eprintln!("sin JDK 21: se salta");

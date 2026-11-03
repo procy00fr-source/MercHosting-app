@@ -1,6 +1,8 @@
 // Jugadores de Bedrock (celular, consola, Windows) en un servidor Java, con Geyser y Floodgate
-// de GeyserMC (código abierto, MIT). Se instalan desde Modrinth con el mismo diálogo de siempre
-// (ver la versión, las dependencias y la licencia antes de instalar). La conexión se prueba de
+// de GeyserMC (código abierto, MIT). Geyser se instala desde Modrinth con el mismo diálogo de
+// siempre (ver la versión, las dependencias y la licencia antes de instalar). Floodgate como
+// plugin (Paper/Purpur/Spigot) no está en Modrinth: lo descarga el supervisor desde la API
+// oficial de GeyserMC, comprobando su SHA-256. En Fabric y NeoForge viene de Modrinth. La conexión se prueba de
 // verdad con el ping de Bedrock por UDP, igual que hace el juego.
 
 import { CheckCircle2, Copy, ExternalLink, Gamepad2, TriangleAlert } from "lucide-react";
@@ -96,6 +98,23 @@ export function CrossplayCard({ api, sup, id, bedrock, online, running, remote, 
     }
   }
 
+  async function installFloodgate() {
+    if (platform?.kind !== "plugin") {
+      setPicking("floodgate");
+      return;
+    }
+    setBusy("floodgate");
+    setError(null);
+    try {
+      const l = await sup.installFloodgate(id);
+      installed(l, "Floodgate instalado desde la página oficial de GeyserMC (comprobado con su huella). Enciende el servidor para usarlo.");
+    } catch (e) {
+      setError(errorMessage(e));
+    } finally {
+      setBusy(null);
+    }
+  }
+
   function installed(_l: ContentList, msg: string) {
     setPicking(null);
     setNote(msg);
@@ -162,11 +181,11 @@ export function CrossplayCard({ api, sup, id, bedrock, online, running, remote, 
                     <button
                       type="button"
                       className="btn btn-xs"
-                      disabled={running}
+                      disabled={running || busy !== null}
                       title={running ? "Detén el servidor para instalarlo." : undefined}
-                      onClick={() => setPicking("floodgate")}
+                      onClick={installFloodgate}
                     >
-                      Instalar Floodgate
+                      {busy === "floodgate" ? "Instalando…" : "Instalar Floodgate"}
                     </button>
                   )}
                 </>

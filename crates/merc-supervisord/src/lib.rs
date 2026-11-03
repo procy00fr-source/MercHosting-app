@@ -96,6 +96,8 @@ struct Daemon {
     /// API de Modrinth (en pruebas de desarrollo se puede apuntar a un servidor local).
     modrinth_api: String,
     hangar_api: String,
+    /// API de descargas de GeyserMC (Floodgate para plugins).
+    geysermc_api: String,
     hangar_cache: Mutex<merc_content::hangar::HangarCache>,
     /// Tareas programadas ejecutándose ahora (servidor, tarea).
     running_tasks: Mutex<std::collections::HashSet<(InstanceId, String)>>,
@@ -232,6 +234,17 @@ fn hangar_api() -> String {
         }
     }
     merc_content::hangar::HANGAR_API.to_string()
+}
+
+fn geysermc_api() -> String {
+    if cfg!(debug_assertions) {
+        if let Ok(v) = std::env::var("MERC_SOURCE_GEYSERMC") {
+            if merc_install::http::url_allowed(&v) {
+                return v;
+            }
+        }
+    }
+    merc_content::geysermc::GEYSERMC_API.to_string()
 }
 
 fn modrinth_api() -> String {
@@ -1008,6 +1021,46 @@ impl Daemon {
                 }
                 self.log
                     .line(&format!("contenido instalado en {id}: {}", placed.join(", ")));
+                ResponseBody::ContentList(self.content_list(&inst, p)?)
+            }
+            R::InstallFloodgate { id } => {
+                let inst = self.instance(id)?;
+                let p = self.platform(&inst, ContentKind::Plugin).map_err(|_| {
+                    api(
+                        ErrorCode::BadRequest,
+                        "Floodgate como plugin es para Paper, Purpur o Spigot. En Fabric o NeoForge se instala como mod desde Modrinth.",
+                    )
+                })?;
+                self.require_stopped(id, "instalar Floodgate (se carga al encender)")?;
+                if merc_admin::geyser::find(&inst.root).1.is_some() {
+                    return Err(api(
+                        ErrorCode::Conflict,
+                        "Floodgate ya está instalado en este servidor.",
+                    ));
+                }
+                let fg =
+                    merc_content::geysermc::floodgate_latest(&self.http, &self.geysermc_api).map_err(content_err)?;
+                let staging = self.store_dir(id).join("descargas").join(merc_admin::stamp());
+                let file = merc_content::geysermc::install_floodgate(
+                    &self.http,
+                    &self.geysermc_api,
+                    &inst.root,
+                    &p.folder,
+                    &staging,
+                    &fg,
+                    &std::sync::atomic::AtomicBool::new(false),
+                )
+                .map_err(content_err)?;
+                self.audit(
+                    client,
+                    Some(id),
+                    "content.install",
+                    &format!(
+                        "Floodgate {} (compilación {}) desde GeyserMC, {file}",
+                        fg.version, fg.build
+                    ),
+                );
+                self.log.line(&format!("Floodgate instalado en {id}: {file}"));
                 ResponseBody::ContentList(self.content_list(&inst, p)?)
             }
             R::ContentInstalled { id, kind } => {
@@ -2587,6 +2640,7 @@ impl Daemon {
             | R::ContentProject { .. }
             | R::ContentPlan { .. }
             | R::ContentInstall { .. }
+            | R::InstallFloodgate { .. }
             | R::ContentInstalled { .. }
             | R::ContentToggle { .. }
             | R::ContentRemove { .. }) => self.handle_content(client, b)?,
@@ -2785,6 +2839,7 @@ pub fn run_with(data_dir: PathBuf, at_login: bool) -> Result<RunOutcome, String>
         world_ops: Mutex::new(Default::default()),
         modrinth_api: modrinth_api(),
         hangar_api: hangar_api(),
+        geysermc_api: geysermc_api(),
         hangar_cache: Mutex::new(Default::default()),
         running_tasks: Mutex::new(Default::default()),
         tasks_lock: Mutex::new(()),

@@ -1,6 +1,7 @@
 //! Contenido de un servidor: mods, plugins y datapacks.
 //!
 //! - [`modrinth`]: catálogo de Modrinth por su API pública (v2), sin cuenta ni clave.
+//! - [`geysermc`]: Floodgate para Spigot/Paper desde la API oficial de GeyserMC (con SHA-256).
 //! - [`hangar`]: catálogo de plugins de PaperMC (Hangar), sin cuenta ni clave.
 //! - [`resourcepack`]: paquete de recursos del servidor (`resource-pack` y su SHA-1).
 //! - [`plan`]: plan de instalación con dependencias obligatorias, opcionales e incompatibles.
@@ -13,6 +14,7 @@
 pub mod cfpack;
 pub mod curseforge;
 pub mod friendpack;
+pub mod geysermc;
 pub mod hangar;
 pub mod local;
 pub mod modrinth;

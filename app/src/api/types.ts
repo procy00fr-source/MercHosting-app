@@ -1286,6 +1286,7 @@ export type RequestBody =
   | { op: "content_project"; id: InstanceId; kind: ContentKind; source: ContentSource; project: string }
   | { op: "content_plan"; id: InstanceId; kind: ContentKind; source: ContentSource; version_id: string }
   | { op: "content_install"; id: InstanceId; kind: ContentKind; source: ContentSource; version_id: string }
+  | { op: "install_floodgate"; id: InstanceId }
   | { op: "content_installed"; id: InstanceId; kind: ContentKind }
   | { op: "content_toggle"; id: InstanceId; kind: ContentKind; file_name: string; enabled: boolean }
   | { op: "content_remove"; id: InstanceId; kind: ContentKind; file_name: string }

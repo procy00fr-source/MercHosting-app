@@ -55,6 +55,16 @@ describe("Jugadores de Bedrock (Geyser)", () => {
     expect(await card.findByText(/Instalado:/)).toBeInTheDocument();
   });
 
+  it("en Paper instala Floodgate desde GeyserMC (no está en Modrinth para plugins)", async () => {
+    const { fake, user, card } = await open("paper", (f) => {
+      f.bedrock = structuredClone(geyser);
+    });
+    await user.click(await card.findByRole("button", { name: "Instalar Floodgate" }));
+    expect(fake.calls).toContainEqual({ op: "install_floodgate", id });
+    expect(fake.calls.some((c) => c.op === "content_project" && c.project === "floodgate")).toBe(false);
+    expect(await card.findByText(/página oficial de GeyserMC/)).toBeInTheDocument();
+  });
+
   it("prueba Bedrock de verdad y solo deja copiar la dirección que respondió", async () => {
     const { fake, user, card } = await open("paper", (f) => {
       f.servers[0].status = { ...f.servers[0].status, state: "ONLINE", has_console: true, pid: 9 };

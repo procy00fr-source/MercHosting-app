@@ -629,6 +629,7 @@ fn examples() -> Value {
             source: ContentSource::Hangar,
             version_id: "1234".into(),
         },
+        RequestBody::InstallFloodgate { id: id() },
         RequestBody::ContentInstalled {
             id: id(),
             kind: ContentKind::Plugin,

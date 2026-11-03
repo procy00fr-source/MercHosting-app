@@ -19,3 +19,8 @@ pub mod local;
 pub mod playit;
 pub mod ram;
 pub mod warnings;
+
+/// Pruebas que hacen `fork` y pruebas que toman el candado del PID se turnan: el hijo de un
+/// `fork` hereda los archivos abiertos (también el candado de otra prueba) y lo mantiene tomado.
+#[cfg(test)]
+pub(crate) static FORK_GUARD: std::sync::Mutex<()> = std::sync::Mutex::new(());
