@@ -13,6 +13,7 @@ Cada versión nueva se describe aquí antes de publicarla (`scripts/publicar-ver
 - Usar tu propio dominio: la app arma el registro SRV que va al túnel de Playit y lo prueba.
 - La dirección para tus amigos por Internet ahora se ve y se copia desde el Resumen.
 - Buscador de addons de CurseForge: llegará cuando MercHosting tenga su clave oficial.
+- Modpacks de Modrinth que anotan mal el tamaño de un archivo ya se instalan si su huella coincide.
 - App para celular (Android, beta): maneja los servidores de tu PC desde el celular con un código de Compañeros, o crea un servidor dentro del propio celular (Java o Java + Bedrock con Geyser), con avisos de batería y calor, Playit y mods y plugins de Modrinth. CurseForge, próximamente.
 
 ## 0.2.4

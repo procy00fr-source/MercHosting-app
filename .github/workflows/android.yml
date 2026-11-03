@@ -120,7 +120,8 @@ jobs:
             echo "No se encontró un APK firmado. APKs generados:"; find src-tauri/gen/android/app/build/outputs -name '*.apk'; exit 1
           fi
           mkdir -p "$GITHUB_WORKSPACE/target/android"
-          cp "$apk" "$GITHUB_WORKSPACE/target/android/MercHosting-movil-$VERSION-arm64.apk"
+          # Nombre fijo: la web enlaza a releases/latest/download/MercHosting-android-arm64.apk.
+          cp "$apk" "$GITHUB_WORKSPACE/target/android/MercHosting-android-arm64.apk"
           cd "$GITHUB_WORKSPACE/target/android" && sha256sum *.apk > SHA256SUMS.txt && cat SHA256SUMS.txt
 
       - name: Guardar el APK como artefacto

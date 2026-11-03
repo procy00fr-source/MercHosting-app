@@ -307,7 +307,7 @@ una versión la compilación falla con «Could not find org.jetbrains.kotlin:kot
 
 ## Instalar el APK en el celular
 
-1. Descarga `MercHosting-movil-X.Y.Z-arm64.apk` en el celular. Si viene del artefacto del run,
+1. Descarga `MercHosting-android-arm64.apk` en el celular (la web enlaza siempre al de la última versión). Si viene del artefacto del run,
    primero descomprime el .zip.
 2. Ábrelo. Android pedirá permiso para **instalar apps de origen desconocido** desde esa app (el
    navegador o el gestor de archivos). Permítelo solo para esa instalación.
