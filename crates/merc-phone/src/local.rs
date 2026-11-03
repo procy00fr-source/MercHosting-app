@@ -554,6 +554,10 @@ impl Phone {
             "-XX:-UsePerfData".to_string(),
             // Netty: solo la red estándar de Java (los transportes nativos son para Linux de PC).
             "-Dio.netty.transport.noNative=true".to_string(),
+            // spark (incluido en Paper y Purpur, y como mod/plugin) muestrea todos los hilos cada
+            // 10 ms en segundo plano: en el celular le quita procesador a la carga del mundo. Se
+            // puede lanzar a mano con /spark profiler (spark.lucko.me/docs/Configuration).
+            "-Dspark.backgroundProfiler=false".to_string(),
             // Si la JVM se cae, su informe queda junto a la consola y la app lo muestra.
             format!("-XX:ErrorFile={}", run.join("fallo_java_%p.log").display()),
             format!("-Djava.io.tmpdir={}", tmp.display()),
@@ -934,6 +938,7 @@ mod tests {
         );
         assert!(p.thread_dump("abc").is_err(), "apagado");
         assert!(spec.args.contains(&"-Dio.netty.transport.noNative=true".to_string()));
+        assert!(spec.args.contains(&"-Dspark.backgroundProfiler=false".to_string()));
         let props = std::fs::read_to_string(p.server_dir("abc").join("server.properties")).unwrap();
         assert!(props.lines().any(|l| l == "use-native-transport=false"), "{props}");
         assert!(

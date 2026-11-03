@@ -148,6 +148,14 @@ la consola el estado y la pila de cada hilo (líneas `[MercHosting]`). El botón
 haciendo (diagnóstico)» crea ese archivo. El `.jar` va en el repositorio (con su código) y se
 recompila con `crates/merc-phone/agent/build.sh` (JDK 17+).
 
+### Menos carga: sin el perfilador de spark en segundo plano
+
+Un volcado de hilos de un Paper en «Joining world» mostró que no estaba colgado sino lento: el
+cálculo de las fortalezas (`generateRingPositions`), la lectura de los chunks y, a la vez, el
+perfilador de spark incluido en Paper, que por defecto muestrea todos los hilos cada 10 ms. En el
+celular se arranca con `-Dspark.backgroundProfiler=false` (spark.lucko.me/docs/Configuration). La
+primera entrada a un mundo nuevo sigue tardando unos minutos en un celular.
+
 ### Red: sin transporte nativo
 
 El transporte de red nativo de Minecraft (epoll de Netty) está hecho para Linux de PC. En el
