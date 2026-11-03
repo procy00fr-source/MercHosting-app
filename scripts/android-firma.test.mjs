@@ -1,7 +1,7 @@
 // node --test scripts/android-firma.test.mjs
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { patchGradle, keystoreProperties } from "./android-firma.mjs";
+import { patchGradle, keystoreProperties, patchBuildSrcSettings } from "./android-firma.mjs";
 
 // Forma de la plantilla de «tauri android init» (Tauri 2).
 const TEMPLATE = `import java.util.Properties
@@ -56,4 +56,13 @@ test("keystore.properties: valores obligatorios, sin saltos de línea y con «\\
   );
   assert.throws(() => keystoreProperties({ alias: "upload", password: "", storeFile: "/k" }), /Falta password/);
   assert.throws(() => keystoreProperties({ alias: "upload\nx=1", password: "p", storeFile: "/k" }), /saltos de línea/);
+});
+
+test("buildSrc: Maven Central y Google de respaldo, al principio e idempotente", () => {
+  const nuevo = patchBuildSrcSettings(null);
+  assert.match(nuevo, /pluginManagement \{\n    repositories \{\n        gradlePluginPortal\(\)\n        mavenCentral\(\)\n        google\(\)/);
+  const conTexto = patchBuildSrcSettings('rootProject.name = "buildSrc"\n');
+  assert.ok(conTexto.indexOf("pluginManagement") < conTexto.indexOf("rootProject.name"), "pluginManagement va primero");
+  assert.equal(patchBuildSrcSettings(conTexto), conTexto);
+  assert.throws(() => patchBuildSrcSettings("pluginManagement {\n  repositories { gradlePluginPortal() }\n}\n"), /plantilla de Tauri cambió/);
 });

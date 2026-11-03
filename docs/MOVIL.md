@@ -298,6 +298,13 @@ El workflow:
    casi todos los actuales;
 6. borra la clave del runner.
 
+### Si Gradle no encuentra Kotlin
+
+`scripts/android-firma.mjs` también añade a `gen/android/buildSrc/settings.gradle.kts` Maven Central
+y Google como repositorios de respaldo para los plugins de `buildSrc`. Sin eso, Gradle busca
+`kotlin-dsl` y Kotlin solo en el portal de plugins (plugins.gradle.org), y si al portal le falta
+una versión la compilación falla con «Could not find org.jetbrains.kotlin:kotlin-stdlib:…».
+
 ## Instalar el APK en el celular
 
 1. Descarga `MercHosting-movil-X.Y.Z-arm64.apk` en el celular. Si viene del artefacto del run,

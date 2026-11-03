@@ -58,6 +58,32 @@ export function patchGradle(text) {
   return out;
 }
 
+const REPOS_MARK = "// MercHosting: repositorios de respaldo (scripts/android-firma.mjs)";
+
+/**
+ * settings.gradle.kts de buildSrc con Maven Central y Google además del portal de plugins.
+ * Sin esto, los plugins de buildSrc (kotlin-dsl → Kotlin) se buscan SOLO en plugins.gradle.org,
+ * y si el portal no tiene una versión recién publicada la compilación falla («Could not find
+ * org.jetbrains.kotlin:kotlin-stdlib:…»). `pluginManagement` tiene que ir al principio.
+ */
+export function patchBuildSrcSettings(text) {
+  const current = text ?? "";
+  if (current.includes(REPOS_MARK)) return current;
+  if (/^\s*pluginManagement\s*\{/m.test(current)) {
+    throw new Error("buildSrc/settings.gradle.kts ya trae pluginManagement: la plantilla de Tauri cambió, revísalo a mano.");
+  }
+  const block = `${REPOS_MARK}
+pluginManagement {
+    repositories {
+        gradlePluginPortal()
+        mavenCentral()
+        google()
+    }
+}
+`;
+  return current ? `${block}\n${current}` : block;
+}
+
 /** Texto de keystore.properties. Rechaza valores con saltos de línea (inyectarían otras claves). */
 export function keystoreProperties({ alias, password, storeFile }) {
   for (const [name, v] of Object.entries({ alias, password, storeFile })) {
@@ -75,6 +101,12 @@ function main() {
   const gradle = join(dir, "app", "build.gradle.kts");
   if (!existsSync(gradle)) throw new Error(`No existe ${gradle}: ejecuta antes «npx tauri android init».`);
   writeFileSync(gradle, patchGradle(readFileSync(gradle, "utf8")));
+  const buildSrc = join(dir, "buildSrc");
+  if (existsSync(buildSrc)) {
+    const settings = join(buildSrc, "settings.gradle.kts");
+    writeFileSync(settings, patchBuildSrcSettings(existsSync(settings) ? readFileSync(settings, "utf8") : null));
+    console.log("✓ Repositorios de respaldo para buildSrc (Maven Central y Google).");
+  }
   writeFileSync(
     join(dir, "keystore.properties"),
     keystoreProperties({
