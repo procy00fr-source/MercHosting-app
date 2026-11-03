@@ -58,8 +58,12 @@ Lo que **todavía no** hace:
 
 - Tipos: **Paper** (recomendado), **Java + Bedrock**, **Vanilla**, **Purpur** y **Fabric**, de
   Minecraft **de la 1.18 a la 1.21** (Java 17 para 1.18–1.20.4 y Java 21 para 1.20.5–1.21.x). Las 26.x piden Java 25 y todavía no hay uno verificado para Android.
-- **Java + Bedrock**: un Paper con **Geyser** y **Floodgate** (de GeyserMC, licencia MIT), instalados
-  desde Modrinth (proyectos `geyser` y `floodgate`) con la huella que publica Modrinth. Entran
+- **Java + Bedrock**: un Paper con **Geyser** y **Floodgate** (de GeyserMC, licencia MIT). Geyser se
+  instala desde Modrinth (proyecto `geyser`, con la huella que publica Modrinth). Floodgate **no**
+  está en Modrinth para Spigot/Paper (allí solo hay Fabric y NeoForge): se descarga de la API
+  oficial de GeyserMC (`download.geysermc.org/v2/projects/floodgate/versions/latest/builds/latest`,
+  y luego la compilación fija `…/versions/<v>/builds/<n>/downloads/spigot`), comprobando el SHA-256
+  que publica esa misma API. Entran
   jugadores de Java y de Bedrock (celular, consola, Windows) al mismo mundo; los de Bedrock no
   necesitan cuenta de Java. **Antes de descargar nada** se comprueba que Geyser y Floodgate tengan
   versión para el Minecraft elegido; si no, no se crea el servidor. Si falla la instalación de
@@ -181,7 +185,8 @@ las de Java, como Vanilla.
 |---|---|---|---|
 | Java 21 para Android | `https://github.com/AngelAuraMC/angelauramc-openjdk-build/releases/download/download_jre21/jre21-android-arm64.tar.xz` (el mismo que usa el lanzador Amethyst; su `release` dice `JAVA_VERSION="21.0.1"`, `OS_ARCH="aarch64"`) | SHA-256 `8d41ec401ee59f7722df60ed991f81ad146e130452804bfdd8a05d3436f7bbfe`, 28 675 516 bytes | GPLv2 con Classpath Exception (`legal/java.base/LICENSE` en el paquete) |
 | Java 17 para Android | `…/download_jre17/jre17-android-arm64.tar.xz` | SHA-256 `e162c860fe05ee4a4e4af7606437419879f6c748386a7b09fa77d10db6a64091`, 26 900 804 bytes | ídem |
-| Geyser y Floodgate | Catálogo de Modrinth (`api.modrinth.com/v2`, proyectos `geyser` y `floodgate`), la versión estable más nueva para Paper/Purpur y esa versión de Minecraft | SHA-1 que publica Modrinth para cada archivo | MIT (GeyserMC) |
+| Geyser | Catálogo de Modrinth (`api.modrinth.com/v2`, proyecto `geyser`), la versión estable más nueva para Paper/Purpur y esa versión de Minecraft | SHA-1 que publica Modrinth para cada archivo | MIT (GeyserMC) |
+| Floodgate (Spigot/Paper) | API oficial de GeyserMC (`download.geysermc.org/v2`), la compilación más reciente | SHA-256 que publica la API | MIT (GeyserMC) |
 | Agente de Playit | Código oficial `https://github.com/playit-cloud/playit-agent`, etiqueta `v1.2.0`, commit `7acf13568a99707dda73028234fdb376e45b15da` (el workflow comprueba el commit), compilado para `aarch64-linux-android` con el NDK | — | BSD-2-Clause, © 2022 Developed Methods LLC (texto completo en la app › Ayuda) |
 
 - El Java **no va dentro del APK**: se descarga la primera vez que creas un servidor, se comprueba su

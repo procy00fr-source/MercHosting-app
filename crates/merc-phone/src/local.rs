@@ -362,11 +362,9 @@ impl Phone {
         // Antes de descargar nada: Geyser y Floodgate tienen que existir para esta versión.
         let crossplay = if req.bedrock {
             progress("Buscando Geyser y Floodgate", 0, None);
-            Some(crate::content::crossplay_versions(
-                catalog,
-                req.flavor,
-                &req.mc_version,
-            )?)
+            let geyser = crate::content::crossplay_versions(catalog, req.flavor, &req.mc_version)?;
+            let floodgate = crate::content::floodgate_latest(http, crate::content::GEYSERMC_API)?;
+            Some((geyser, floodgate))
         } else {
             None
         };
@@ -413,9 +411,9 @@ impl Phone {
                 return Err(PhoneError::Io("No se encontró el .jar del servidor.".into()));
             }
         };
-        if let Some(versions) = crossplay {
+        if let Some((versions, floodgate)) = crossplay {
             progress("Instalando Geyser y Floodgate", 0, None);
-            if let Err(e) = crate::content::install_crossplay(
+            let r = crate::content::install_crossplay(
                 self,
                 http,
                 catalog,
@@ -424,7 +422,11 @@ impl Phone {
                 &req.mc_version,
                 &versions,
                 cancel,
-            ) {
+            )
+            .and_then(|_| {
+                crate::content::install_floodgate(self, http, crate::content::GEYSERMC_API, &dir, &floodgate, cancel)
+            });
+            if let Err(e) = r {
                 // Servidor recién creado y vacío: se quita para no dejar uno a medias.
                 let _ = std::fs::remove_dir_all(&dir);
                 return Err(e);

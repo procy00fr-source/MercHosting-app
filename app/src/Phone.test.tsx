@@ -345,7 +345,7 @@ describe("Servidor dentro del celular", () => {
     for (const b of within(d.getByRole("group", { name: "Avisos de riesgo" })).getAllByRole("checkbox")) await user.click(b);
     await user.click(d.getByRole("button", { name: /Entiendo los riesgos/ }));
     await user.selectOptions(d.getByLabelText("Tipo"), "bedrock");
-    expect(d.getByText(/Se instalan Geyser y Floodgate/)).toBeInTheDocument();
+    expect(d.getByText(/Se instalan Geyser \(desde Modrinth\) y Floodgate/)).toBeInTheDocument();
     await waitFor(() => expect(d.getByLabelText(/^Versión de Minecraft/)).toHaveValue("1.21.1"));
     await user.click(d.getByRole("checkbox", { name: /acepto la EULA/ }));
     await user.click(d.getByRole("button", { name: "Crear servidor" }));

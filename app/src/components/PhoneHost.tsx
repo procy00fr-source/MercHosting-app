@@ -349,9 +349,9 @@ function PhoneCreate({
             </select>
             {bedrock && (
               <span className="field-help">
-                Se instalan Geyser y Floodgate (de GeyserMC, gratis y de código abierto) desde Modrinth. Entran jugadores de Java y de
-                Bedrock, y los de Bedrock no necesitan cuenta de Java. Antes de descargar se comprueba que existan para la versión
-                elegida.
+                Se instalan Geyser (desde Modrinth) y Floodgate (desde la página oficial de GeyserMC), los dos gratis y de código
+                abierto, comprobados con su huella. Entran jugadores de Java y de Bedrock, y los de Bedrock no necesitan cuenta de
+                Java. Antes de descargar se comprueba que Geyser tenga versión para la elegida.
               </span>
             )}
           </label>
