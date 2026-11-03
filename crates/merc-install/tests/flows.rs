@@ -797,3 +797,60 @@ fn legacy_forge_installs_and_launches_its_jar() {
     );
     assert!(!d.path().join("malo").exists());
 }
+
+/// Un modpack que anota mal el tamaño (un byte de más o de menos) se acepta si la huella SHA-1
+/// coincide; sin huella fuerte, el tamaño sigue mandando.
+#[test]
+fn wrong_published_size_is_ok_only_with_a_matching_strong_hash() {
+    use merc_install::Checksum;
+    let f = Fake::start();
+    let body = b"contenido del mod".to_vec();
+    f.route("/mod.jar", body.clone());
+    let http = Http::new();
+    let d = tempfile::tempdir().unwrap();
+    let sha1 = hex(&sha1::Sha1::digest(&body));
+    let url = format!("{}/mod.jar", f.base);
+    let wrong = Some(body.len() as u64 - 1);
+    let n = http
+        .download(
+            &url,
+            &d.path().join("a.jar"),
+            &Checksum::Sha1(sha1.clone()),
+            wrong,
+            &mut |_, _| {},
+            &AtomicBool::new(false),
+        )
+        .unwrap();
+    assert_eq!(n, body.len() as u64);
+    // Huella distinta: rechazado aunque el tamaño coincida.
+    let err = http
+        .download(
+            &url,
+            &d.path().join("b.jar"),
+            &Checksum::Sha1("0".repeat(40)),
+            Some(body.len() as u64),
+            &mut |_, _| {},
+            &AtomicBool::new(false),
+        )
+        .unwrap_err();
+    assert!(
+        matches!(err, InstallError::Integrity(ref m) if m.contains("huella")),
+        "{err:?}"
+    );
+    // Sin huella: el tamaño mal anotado sí se rechaza.
+    let err = http
+        .download(
+            &url,
+            &d.path().join("c.jar"),
+            &Checksum::None,
+            wrong,
+            &mut |_, _| {},
+            &AtomicBool::new(false),
+        )
+        .unwrap_err();
+    assert!(
+        matches!(err, InstallError::Integrity(ref m) if m.contains("tamaño")),
+        "{err:?}"
+    );
+    assert!(!d.path().join("c.jar").exists());
+}

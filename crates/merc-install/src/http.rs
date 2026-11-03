@@ -304,23 +304,27 @@ impl Http {
             .map_err(|e| InstallError::Io(format!("{}: {e}", part.display())))?;
         drop(file);
         progress(done, total);
-        if let Some(size) = expected_size {
-            if size != done {
-                return Err(InstallError::Integrity(format!(
-                    "tamaño distinto al publicado ({done} bytes, se esperaban {size})"
-                )));
-            }
-        }
         let actual = match checksum {
             Checksum::Md5(_) => Some(hex(&md5.finalize())),
             Checksum::Sha1(_) => Some(hex(&sha1.finalize())),
             Checksum::Sha256(_) => Some(hex(&sha256.finalize())),
             Checksum::None => None,
         };
-        if let (Some(actual), Some(expected)) = (actual, checksum.expected()) {
+        if let (Some(actual), Some(expected)) = (&actual, checksum.expected()) {
             if !actual.eq_ignore_ascii_case(expected) {
                 return Err(InstallError::Integrity(format!(
                     "la huella del archivo no coincide con la publicada ({actual} ≠ {expected})"
+                )));
+            }
+        }
+        if let Some(size) = expected_size {
+            // Con una huella SHA-1 o SHA-256 que coincide, el archivo es exactamente el publicado:
+            // un tamaño anotado mal (pasa en algunos modpacks, por un byte) no lo invalida. Sin
+            // huella, o con MD5, el tamaño sigue siendo obligatorio.
+            let strong_hash_ok = actual.is_some() && matches!(checksum, Checksum::Sha1(_) | Checksum::Sha256(_));
+            if size != done && !strong_hash_ok {
+                return Err(InstallError::Integrity(format!(
+                    "tamaño distinto al publicado ({done} bytes, se esperaban {size})"
                 )));
             }
         }
