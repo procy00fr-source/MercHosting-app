@@ -1701,6 +1701,11 @@ select {
 @media (prefers-reduced-motion: no-preference) {
   .wiz-page,
   .flavor-groups {
+    animation: fade-up 0.35s var(--ease-out) both;
+  }
+}
+
+.flavor-groups {
   display: grid;
   gap: 14px;
 }

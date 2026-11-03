@@ -244,6 +244,20 @@ describe("Asistente con modpack", () => {
     );
   });
 
+  it("si falla la revisión del modpack, el error sale junto a la versión y se puede reintentar", async () => {
+    const fake = new FakeApi();
+    fake.inspectFailures = 1;
+    const { user, w } = await openWizard(fake);
+    await user.click(w.getByRole("button", { name: /Modpack de Modrinth/ }));
+    await user.click(w.getByRole("button", { name: /Siguiente/ }));
+    await user.click(await w.findByRole("button", { name: /Aventura Épica/ }));
+    expect(await w.findByText(/No se pudo revisar este modpack: descarga dañada/)).toBeInTheDocument();
+    expect(w.getByRole("button", { name: /Siguiente/ })).toBeDisabled();
+    await user.click(w.getByRole("button", { name: "Volver a intentar" }));
+    expect(await w.findByText(/Se creará un servidor/)).toBeInTheDocument();
+    expect(w.queryByText(/No se pudo revisar/)).toBeNull();
+  });
+
   it("CurseForge aparece como «Próximamente» sin clave", async () => {
     const { w } = await openWizard();
     const cf = await w.findByRole("button", { name: /Modpack de CurseForge/ });

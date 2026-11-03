@@ -217,7 +217,6 @@
   box-shadow: 0 0 14px rgba(79, 125, 255, 0.36);
 }
 
-@media (prefers-reduced-motion: no-preference) {
 :root[data-mode="light"] .flavor-card {
   background: linear-gradient(150deg, rgba(79, 125, 255, 0.08), rgba(255, 255, 255, 0.75));
 }
@@ -621,7 +620,6 @@
 
 :root[data-mode="light"] .license-text {
   background: rgba(255, 255, 255, 0.65);
-}
 }
 
 :root[data-mode="light"] .sidebar {

@@ -524,6 +524,8 @@ export class FakeApi implements MercApi {
   testedAs: Record<string, string> = {};
   /** Geyser instalado (null = no) y direcciones de Bedrock que «responden». */
   bedrock: BedrockInfo | null = null;
+  /** Cuántas revisiones de modpack fallan antes de funcionar. */
+  inspectFailures = 0;
   reachableBedrock = new Set<string>();
   voiceWrites: { voice_host?: string | null; port?: number | null }[] = [];
   private connectionInfo() {
@@ -959,6 +961,10 @@ export class FakeApi implements MercApi {
           },
         };
       case "modpack_inspect":
+        if (this.inspectFailures > 0) {
+          this.inspectFailures -= 1;
+          throw new MercError("network", "descarga dañada: tamaño distinto al publicado");
+        }
         return {
           kind: "modpack_summary",
           data: {

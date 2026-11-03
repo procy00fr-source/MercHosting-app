@@ -2,6 +2,11 @@
 
 Cada versión nueva se describe aquí antes de publicarla (`scripts/publicar-version.ps1` toma de aquí las notas que ve la gente al actualizar).
 
+## 1.0.2
+
+- Con las animaciones de Windows apagadas, parte del diseño de la app no se cargaba (por ejemplo, las tarjetas para elegir el tipo de servidor). Ya se ve bien.
+- Si falla la revisión de un modpack, el error aparece junto a la versión elegida, con un botón para volver a intentar.
+
 ## 1.0.1
 
 - Jugadores de Bedrock en Paper, Purpur y Spigot: «Instalar Floodgate» ya funciona. Se descarga de la página oficial de GeyserMC y se comprueba con su huella (en Modrinth solo está para Fabric y NeoForge).

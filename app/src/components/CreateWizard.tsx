@@ -858,7 +858,7 @@ export function CreateWizard({ api, system, usedPorts, onClose, onCreated, remot
               onChange={(e) => setPackQuery(e.target.value)}
             />
           </form>
-          {packError && (
+          {packError && !pack && (
             <div className="wiz-alert" role="alert">
               <TriangleAlert size={18} aria-hidden="true" />
               <div>
@@ -892,7 +892,7 @@ export function CreateWizard({ api, system, usedPorts, onClose, onCreated, remot
           {pack && (
             <div className="detect-box" aria-live="polite">
               <h3>{pack.title}</h3>
-              {packVersions === null ? (
+              {packVersions === null && packError ? null : packVersions === null ? (
                 <p className="field-help" role="status">
                   Cargando versiones…
                 </p>
@@ -922,6 +922,21 @@ export function CreateWizard({ api, system, usedPorts, onClose, onCreated, remot
                 <p className="field-help" role="status">
                   Descargando y revisando el modpack…
                 </p>
+              )}
+              {packError && !packInspecting && (
+                <div className="wiz-alert" role="alert">
+                  <TriangleAlert size={18} aria-hidden="true" />
+                  <div>
+                    <p>No se pudo revisar este modpack: {packError}</p>
+                    <button
+                      type="button"
+                      className="btn btn-sm"
+                      onClick={() => (packVersionId ? inspectPack(packVersionId, pack.title) : choosePack(pack))}
+                    >
+                      Volver a intentar
+                    </button>
+                  </div>
+                </div>
               )}
               {packSummary && (
                 <>
