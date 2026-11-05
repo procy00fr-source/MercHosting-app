@@ -112,7 +112,10 @@ jobs:
         working-directory: app
         env:
           VERSION: ${{ inputs.version }}
+          # Clave de CurseForge: queda dentro del APK al compilar; nunca está en el repositorio.
+          MERC_CURSEFORGE_API_KEY: ${{ secrets.MERC_CURSEFORGE_API_KEY }}
         run: |
+          if [ -z "$MERC_CURSEFORGE_API_KEY" ]; then echo "::warning::Falta el secreto MERC_CURSEFORGE_API_KEY: el APK sale sin CurseForge."; fi
           printf '{"version":"%s"}' "$VERSION" > "$RUNNER_TEMP/version.json"
           npx tauri android build --apk --target aarch64 --config "$RUNNER_TEMP/version.json"
           apk=$(find src-tauri/gen/android/app/build/outputs/apk -name '*release*.apk' ! -name '*unsigned*' | head -n 1)

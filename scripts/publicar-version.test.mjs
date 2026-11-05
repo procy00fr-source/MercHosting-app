@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import {
+  curseforgeKeyStatus,
   bumpCargoVersion,
   bumpJsonVersion,
   changelogSection,
@@ -107,4 +108,12 @@ test("la configuración de Linux la acepta el esquema de Tauri", () => {
   assert.ok(schema.definitions.DebConfig.properties.section);
   const types = JSON.stringify(schema.definitions.BundleType);
   for (const t of ["deb", "appimage"]) assert.ok(types.includes(`"${t}"`), t);
+});
+
+test("la clave de CurseForge se revisa sin mostrarla", () => {
+  assert.equal(curseforgeKeyStatus(undefined), "falta");
+  assert.equal(curseforgeKeyStatus("   "), "falta");
+  assert.equal(curseforgeKeyStatus(" $2a$10$abcDEF "), "ok");
+  assert.equal(curseforgeKeyStatus("con espacio"), "rara");
+  assert.equal(curseforgeKeyStatus("x".repeat(200)), "rara");
 });

@@ -72,6 +72,17 @@ export function changelogSection(md, version) {
   return text || null;
 }
 
+/**
+ * ¿Trae la compilación la clave de CurseForge? Nunca devuelve la clave: solo si está y si parece
+ * válida (sin espacios y de largo razonable, como la revisa el supervisor).
+ */
+export function curseforgeKeyStatus(value) {
+  const k = (value ?? "").trim();
+  if (!k) return "falta";
+  if (k.length >= 200 || /\s/.test(k)) return "rara";
+  return "ok";
+}
+
 export function bumpJsonVersion(text, version) {
   const j = JSON.parse(text);
   j.version = version;
@@ -249,6 +260,21 @@ async function main() {
   }
   if (env.TAURI_SIGNING_PRIVATE_KEY_PASSWORD === undefined) {
     env.TAURI_SIGNING_PRIVATE_KEY_PASSWORD = ask("Contraseña de la clave de firma (se verá al escribirla; Enter si no tiene): ");
+  }
+
+  // Clave de CurseForge (variable MERC_CURSEFORGE_API_KEY): queda dentro del supervisor al
+  // compilar. Nunca se escribe en el repositorio ni se muestra.
+  const cf = curseforgeKeyStatus(env.MERC_CURSEFORGE_API_KEY);
+  if (cf === "ok") {
+    console.log("CurseForge: clave encontrada, esta versión trae CurseForge.");
+  } else {
+    console.log(
+      cf === "rara"
+        ? "CurseForge: la clave de MERC_CURSEFORGE_API_KEY tiene espacios o es demasiado larga; la app la ignoraría."
+        : "CurseForge: no se encontró MERC_CURSEFORGE_API_KEY (si la guardaste con setx, cierra y abre de nuevo la ventana).",
+    );
+    if (!/^[sS]/.test(ask("¿Seguir sin CurseForge? (S/N): "))) fail("Publicación cancelada.");
+    delete env.MERC_CURSEFORGE_API_KEY;
   }
 
   console.log(`\nPublicando MercHosting ${version} (antes ${current}) en ${release.releases_repo}`);

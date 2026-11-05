@@ -237,7 +237,10 @@ pub fn need(body: &RequestBody) -> Need {
         R::BedrockPlayers { id } => On(*id, Players),
         R::BedrockAllowlist { id, .. } | R::BedrockAllowlistEnabled { id, .. } => On(*id, Whitelist),
         R::BedrockPermission { id, .. } => On(*id, Op),
-        R::AddonSetActive { id, .. } | R::AddonRemove { id, .. } => On(*id, Content),
+        R::AddonSetActive { id, .. }
+        | R::AddonRemove { id, .. }
+        | R::AddonSearch { id, .. }
+        | R::AddonInstallCurseforge { id, .. } => On(*id, Content),
         // Lee un archivo de la PC del dueño: no se permite desde otra PC.
         R::AddonImport { .. } => Need::Deny,
         // Escribe un archivo en la PC del dueño.

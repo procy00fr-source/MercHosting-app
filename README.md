@@ -53,7 +53,7 @@ npm --prefix app test
 
 En Windows, `scripts\abrir-app.ps1` compila y abre la app; `scripts\verificar-windows.ps1` comprueba las herramientas y pasa todas las pruebas. Publicar una versión: [docs/PUBLICAR_VERSION.md](docs/PUBLICAR_VERSION.md); la de Linux sale de GitHub Actions ([docs/LINUX.md](docs/LINUX.md)), y también el APK de **MercHosting para celular**, que administra desde Android los servidores de tus PCs ([docs/MOVIL.md](docs/MOVIL.md)).
 
-**CurseForge:** su API necesita una clave que no está en el repositorio. Sin ella, MercHosting funciona igual y muestra CurseForge como no disponible.
+**CurseForge:** su API necesita una clave que no está en el repositorio. Las versiones oficiales la llevan dentro (se pone al compilar desde la variable `MERC_CURSEFORGE_API_KEY`, en Windows con `setx` y en GitHub Actions como secreto). Si compilas sin ella, MercHosting funciona igual y muestra CurseForge como «Próximamente».
 
 ## Contribuir
 

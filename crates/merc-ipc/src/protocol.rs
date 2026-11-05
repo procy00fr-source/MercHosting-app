@@ -317,6 +317,23 @@ pub enum RequestBody {
         id: InstanceId,
         source: PathBuf,
     },
+    /// Busca addons de Minecraft Bedrock en CurseForge (necesita la clave de la instalación).
+    AddonSearch {
+        id: InstanceId,
+        query: String,
+        #[serde(default)]
+        sort: SearchSort,
+        #[serde(default)]
+        offset: u64,
+    },
+    /// Descarga de CurseForge un addon (el archivo indicado o el más nuevo que se pueda), comprueba
+    /// su huella, lo instala y lo activa en el mundo. Servidor detenido.
+    AddonInstallCurseforge {
+        id: InstanceId,
+        project_id: String,
+        #[serde(default)]
+        file_id: Option<String>,
+    },
     /// Activa o desactiva un pack en el mundo. Servidor detenido.
     AddonSetActive {
         id: InstanceId,
@@ -1009,6 +1026,9 @@ pub struct AddonsInfo {
     /// Resultado de la última importación (solo en la respuesta a `AddonImport`).
     #[serde(default)]
     pub last_import: Option<merc_admin::addons::ImportResult>,
+    /// Esta instalación puede buscar e instalar addons de CurseForge (tiene la clave de API).
+    #[serde(default)]
+    pub curseforge: bool,
 }
 
 /// Jugadores de Bedrock por Geyser: lo instalado, el puerto UDP real y sus túneles.

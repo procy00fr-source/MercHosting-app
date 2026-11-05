@@ -3,7 +3,7 @@
 
 import { invoke } from "@tauri-apps/api/core";
 import { isPermissionGranted, requestPermission } from "@tauri-apps/plugin-notification";
-import type { BackupInfo, CatalogEntry, ContentPlan, Flavor, InstalledItem, Platform, SearchPage } from "./types";
+import type { BackupInfo, CatalogEntry, ContentPlan, ContentSource, Flavor, InstalledItem, Platform, SearchPage } from "./types";
 import { MercError } from "./types";
 
 /** Tipos que se pueden crear en el celular (no necesitan ejecutar un instalador de Java). */
@@ -125,10 +125,10 @@ export type PhoneOp =
   | { op: "playit_link" }
   | { op: "playit_unlink" }
   | { op: "content_info"; id: string }
-  | { op: "content_search"; id: string; query: string; offset: number }
+  | { op: "content_search"; id: string; query: string; offset: number; source: ContentSource }
   | { op: "content_installed"; id: string }
-  | { op: "content_plan"; id: string; project: string }
-  | { op: "content_install"; id: string; version_id: string }
+  | { op: "content_plan"; id: string; project: string; source: ContentSource }
+  | { op: "content_install"; id: string; version_id: string; source: ContentSource }
   | { op: "content_progress" }
   | { op: "content_cancel" }
   | { op: "content_set_enabled"; id: string; file: string; enabled: boolean }
@@ -158,10 +158,10 @@ export interface PhoneApi {
   playitLink(): Promise<PhonePlayit["claim"]>;
   playitUnlink(): Promise<void>;
   contentInfo(id: string): Promise<PhoneContentInfo>;
-  contentSearch(id: string, query: string, offset: number): Promise<SearchPage>;
+  contentSearch(id: string, query: string, offset: number, source?: ContentSource): Promise<SearchPage>;
   contentInstalled(id: string): Promise<InstalledItem[]>;
-  contentPlan(id: string, project: string): Promise<{ version_id: string; plan: ContentPlan }>;
-  contentInstall(id: string, versionId: string): Promise<{ installed: string[] }>;
+  contentPlan(id: string, project: string, source?: ContentSource): Promise<{ version_id: string; plan: ContentPlan }>;
+  contentInstall(id: string, versionId: string, source?: ContentSource): Promise<{ installed: string[] }>;
   contentProgress(): Promise<PhoneContentProgress>;
   contentCancel(): Promise<void>;
   contentSetEnabled(id: string, file: string, enabled: boolean): Promise<{ file: string }>;
@@ -206,10 +206,10 @@ export function phoneApiFrom(send: (op: PhoneOp) => Promise<unknown>, askNotific
     playitLink: () => c({ op: "playit_link" }),
     playitUnlink: () => c({ op: "playit_unlink" }),
     contentInfo: (id) => c({ op: "content_info", id }),
-    contentSearch: (id, query, offset) => c({ op: "content_search", id, query, offset }),
+    contentSearch: (id, query, offset, source = "modrinth") => c({ op: "content_search", id, query, offset, source }),
     contentInstalled: (id) => c({ op: "content_installed", id }),
-    contentPlan: (id, project) => c({ op: "content_plan", id, project }),
-    contentInstall: (id, version_id) => c({ op: "content_install", id, version_id }),
+    contentPlan: (id, project, source = "modrinth") => c({ op: "content_plan", id, project, source }),
+    contentInstall: (id, version_id, source = "modrinth") => c({ op: "content_install", id, version_id, source }),
     contentProgress: () => c({ op: "content_progress" }),
     contentCancel: () => c({ op: "content_cancel" }),
     contentSetEnabled: (id, file, enabled) => c({ op: "content_set_enabled", id, file, enabled }),

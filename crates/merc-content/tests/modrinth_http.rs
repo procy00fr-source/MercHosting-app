@@ -594,3 +594,105 @@ fn hangar_external_download_is_blocked_with_explanation() {
     assert!(plan.blockers[0].contains("otra web"), "{:?}", plan.blockers);
     assert!(plan.items.is_empty());
 }
+
+#[test]
+fn curseforge_bedrock_addons_catalog_search_and_pick() {
+    use merc_content::curseforge::{pick_addon_file, BedrockCatalog};
+    let fake = Fake::start();
+    let http = Http::new();
+    let cf = CurseForge::new(&http, fake.base.clone(), "clave-de-prueba");
+    fake.route(
+        "GET /v1/games",
+        json!({ "data": [{ "id": 432, "slug": "minecraft" }, { "id": 78022, "slug": "minecraft-bedrock" }] })
+            .to_string(),
+    );
+    fake.route(
+        "GET /v1/categories",
+        json!({ "data": [{ "id": 4559, "slug": "maps", "name": "Maps" }, { "id": 4984, "slug": "addons", "name": "Addons" }] })
+            .to_string(),
+    );
+    let cat = cf.bedrock_catalog().unwrap();
+    assert_eq!(
+        cat,
+        BedrockCatalog {
+            game_id: 78022,
+            class_id: 4984
+        }
+    );
+
+    let addon = |id: u64, game: u64| {
+        json!({ "id": id, "gameId": game, "classId": 4984, "name": format!("Addon {id}"), "slug": format!("addon-{id}"),
+                "summary": "s", "downloadCount": 5, "authors": [{ "name": "autor" }],
+                "links": { "websiteUrl": format!("https://www.curseforge.com/minecraft-bedrock/addons/addon-{id}") } })
+    };
+    fake.route(
+        "GET /v1/mods/search",
+        json!({ "data": [addon(1, 78022), addon(2, 432)], "pagination": { "totalCount": 2 } }).to_string(),
+    );
+    let page = cf
+        .search_bedrock_addons(cat, "dragones", SearchSort::Relevance, 0)
+        .unwrap();
+    assert_eq!(page.hits.len(), 1, "lo que no es de Bedrock se descarta");
+    let req = fake
+        .seen
+        .lock()
+        .unwrap()
+        .iter()
+        .map(|(r, _)| r.clone())
+        .find(|r| r.contains("/v1/mods/search"))
+        .unwrap();
+    assert!(
+        req.contains("gameId=78022") && req.contains("classId=4984") && req.contains("searchFilter=dragones"),
+        "{req}"
+    );
+
+    fake.route("GET /v1/mods/1", json!({ "data": addon(1, 78022) }).to_string());
+    assert!(cf.is_bedrock_addon(cat, "1").unwrap());
+    fake.route("GET /v1/mods/2", json!({ "data": addon(2, 432) }).to_string());
+    assert!(!cf.is_bedrock_addon(cat, "2").unwrap());
+
+    let file = |id: u64, name: &str, url: &str, release: u64, date: &str| {
+        json!({ "id": id, "modId": 1, "displayName": name, "fileName": name, "downloadUrl": url, "releaseType": release,
+                "fileDate": date, "fileLength": 3, "hashes": [{ "algo": 1, "value": "0123456789abcdef0123456789abcdef01234567" }] })
+    };
+    fake.route(
+        "GET /v1/mods/1/files",
+        json!({ "data": [
+            file(13, "beta.mcaddon", "https://edge.forgecdn.net/b", 2, "2026-03-01"),
+            file(12, "fotos.png", "https://edge.forgecdn.net/p", 1, "2026-02-01"),
+            file(11, "estable.mcpack", "https://edge.forgecdn.net/e", 1, "2026-01-01"),
+            file(10, "sin-permiso.mcaddon", "", 1, "2025-12-01"),
+        ] })
+        .to_string(),
+    );
+    let files = cf.all_files("1").unwrap();
+    assert_eq!(
+        pick_addon_file(&files).unwrap().id,
+        "11",
+        "el estable más nuevo que se puede instalar"
+    );
+    assert_eq!(
+        pick_addon_file(&files[..1]).unwrap().id,
+        "13",
+        "sin estables, el más nuevo"
+    );
+    assert!(
+        pick_addon_file(&files[3..]).is_none(),
+        "sin permiso de descarga no se elige"
+    );
+}
+
+#[test]
+fn curseforge_bedrock_catalog_missing_game_is_clear() {
+    let fake = Fake::start();
+    let http = Http::new();
+    let cf = CurseForge::new(&http, fake.base.clone(), "clave-de-prueba");
+    fake.route(
+        "GET /v1/games",
+        json!({ "data": [{ "id": 432, "slug": "minecraft" }] }).to_string(),
+    );
+    match cf.bedrock_catalog() {
+        Err(ContentError::NotFound(m)) => assert!(m.contains("no incluye Minecraft Bedrock"), "{m}"),
+        other => panic!("{other:?}"),
+    }
+}

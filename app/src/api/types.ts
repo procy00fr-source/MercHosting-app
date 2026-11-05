@@ -311,6 +311,8 @@ export interface AddonsInfo {
   world_exists: boolean;
   packs: AddonPack[];
   last_import: AddonImportResult | null;
+  /** Esta instalación puede buscar e instalar addons de CurseForge. */
+  curseforge: boolean;
 }
 
 export interface ModSidesInfo {
@@ -1235,6 +1237,8 @@ export type RequestBody =
   | { op: "bedrock_allowlist_enabled"; id: InstanceId; enabled: boolean }
   | { op: "bedrock_permission"; id: InstanceId; xuid: string; level: BedrockLevel | null }
   | { op: "addon_import"; id: InstanceId; source: string }
+  | { op: "addon_search"; id: InstanceId; query: string; sort: SearchSort; offset: number }
+  | { op: "addon_install_curseforge"; id: InstanceId; project_id: string; file_id: string | null }
   | { op: "addon_set_active"; id: InstanceId; uuid: string; active: boolean }
   | { op: "addon_remove"; id: InstanceId; uuid: string }
   | { op: "mod_sides"; id: InstanceId }

@@ -48,6 +48,7 @@ En el repositorio **MercHosting-app**: *Settings → Secrets and variables → A
 1. **`TAURI_SIGNING_PRIVATE_KEY`**: el contenido de tu `%USERPROFILE%\.tauri\merchosting.key`. Es la MISMA clave con la que firmas las versiones de Windows. Nunca la pegues en ningún archivo del repositorio.
 2. **`TAURI_SIGNING_PRIVATE_KEY_PASSWORD`**: su contraseña. Si no tiene, crea el secreto vacío.
 3. **`RELEASES_TOKEN`**: un token de GitHub *fine-grained* con acceso **solo** al repositorio `procy00fr-source/MercHosting-releases` y permiso **Contents: Read and write**. Se crea en *GitHub → Settings → Developer settings → Personal access tokens → Fine-grained tokens*.
+4. **`MERC_CURSEFORGE_API_KEY`**: la clave de API de CurseForge que te dio Overwolf. Queda dentro del programa al compilar; sin ella, la versión de Linux sale con CurseForge en «Próximamente» (el workflow avisa). No la pegues en ningún archivo ni se la pases a nadie: las condiciones de CurseForge no lo permiten.
 
 ### Cada versión
 

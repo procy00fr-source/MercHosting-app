@@ -98,6 +98,8 @@ struct Daemon {
     hangar_api: String,
     /// API de descargas de GeyserMC (Floodgate para plugins).
     geysermc_api: String,
+    /// Juego y clase de los addons de Bedrock en CurseForge, una vez averiguados.
+    cf_bedrock: Mutex<Option<merc_content::curseforge::BedrockCatalog>>,
     hangar_cache: Mutex<merc_content::hangar::HangarCache>,
     /// Tareas programadas ejecutándose ahora (servidor, tarea).
     running_tasks: Mutex<std::collections::HashSet<(InstanceId, String)>>,
@@ -2605,9 +2607,12 @@ impl Daemon {
             | R::BedrockAllowlist { .. }
             | R::BedrockAllowlistEnabled { .. }
             | R::BedrockPermission { .. }) => self.handle_bedrock_players(client, b)?,
-            b @ (R::Addons { .. } | R::AddonImport { .. } | R::AddonSetActive { .. } | R::AddonRemove { .. }) => {
-                self.handle_addons(client, b)?
-            }
+            b @ (R::Addons { .. }
+            | R::AddonImport { .. }
+            | R::AddonSearch { .. }
+            | R::AddonInstallCurseforge { .. }
+            | R::AddonSetActive { .. }
+            | R::AddonRemove { .. }) => self.handle_addons(client, b)?,
             b @ (R::ModSides { .. } | R::QuarantineMods { .. } | R::RestoreMods { .. }) => {
                 self.handle_mod_sides(client, b)?
             }
@@ -2840,6 +2845,7 @@ pub fn run_with(data_dir: PathBuf, at_login: bool) -> Result<RunOutcome, String>
         modrinth_api: modrinth_api(),
         hangar_api: hangar_api(),
         geysermc_api: geysermc_api(),
+        cf_bedrock: Mutex::new(None),
         hangar_cache: Mutex::new(Default::default()),
         running_tasks: Mutex::new(Default::default()),
         tasks_lock: Mutex::new(()),

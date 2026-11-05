@@ -3,8 +3,10 @@
 
 use crate::local::{CreateRequest, Phone, PhoneError};
 use crate::playit::Playit;
+use merc_content::curseforge::CurseForge;
 use merc_content::local::InstallProgress;
-use merc_content::modrinth::Modrinth;
+use merc_content::modrinth::{Modrinth, Source};
+use merc_content::ContentSource;
 use merc_install::{Flavor, Http, Sources};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -84,6 +86,9 @@ pub enum Op {
         query: String,
         #[serde(default)]
         offset: u64,
+        /// Modrinth (por defecto) o CurseForge (solo mods y con la clave de la app).
+        #[serde(default)]
+        source: ContentSource,
     },
     ContentInstalled {
         id: String,
@@ -91,10 +96,14 @@ pub enum Op {
     ContentPlan {
         id: String,
         project: String,
+        #[serde(default)]
+        source: ContentSource,
     },
     ContentInstall {
         id: String,
         version_id: String,
+        #[serde(default)]
+        source: ContentSource,
     },
     ContentProgress,
     ContentCancel,
@@ -159,6 +168,10 @@ pub struct Api {
     cancel: AtomicBool,
     playit_api: String,
     modrinth_api: String,
+    curseforge_api: String,
+    /// Clave de CurseForge de la app: se pone al compilar (`MERC_CURSEFORGE_API_KEY`), nunca está
+    /// en el repositorio. Sin ella, CurseForge sale como «Próximamente».
+    curseforge_key: Option<String>,
     content_progress: InstallProgress,
     content_busy: AtomicBool,
 }
@@ -178,6 +191,11 @@ impl Api {
             cancel: AtomicBool::new(false),
             playit_api: merc_net::playit::API_BASE.to_string(),
             modrinth_api: merc_content::modrinth::MODRINTH_API.to_string(),
+            curseforge_api: merc_content::curseforge::CURSEFORGE_API.to_string(),
+            curseforge_key: option_env!("MERC_CURSEFORGE_API_KEY")
+                .map(str::trim)
+                .filter(|k| !k.is_empty() && k.len() < 200 && !k.contains(char::is_whitespace))
+                .map(str::to_string),
             content_progress: InstallProgress::default(),
             content_busy: AtomicBool::new(false),
         }
@@ -185,6 +203,34 @@ impl Api {
 
     fn modrinth(&self) -> Modrinth<'_> {
         Modrinth::new(&self.http, self.modrinth_api.clone())
+    }
+
+    /// Para pruebas: otra dirección de CurseForge y una clave de prueba.
+    #[cfg(test)]
+    pub(crate) fn with_curseforge(mut self, api: &str, key: Option<&str>) -> Self {
+        self.curseforge_api = api.to_string();
+        self.curseforge_key = key.map(str::to_string);
+        self
+    }
+
+    fn curseforge(&self) -> Option<CurseForge<'_>> {
+        self.curseforge_key
+            .as_ref()
+            .map(|k| CurseForge::new(&self.http, self.curseforge_api.clone(), k.clone()))
+    }
+
+    /// El catálogo pedido. CurseForge solo para mods y si la app trae la clave.
+    fn source(&self, s: ContentSource) -> Result<Box<dyn Source + '_>, ApiError> {
+        match s {
+            ContentSource::Curseforge => match self.curseforge() {
+                Some(cf) => Ok(Box::new(cf)),
+                None => Err(err(
+                    "unsupported",
+                    "CurseForge estará disponible próximamente: esta versión de la app no trae la clave oficial.",
+                )),
+            },
+            _ => Ok(Box::new(self.modrinth())),
+        }
     }
 
     fn set_progress(&self, f: impl FnOnce(&mut Progress)) {
@@ -320,16 +366,22 @@ impl Api {
                 self.playit.unlink(&p.playit_paths()).map_err(|e| err("playit", e))?;
                 Value::Null
             }
-            Op::ContentInfo { id } => to_value(p.content_info(&id)?),
-            Op::ContentSearch { id, query, offset } => {
-                to_value(p.content_search(&self.modrinth(), &id, &query, offset)?)
+            Op::ContentInfo { id } => to_value(p.content_info(&id, self.curseforge_key.is_some())?),
+            Op::ContentSearch {
+                id,
+                query,
+                offset,
+                source,
+            } => to_value(p.content_search(self.source(source)?.as_ref(), &id, &query, offset)?),
+            Op::ContentInstalled { id } => {
+                to_value(p.content_installed(Some(&self.modrinth()), self.curseforge().as_ref(), &id)?)
             }
-            Op::ContentInstalled { id } => to_value(p.content_installed(Some(&self.modrinth()), &id)?),
-            Op::ContentPlan { id, project } => {
-                let (version_id, plan) = p.content_plan(&self.modrinth(), &id, &project)?;
+            Op::ContentPlan { id, project, source } => {
+                let (version_id, plan) = p.content_plan(self.source(source)?.as_ref(), &id, &project)?;
                 json!({ "version_id": version_id, "plan": plan })
             }
-            Op::ContentInstall { id, version_id } => {
+            Op::ContentInstall { id, version_id, source } => {
+                let src = self.source(source)?;
                 if self.content_busy.swap(true, Ordering::SeqCst) {
                     return Err(err("busy", "Ya se está instalando algo."));
                 }
@@ -337,7 +389,7 @@ impl Api {
                 pr.done.store(0, Ordering::Relaxed);
                 pr.total.store(0, Ordering::Relaxed);
                 pr.cancel.store(false, Ordering::Relaxed);
-                let r = p.content_install(&self.http, &self.modrinth(), &id, &version_id, pr);
+                let r = p.content_install(&self.http, src.as_ref(), &id, &version_id, pr);
                 self.content_busy.store(false, Ordering::SeqCst);
                 json!({ "installed": r? })
             }
@@ -410,6 +462,13 @@ mod tests {
             Op::ContentSearch { offset: 0, .. }
         ));
         assert!(matches!(
+            op(json!({"op": "content_search", "id": "a", "source": "curseforge"})),
+            Op::ContentSearch {
+                source: ContentSource::Curseforge,
+                ..
+            }
+        ));
+        assert!(matches!(
             op(json!({"op": "content_set_enabled", "id": "a", "file": "x.jar", "enabled": false})),
             Op::ContentSetEnabled { enabled: false, .. }
         ));
@@ -418,6 +477,86 @@ mod tests {
             "accept_eula": true, "warnings_accepted": [], "bedrock": true
         }}));
         assert!(matches!(b, Op::Create { req } if req.bedrock));
+    }
+
+    #[test]
+    fn curseforge_needs_the_app_key_and_sends_it_only_in_the_header() {
+        use std::io::{BufRead, BufReader, Write};
+        let d = tempfile::tempdir().unwrap();
+        let api = Api::new(
+            Phone::new(d.path().into(), "aarch64", 8_192, None),
+            Http::new(),
+            Sources::default(),
+        );
+        let host = FakeHost::default();
+        api.phone
+            .register(LocalServer {
+                id: "f".into(),
+                name: "S".into(),
+                flavor: Flavor::Fabric,
+                mc_version: "1.21.1".into(),
+                java_major: 21,
+                heap_mb: 2_048,
+                jar: "fabric.jar".into(),
+                created_unix_ms: 0,
+                playit: false,
+                bedrock: false,
+            })
+            .unwrap();
+        std::fs::create_dir_all(api.phone.server_dir("f")).unwrap();
+        let search = || Op::ContentSearch {
+            id: "f".into(),
+            query: "mapa".into(),
+            offset: 0,
+            source: ContentSource::Curseforge,
+        };
+        // Sin clave (como en una compilación sin el secreto): «próximamente».
+        let api = api.with_curseforge("http://127.0.0.1:9", None);
+        assert_eq!(api.handle(&host, search()).unwrap_err().code, "unsupported");
+        let info = api.handle(&host, Op::ContentInfo { id: "f".into() }).unwrap();
+        assert_eq!(info["platform"]["sources"], json!(["modrinth"]));
+
+        // Con clave: busca en CurseForge.
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let base = format!("http://127.0.0.1:{}", listener.local_addr().unwrap().port());
+        let seen = Arc::new(Mutex::new(Vec::<String>::new()));
+        let seen2 = seen.clone();
+        std::thread::spawn(move || {
+            for stream in listener.incoming().flatten() {
+                let mut reader = BufReader::new(stream.try_clone().unwrap());
+                let mut lines = vec![];
+                loop {
+                    let mut h = String::new();
+                    if reader.read_line(&mut h).unwrap_or(0) == 0 || h == "\r\n" {
+                        break;
+                    }
+                    lines.push(h.trim_end().to_string());
+                }
+                seen2.lock().unwrap().push(lines.join(" | "));
+                let body = json!({ "data": [{ "id": 5, "name": "Mapa", "slug": "mapa", "summary": "s",
+                                              "downloadCount": 1, "authors": [{ "name": "a" }] }],
+                                   "pagination": { "totalCount": 1 } })
+                .to_string();
+                let mut s = stream;
+                let _ = write!(
+                    s,
+                    "HTTP/1.1 200 OK\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
+                    body.len()
+                );
+            }
+        });
+        let api = api.with_curseforge(&base, Some("clave-de-prueba"));
+        let info = api.handle(&host, Op::ContentInfo { id: "f".into() }).unwrap();
+        assert_eq!(info["platform"]["sources"], json!(["modrinth", "curseforge"]));
+        let page = api.handle(&host, search()).unwrap();
+        assert_eq!(page["hits"][0]["title"], "Mapa");
+        let req = seen.lock().unwrap()[0].clone();
+        assert!(req.starts_with("GET /v1/mods/search?gameId=432&classId=6"), "{req}");
+        assert!(req.to_lowercase().contains("x-api-key: clave-de-prueba"), "{req}");
+        assert!(
+            !req.split(' ').nth(1).unwrap().contains("clave"),
+            "la clave no va en la URL"
+        );
     }
 
     #[test]

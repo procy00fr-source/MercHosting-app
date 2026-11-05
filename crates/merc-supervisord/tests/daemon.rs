@@ -3299,7 +3299,59 @@ fn bedrock_native_server_runs_without_java_and_takes_addons() {
     std::fs::set_permissions(&exe, std::fs::Permissions::from_mode(0o755)).unwrap();
     std::fs::write(server.join(merc_core::detect::BEDROCK_VERSION_FILE), "1.21.124.2\n").unwrap();
 
-    let _d = spawn_daemon(&data);
+    // Un addon publicado en un CurseForge de prueba (juego y clase se averiguan por la API).
+    let castillos = {
+        let manifest = serde_json::json!({
+            "format_version": 2,
+            "header": {"name": "Castillos", "description": "c", "uuid": "aaaaaaaa-2222-3333-4444-555555555555", "version": [2, 0, 0]},
+            "modules": [{"type": "resources", "uuid": "aaaaaaaa-2222-3333-4444-555555555556", "version": [2, 0, 0]}]
+        });
+        let mut buf = std::io::Cursor::new(Vec::new());
+        let mut z = zip::ZipWriter::new(&mut buf);
+        z.start_file("manifest.json", zip::write::SimpleFileOptions::default())
+            .unwrap();
+        z.write_all(manifest.to_string().as_bytes()).unwrap();
+        z.finish().unwrap();
+        buf.into_inner()
+    };
+    let cf_base = {
+        let castillos = castillos.clone();
+        fake_modrinth(move |base| {
+            use serde_json::json;
+            let addon = json!({ "id": 77, "gameId": 78022, "classId": 4984, "name": "Castillos", "slug": "castillos",
+                                "summary": "Castillos enormes", "downloadCount": 9, "authors": [{ "name": "autora" }],
+                                "links": { "websiteUrl": "https://www.curseforge.com/minecraft-bedrock/addons/castillos" } });
+            let mut r = std::collections::HashMap::new();
+            let mut put = |k: &str, v: String| {
+                r.insert(k.to_string(), v.into_bytes());
+            };
+            put(
+                "GET /cf/v1/games",
+                json!({ "data": [{ "id": 78022, "slug": "minecraft-bedrock" }] }).to_string(),
+            );
+            put(
+                "GET /cf/v1/categories",
+                json!({ "data": [{ "id": 4984, "slug": "addons", "name": "Addons" }] }).to_string(),
+            );
+            put(
+                "GET /cf/v1/mods/search",
+                json!({ "data": [addon.clone()], "pagination": { "totalCount": 1 } }).to_string(),
+            );
+            put("GET /cf/v1/mods/77", json!({ "data": addon }).to_string());
+            put(
+                "GET /cf/v1/mods/77/files",
+                json!({ "data": [{ "id": 701, "modId": 77, "displayName": "Castillos 2.0", "fileName": "castillos.mcaddon",
+                                   "downloadUrl": format!("{base}/cdn/castillos.mcaddon"), "releaseType": 1,
+                                   "fileDate": "2026-10-01T00:00:00Z", "fileLength": castillos.len(),
+                                   "hashes": [{ "algo": 1, "value": sha1_hex(&castillos) }] }] })
+                .to_string(),
+            );
+            r.insert("GET /cdn/castillos.mcaddon".into(), castillos.clone());
+            r
+        })
+    };
+    let cf_api = PathBuf::from(format!("{cf_base}/cf"));
+    let _d = spawn_daemon_with(&data, &[("MERC_SOURCE_CURSEFORGE", &cf_api)]);
     let mut c = client(&data);
     // Sin Java: se importa igual (la ruta de Java no se usa).
     let id = match c
@@ -3349,6 +3401,47 @@ fn bedrock_native_server_runs_without_java_and_takes_addons() {
     assert!(a.packs[0].active);
     assert_eq!(a.last_import.unwrap().installed, vec!["Dragones 1.0.0".to_string()]);
     assert!(server.join("worlds/Mundo/world_behavior_packs.json").is_file());
+
+    // Sin clave de CurseForge no se buscan addons (y la app lo sabe).
+    let ResponseBody::Addons(a) = c.call(RequestBody::Addons { id }).unwrap() else {
+        panic!()
+    };
+    assert!(!a.curseforge);
+    let search = RequestBody::AddonSearch {
+        id,
+        query: "castillos".into(),
+        sort: SearchSort::Relevance,
+        offset: 0,
+    };
+    assert_eq!(api_code(c.call(search.clone())), ErrorCode::BadRequest);
+    // Con la clave: busca en Bedrock, descarga, comprueba el SHA-1, instala y activa.
+    std::fs::write(data.join("curseforge-api-key.txt"), "clave-de-prueba\n").unwrap();
+    let ResponseBody::ContentSearch(page) = c.call(search).unwrap() else {
+        panic!()
+    };
+    assert_eq!(page.hits.len(), 1);
+    assert_eq!(page.hits[0].title, "Castillos");
+    let ResponseBody::Addons(a) = c
+        .call(RequestBody::AddonInstallCurseforge {
+            id,
+            project_id: "77".into(),
+            file_id: None,
+        })
+        .unwrap()
+    else {
+        panic!()
+    };
+    assert!(a.curseforge);
+    assert_eq!(a.last_import.unwrap().installed, vec!["Castillos 2.0.0".to_string()]);
+    assert!(a.packs.iter().any(|p| p.name == "Castillos" && p.active));
+    assert!(server.join("worlds/Mundo/world_resource_packs.json").is_file());
+    // Lo quita para que el resto de la prueba siga con un solo addon.
+    c.call(RequestBody::AddonRemove {
+        id,
+        uuid: "aaaaaaaa-2222-3333-4444-555555555555".into(),
+    })
+    .unwrap();
+    std::fs::remove_file(data.join("curseforge-api-key.txt")).unwrap();
 
     // Arranca el ejecutable nativo y reconoce las líneas de Bedrock.
     c.call(RequestBody::Start { id }).unwrap();
@@ -3448,7 +3541,9 @@ fn bedrock_native_server_runs_without_java_and_takes_addons() {
     };
     assert!(a.packs.is_empty());
     assert!(!server.join("behavior_packs/Dragones_11111111").exists());
-    assert_eq!(activity_has(&mut c, id, "addons.remove"), 1);
+    // Dos quitados: «Castillos» (de CurseForge) y «Dragones».
+    assert_eq!(activity_has(&mut c, id, "addons.remove"), 2);
+    assert_eq!(activity_has(&mut c, id, "addons.curseforge"), 1);
 }
 
 #[test]

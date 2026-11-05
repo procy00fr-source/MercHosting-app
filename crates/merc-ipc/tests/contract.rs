@@ -418,6 +418,17 @@ fn examples() -> Value {
             id: id(),
             source: "C:/Users/amir/Downloads/dragones.mcaddon".into(),
         },
+        RequestBody::AddonSearch {
+            id: id(),
+            query: "dragones".into(),
+            sort: SearchSort::Downloads,
+            offset: 0,
+        },
+        RequestBody::AddonInstallCurseforge {
+            id: id(),
+            project_id: "123456".into(),
+            file_id: Some("7654321".into()),
+        },
         RequestBody::AddonSetActive {
             id: id(),
             uuid: "11111111-2222-3333-4444-555555555555".into(),
@@ -1183,6 +1194,7 @@ fn examples() -> Value {
                 replaced: vec![],
                 notes: vec!["«Dragones» usa scripts.".into()],
             }),
+            curseforge: true,
         })),
         ResponseBody::ModSides(Box::new(merc_admin::modsides::ModSidesInfo {
             items: vec![merc_admin::modsides::ModSideReport {

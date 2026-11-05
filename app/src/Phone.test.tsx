@@ -32,6 +32,8 @@ class FakePhone implements PhoneApi {
   linked = false;
   installedItems: InstalledItem[] = [];
   contentCalls: string[] = [];
+  /** La app trae la clave de CurseForge (los servidores Fabric ofrecen ese catálogo). */
+  curseforge = false;
   async info() {
     return this.info_;
   }
@@ -124,14 +126,22 @@ class FakePhone implements PhoneApi {
   async playitUnlink() {}
   async contentInfo(id: string): Promise<PhoneContentInfo> {
     const s = this.list.find((x) => x.id === id)!;
-    const platform =
+    const platform: PhoneContentInfo["platform"] =
       s.flavor === "vanilla"
         ? null
-        : { kind: "plugin" as const, folder: "plugins", loaders: ["paper", "spigot", "bukkit"], experimental: false, sources: ["modrinth" as const] };
+        : s.flavor === "fabric"
+          ? {
+              kind: "mod",
+              folder: "mods",
+              loaders: ["fabric"],
+              experimental: false,
+              sources: this.curseforge ? ["modrinth", "curseforge"] : ["modrinth"],
+            }
+          : { kind: "plugin", folder: "plugins", loaders: ["paper", "spigot", "bukkit"], experimental: false, sources: ["modrinth"] };
     return { platform, mc_version: s.mc_version, running: this.state !== "stopped" };
   }
-  async contentSearch(_id: string, query: string): Promise<SearchPage> {
-    this.contentCalls.push(`search:${query}`);
+  async contentSearch(_id: string, query: string, _offset = 0, source = "modrinth"): Promise<SearchPage> {
+    this.contentCalls.push(source === "modrinth" ? `search:${query}` : `search:${source}:${query}`);
     return {
       total: 1,
       offset: 0,
@@ -156,8 +166,8 @@ class FakePhone implements PhoneApi {
   async contentInstalled() {
     return this.installedItems;
   }
-  async contentPlan(_id: string, project: string) {
-    this.contentCalls.push(`plan:${project}`);
+  async contentPlan(_id: string, project: string, source = "modrinth") {
+    this.contentCalls.push(source === "modrinth" ? `plan:${project}` : `plan:${source}:${project}`);
     return {
       version_id: "v1",
       plan: {
@@ -185,8 +195,8 @@ class FakePhone implements PhoneApi {
       },
     };
   }
-  async contentInstall(_id: string, versionId: string) {
-    this.contentCalls.push(`install:${versionId}`);
+  async contentInstall(_id: string, versionId: string, source = "modrinth") {
+    this.contentCalls.push(source === "modrinth" ? `install:${versionId}` : `install:${source}:${versionId}`);
     this.installedItems = [
       {
         file_name: "EssentialsX.jar",
@@ -354,7 +364,7 @@ describe("Servidor dentro del celular", () => {
     expect(await view.findByText("19132")).toBeInTheDocument();
   });
 
-  it("catálogo de Modrinth: busca, instala con su plan, desactiva y quita; CurseForge está en Próximamente", async () => {
+  it("catálogo de Modrinth: busca, instala con su plan, desactiva y quita; CurseForge no es para plugins", async () => {
     const phone = new FakePhone();
     phone.list.push(
       { id: "s1", name: "Survival", flavor: "paper", mc_version: "1.21.1", java_major: 21, heap_mb: 2048, jar: "paper.jar", created_unix_ms: 1, playit: false },
@@ -367,7 +377,7 @@ describe("Servidor dentro del celular", () => {
     const plugins = within(await screen.findByRole("region", { name: "Plugins" }));
     const cf = plugins.getByRole("button", { name: /CurseForge/ });
     expect(cf).toBeDisabled();
-    expect(within(cf).getByText("Próximamente")).toBeInTheDocument();
+    expect(within(cf).getByText("Solo mods")).toBeInTheDocument();
     await user.click(await plugins.findByRole("button", { name: "Instalar EssentialsX" }));
     const d = within(await screen.findByRole("dialog", { name: "Instalar EssentialsX" }));
     expect(d.getByText(/Lo elegiste tú/)).toBeInTheDocument();
@@ -385,6 +395,54 @@ describe("Servidor dentro del celular", () => {
     expect(await screen.findByText(/Vanilla no admite mods ni plugins/)).toBeInTheDocument();
   }, 20_000);
 
+  it("sin la clave de CurseForge, en un servidor de mods sale «Próximamente»", async () => {
+    const phone = new FakePhone();
+    phone.list.push({ id: "f1", name: "Modeado", flavor: "fabric", mc_version: "1.21.1", java_major: 21, heap_mb: 2048, jar: "fabric.jar", created_unix_ms: 1, playit: false });
+    const user = userEvent.setup();
+    render(<MobileApp api={app(new FakeApi())} phone={phone} />);
+    await user.click(await screen.findByRole("button", { name: "En este celular" }));
+    await user.click(await screen.findByRole("button", { name: /Modeado/ }));
+    const mods = within(await screen.findByRole("region", { name: "Mods" }));
+    const cf = mods.getByRole("button", { name: /CurseForge/ });
+    expect(cf).toBeDisabled();
+    expect(within(cf).getByText("Próximamente")).toBeInTheDocument();
+  });
+
+  it("con la clave de CurseForge, los mods de Fabric se buscan e instalan desde CurseForge; los plugins no", async () => {
+    const phone = new FakePhone();
+    phone.curseforge = true;
+    phone.list.push(
+      { id: "f1", name: "Modeado", flavor: "fabric", mc_version: "1.21.1", java_major: 21, heap_mb: 2048, jar: "fabric.jar", created_unix_ms: 1, playit: false },
+      { id: "s1", name: "Survival", flavor: "paper", mc_version: "1.21.1", java_major: 21, heap_mb: 2048, jar: "paper.jar", created_unix_ms: 1, playit: false },
+    );
+    const user = userEvent.setup();
+    const fakeApp = new FakeApi();
+    render(<MobileApp api={app(fakeApp)} phone={phone} />);
+    await user.click(await screen.findByRole("button", { name: "En este celular" }));
+    await user.click(await screen.findByRole("button", { name: /Modeado/ }));
+    const mods = within(await screen.findByRole("region", { name: "Mods" }));
+    const cf = mods.getByRole("button", { name: "CurseForge" });
+    expect(cf).toBeEnabled();
+    expect(mods.queryByText("Próximamente")).not.toBeInTheDocument();
+    await user.click(cf);
+    await waitFor(() => expect(phone.contentCalls).toContain("search:curseforge:"));
+    expect(await mods.findByText("Buscar en CurseForge")).toBeInTheDocument();
+    await user.click(await mods.findByRole("button", { name: "Ver EssentialsX en CurseForge" }));
+    expect(fakeApp.openedUrls).toContain("https://www.curseforge.com/minecraft/mc-mods/essentialsx");
+    await user.click(mods.getByRole("button", { name: "Instalar EssentialsX" }));
+    expect(phone.contentCalls).toContain("plan:curseforge:essx");
+    const d = within(await screen.findByRole("dialog", { name: "Instalar EssentialsX" }));
+    await user.click(d.getByRole("button", { name: "Instalar" }));
+    await waitFor(() => expect(phone.contentCalls).toContain("install:curseforge:v1"));
+
+    await user.click(screen.getByRole("button", { name: "← En este celular" }));
+    await user.click(await screen.findByRole("button", { name: /Survival/ }));
+    const plugins = within(await screen.findByRole("region", { name: "Plugins" }));
+    const cfp = plugins.getByRole("button", { name: /CurseForge/ });
+    expect(cfp).toBeDisabled();
+    expect(within(cfp).getByText("Solo mods")).toBeInTheDocument();
+  }, 20_000);
+
   it("las peticiones salen con la forma que entiende merc_phone::api", async () => {
     const sent: unknown[] = [];
     const p = phoneApiFrom(
@@ -399,14 +457,16 @@ describe("Servidor dentro del celular", () => {
     await p.playit(null);
     await p.contentSearch("a", "ess", 20);
     await p.contentInstall("a", "v1");
+    await p.contentSearch("a", "mapa", 0, "curseforge");
     await p.contentSetEnabled("a", "x.jar", false);
     await p.threadDump("a");
     expect(sent).toEqual([
       { op: "set_heap", id: "a", heap_mb: 2048 },
       { op: "command", id: "a", text: "say x" },
       { op: "playit", id: null },
-      { op: "content_search", id: "a", query: "ess", offset: 20 },
-      { op: "content_install", id: "a", version_id: "v1" },
+      { op: "content_search", id: "a", query: "ess", offset: 20, source: "modrinth" },
+      { op: "content_install", id: "a", version_id: "v1", source: "modrinth" },
+      { op: "content_search", id: "a", query: "mapa", offset: 0, source: "curseforge" },
       { op: "content_set_enabled", id: "a", file: "x.jar", enabled: false },
       { op: "thread_dump", id: "a" },
     ]);

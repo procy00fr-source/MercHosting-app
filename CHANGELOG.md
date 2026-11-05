@@ -2,8 +2,11 @@
 
 Cada versión nueva se describe aquí antes de publicarla (`scripts/publicar-version.ps1` toma de aquí las notas que ve la gente al actualizar).
 
-## 1.0.2
+## 2.0.0
 
+- **CurseForge, por fin:** busca e instala mods de CurseForge y crea servidores desde sus modpacks, igual que con Modrinth. Cada descarga se comprueba con su huella, y si el autor no permite descargar su mod desde otras apps, MercHosting te lo dice en vez de instalarlo.
+- **Addons de Bedrock desde CurseForge:** en la pestaña Addons de un servidor Bedrock ya puedes buscar addons e instalarlos con un clic. Se activan solos en el mundo (con el servidor apagado).
+- **CurseForge en el celular:** los servidores Fabric que corren dentro del celular también buscan e instalan mods de CurseForge.
 - Con las animaciones de Windows apagadas, parte del diseño de la app no se cargaba (por ejemplo, las tarjetas para elegir el tipo de servidor). Ya se ve bien.
 - Si falla la revisión de un modpack, el error aparece junto a la versión elegida, con un botón para volver a intentar.
 

@@ -276,6 +276,7 @@ En el repositorio: **Settings › Secrets and variables › Actions › New repo
 | `ANDROID_KEY_ALIAS` | `upload`, o el alias que usaste en `-alias` |
 | `ANDROID_KEY_PASSWORD` | La contraseña que pusiste en keytool |
 | `RELEASES_TOKEN` | El mismo que ya usas para Linux. Solo hace falta si quieres subir el APK a la release |
+| `MERC_CURSEFORGE_API_KEY` | El mismo que ya usas para Linux. Con él, los servidores Fabric del celular también buscan mods en CurseForge |
 
 Borra `keystore.b64` cuando termines.
 

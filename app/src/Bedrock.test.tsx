@@ -145,6 +145,56 @@ describe("Addons", () => {
     expect(fake.calls).toContainEqual({ op: "addon_remove", id, uuid: "11111111-2222-3333-4444-555555555555" });
   }, 20_000);
 
+  it("con la clave de CurseForge: busca addons de Bedrock, instala el elegido y avisa si el autor no deja descargarlo", async () => {
+    const fake = new FakeApi();
+    bedrockServer(fake);
+    fake.addonsState.curseforge = true;
+    const hit = (project_id: string, title: string, slug: string) => ({
+      project_id,
+      slug,
+      title,
+      author: "autora",
+      description: `${title} para tu mundo`,
+      icon_url: null,
+      downloads: 1234,
+      categories: [],
+      client_side: "unknown" as const,
+      server_side: "unknown" as const,
+      date_modified: "",
+      license: "",
+    });
+    fake.cfAddons = [
+      {
+        hit: hit("77", "Castillos", "castillos"),
+        packs: [
+          { uuid: "aaaaaaaa-2222-3333-4444-555555555555", version: [2, 0, 0], name: "Castillos", description: "", kind: "resource", folder: "resource_packs/Castillos_aaaaaaaa", active: true, bundled: false, scripts: false },
+        ],
+      },
+      { hit: hit("88", "Cerrado", "cerrado"), packs: null },
+    ];
+    const user = userEvent.setup();
+    render(<App api={fake} intro={false} />);
+    await user.click(await screen.findByRole("tab", { name: "Addons" }));
+    const panel = within(screen.getByRole("tabpanel", { name: "Addons" }));
+    const box = within(await panel.findByRole("region", { name: "Buscar addons en CurseForge" }));
+    expect(panel.queryByText("Próximamente")).not.toBeInTheDocument();
+
+    await user.type(box.getByLabelText("Nombre del addon"), "cas");
+    await user.click(box.getByRole("button", { name: /Buscar/ }));
+    expect(fake.calls).toContainEqual({ op: "addon_search", id, query: "cas", sort: "relevance", offset: 0 });
+    await user.click(await box.findByRole("button", { name: "Ver Castillos en CurseForge" }));
+    expect(fake.openedUrls).toContain("https://www.curseforge.com/minecraft-bedrock/addons/castillos");
+    await user.click(box.getByRole("button", { name: "Instalar Castillos" }));
+    expect(fake.calls).toContainEqual({ op: "addon_install_curseforge", id, project_id: "77", file_id: null });
+    expect(await panel.findByText(/Instalado y activado: Castillos 2\.0\.0/)).toBeInTheDocument();
+    expect(panel.getByRole("checkbox", { name: "Activo en el mundo: Castillos" })).toBeChecked();
+
+    await user.clear(box.getByLabelText("Nombre del addon"));
+    await user.click(box.getByRole("button", { name: /Ver populares/ }));
+    await user.click(await box.findByRole("button", { name: "Instalar Cerrado" }));
+    expect(await box.findByText(/no permite descargarlo desde otras aplicaciones/)).toBeInTheDocument();
+  }, 20_000);
+
   it("arrastrar: instala solo .mcpack/.mcaddon", async () => {
     const fake = new FakeApi();
     bedrockServer(fake);

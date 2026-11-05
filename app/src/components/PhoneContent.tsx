@@ -1,14 +1,14 @@
-// Mods y plugins de un servidor del celular, desde Modrinth (API pública, sin clave). Instala
-// con el plan verificado de merc_phone::content (dependencias + hash de cada descarga); lo que
-// se reemplaza o se quita va a la papelera de la app. CurseForge aparece desactivado: llega
-// cuando MercHosting tenga su clave oficial.
+// Mods y plugins de un servidor del celular, desde Modrinth (API pública, sin clave) y, para
+// mods, desde CurseForge cuando la app se compiló con su clave oficial (si no, «Próximamente»).
+// Instala con el plan verificado de merc_phone::content (dependencias + hash de cada descarga);
+// lo que se reemplaza o se quita va a la papelera de la app.
 
 import { ExternalLink, Search, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import type { MercApi } from "../api/client";
 import { errorMessage } from "../api/client";
 import type { PhoneApi, PhoneContentInfo, PhoneContentProgress } from "../api/phone";
-import type { ContentPlan, InstalledItem, SearchPage } from "../api/types";
+import type { ContentPlan, ContentSource, InstalledItem, SearchPage } from "../api/types";
 import { Dialog } from "./Dialog";
 
 function mb(bytes: number): string {
@@ -30,7 +30,8 @@ export function PhoneContent({ phone, api, id, running, onError }: Props) {
   const [query, setQuery] = useState("");
   const [page, setPage] = useState<SearchPage | null>(null);
   const [searching, setSearching] = useState(false);
-  const [planFor, setPlanFor] = useState<{ title: string; version_id: string; plan: ContentPlan } | null>(null);
+  const [source, setSource] = useState<ContentSource>("modrinth");
+  const [planFor, setPlanFor] = useState<{ title: string; version_id: string; plan: ContentPlan; source: ContentSource } | null>(null);
   const [progress, setProgress] = useState<PhoneContentProgress | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
 
@@ -44,10 +45,11 @@ export function PhoneContent({ phone, api, id, running, onError }: Props) {
   }, [phone, id, onError]);
 
   const search = useCallback(
-    async (q: string, offset = 0) => {
+    async (q: string, offset = 0, from: ContentSource = "modrinth") => {
       setSearching(true);
+      if (offset === 0) setPage(null);
       try {
-        const r = await phone.contentSearch(id, q, offset);
+        const r = await phone.contentSearch(id, q, offset, from);
         setPage((prev) => (offset > 0 && prev ? { ...r, hits: [...prev.hits, ...r.hits] } : r));
       } catch (e) {
         onError(errorMessage(e));
@@ -85,8 +87,8 @@ export function PhoneContent({ phone, api, id, running, onError }: Props) {
   async function askPlan(projectId: string, title: string) {
     setBusy(projectId);
     try {
-      const r = await phone.contentPlan(id, projectId);
-      setPlanFor({ title, ...r });
+      const r = await phone.contentPlan(id, projectId, source);
+      setPlanFor({ title, ...r, source });
     } catch (e) {
       onError(errorMessage(e));
     } finally {
@@ -98,7 +100,7 @@ export function PhoneContent({ phone, api, id, running, onError }: Props) {
     if (!planFor) return;
     setProgress({ running: true, done: 0, total: planFor.plan.download_bytes });
     try {
-      await phone.contentInstall(id, planFor.version_id);
+      await phone.contentInstall(id, planFor.version_id, planFor.source);
       setPlanFor(null);
       await loadInstalled();
     } catch (e) {
@@ -123,23 +125,40 @@ export function PhoneContent({ phone, api, id, running, onError }: Props) {
   if (info === null) return null;
   const platform = info.platform;
   const what = platform?.kind === "mod" ? "Mods" : "Plugins";
+  const hasCurseforge = platform?.sources.includes("curseforge") ?? false;
+  const sourceName = source === "curseforge" ? "CurseForge" : "Modrinth";
+  const pickSource = (s: ContentSource) => {
+    if (s === source) return;
+    setSource(s);
+    void search(query.trim(), 0, s);
+  };
 
   return (
     <div className="card props-card" aria-label={platform ? what : "Mods y plugins"} role="region">
       <h2 className="panel-title">{platform ? what : "Mods y plugins"}</h2>
       <div className="seg" role="group" aria-label="Catálogo">
-        <button type="button" className="seg-btn" aria-pressed={true}>
+        <button type="button" className="seg-btn" aria-pressed={source === "modrinth"} onClick={() => pickSource("modrinth")}>
           Modrinth
         </button>
-        <button
-          type="button"
-          className="seg-btn"
-          aria-pressed={false}
-          disabled
-          title="Estará disponible cuando MercHosting tenga su clave oficial de CurseForge"
-        >
-          CurseForge <span className="badge badge-muted">Próximamente</span>
-        </button>
+        {hasCurseforge ? (
+          <button type="button" className="seg-btn" aria-pressed={source === "curseforge"} onClick={() => pickSource("curseforge")}>
+            CurseForge
+          </button>
+        ) : (
+          <button
+            type="button"
+            className="seg-btn"
+            aria-pressed={false}
+            disabled
+            title={
+              platform?.kind === "plugin"
+                ? "En el celular, CurseForge es solo para mods (servidores Fabric)"
+                : "Estará disponible cuando MercHosting tenga su clave oficial de CurseForge"
+            }
+          >
+            CurseForge <span className="badge badge-muted">{platform?.kind === "plugin" ? "Solo mods" : "Próximamente"}</span>
+          </button>
+        )}
       </div>
       {!platform ? (
         <p className="field-help">
@@ -195,12 +214,12 @@ export function PhoneContent({ phone, api, id, running, onError }: Props) {
           )}
           <p className="field-help">«Quitar» lo manda a la papelera de la app (no se borra).</p>
 
-          <h3 className="field-title">Buscar en Modrinth</h3>
+          <h3 className="field-title">Buscar en {sourceName}</h3>
           <form
             className="join-form"
             onSubmit={(e) => {
               e.preventDefault();
-              search(query.trim());
+              search(query.trim(), 0, source);
             }}
           >
             <label className="field">
@@ -216,7 +235,7 @@ export function PhoneContent({ phone, api, id, running, onError }: Props) {
           ) : page.hits.length === 0 ? (
             <p className="field-help">No hay resultados para esta versión de Minecraft.</p>
           ) : (
-            <ul className="mobile-servers" aria-label="Resultados de Modrinth">
+            <ul className="mobile-servers" aria-label={`Resultados de ${sourceName}`}>
               {page.hits.map((h) => (
                 <li key={h.project_id} className="content-row">
                   <span>
@@ -239,8 +258,14 @@ export function PhoneContent({ phone, api, id, running, onError }: Props) {
                     <button
                       type="button"
                       className="btn btn-sm btn-quiet"
-                      aria-label={`Ver ${h.title} en Modrinth`}
-                      onClick={() => api.openUrl(`https://modrinth.com/project/${encodeURIComponent(h.slug)}`)}
+                      aria-label={`Ver ${h.title} en ${sourceName}`}
+                      onClick={() =>
+                        api.openUrl(
+                          source === "curseforge"
+                            ? `https://www.curseforge.com/minecraft/mc-mods/${encodeURIComponent(h.slug)}`
+                            : `https://modrinth.com/project/${encodeURIComponent(h.slug)}`,
+                        )
+                      }
                     >
                       <ExternalLink size={14} aria-hidden="true" />
                     </button>
@@ -250,13 +275,18 @@ export function PhoneContent({ phone, api, id, running, onError }: Props) {
             </ul>
           )}
           {page && page.hits.length < page.total && (
-            <button type="button" className="btn btn-sm" disabled={searching} onClick={() => search(query.trim(), page.hits.length)}>
+            <button type="button" className="btn btn-sm" disabled={searching} onClick={() => search(query.trim(), page.hits.length, source)}>
               Ver más
             </button>
           )}
-          <p className="field-help">
-            CurseForge llega cuando MercHosting tenga su clave oficial. Mientras tanto, solo Modrinth.
-          </p>
+          {!hasCurseforge && platform.kind === "mod" && (
+            <p className="field-help">CurseForge llega cuando MercHosting tenga su clave oficial. Mientras tanto, solo Modrinth.</p>
+          )}
+          {source === "curseforge" && (
+            <p className="field-help">
+              Si el autor de un mod de CurseForge no permite descargarlo desde otras apps, MercHosting te lo dice y no lo instala.
+            </p>
+          )}
         </>
       )}
 

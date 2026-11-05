@@ -1,12 +1,13 @@
 // Pestaña Addons (solo servidores Bedrock): behavior packs y resource packs.
-// Se instalan desde un .mcpack/.mcaddon de esta PC (botón o arrastrando), se activan en el
-// mundo del servidor y se pueden desactivar o quitar (a la papelera, nunca se borran).
+// Se instalan desde un .mcpack/.mcaddon de esta PC (botón o arrastrando) o desde CurseForge
+// (si la instalación tiene la clave oficial; la descarga se comprueba con su huella), se activan
+// en el mundo del servidor y se pueden desactivar o quitar (a la papelera, nunca se borran).
 
-import { Boxes, Package, TriangleAlert, Upload } from "lucide-react";
+import { Boxes, ExternalLink, Package, Search, TriangleAlert, Upload } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import type { MercApi, Supervisor } from "../api/client";
 import { errorMessage } from "../api/client";
-import type { AddonImportResult, AddonPack, AddonsInfo, InstanceId } from "../api/types";
+import type { AddonImportResult, AddonPack, AddonsInfo, InstanceId, SearchPage } from "../api/types";
 import { baseName, useFileDrop } from "../useFileDrop";
 import { Dialog } from "./Dialog";
 
@@ -79,6 +80,142 @@ function PackRow({
         </button>
       )}
     </li>
+  );
+}
+
+/** Página de un addon de Bedrock en CurseForge. */
+export function curseforgeAddonUrl(slug: string): string {
+  return `https://www.curseforge.com/minecraft-bedrock/addons/${encodeURIComponent(slug)}`;
+}
+
+function CurseForgeAddons({
+  api,
+  sup,
+  id,
+  disabled,
+  canManage,
+  running,
+  onInstalled,
+}: {
+  api: MercApi;
+  sup: Supervisor;
+  id: InstanceId;
+  disabled: boolean;
+  canManage: boolean;
+  running: boolean;
+  onInstalled: (r: AddonsInfo) => void;
+}) {
+  const [query, setQuery] = useState("");
+  const [page, setPage] = useState<SearchPage | null>(null);
+  const [searching, setSearching] = useState(false);
+  const [installing, setInstalling] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  async function search(q: string, offset = 0) {
+    setSearching(true);
+    setError(null);
+    try {
+      const r = await sup.addonSearch(id, q, q ? "relevance" : "downloads", offset);
+      setPage((old) => (offset > 0 && old ? { ...r, hits: [...old.hits, ...r.hits] } : r));
+    } catch (e) {
+      setError(errorMessage(e));
+    } finally {
+      setSearching(false);
+    }
+  }
+
+  async function install(projectId: string) {
+    setInstalling(projectId);
+    setError(null);
+    try {
+      onInstalled(await sup.addonInstallCurseforge(id, projectId));
+    } catch (e) {
+      setError(errorMessage(e));
+    } finally {
+      setInstalling(null);
+    }
+  }
+
+  return (
+    <section className="card props-card" aria-label="Buscar addons en CurseForge">
+      <h2>Buscar addons en CurseForge</h2>
+      <form
+        className="join-form"
+        onSubmit={(e) => {
+          e.preventDefault();
+          void search(query.trim());
+        }}
+      >
+        <label className="field">
+          <span className="field-title">Nombre del addon</span>
+          <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} maxLength={100} placeholder="Por ejemplo: muebles" />
+        </label>
+        <button type="submit" className="btn btn-sm" disabled={searching}>
+          <Search size={14} aria-hidden="true" /> {query.trim() ? "Buscar" : "Ver populares"}
+        </button>
+      </form>
+      {error && (
+        <p className="form-error" role="alert">
+          {error}
+        </p>
+      )}
+      {searching && page === null && <p className="wiz-loading">Buscando…</p>}
+      {page &&
+        (page.hits.length === 0 ? (
+          <p className="field-help">No hay addons con ese nombre.</p>
+        ) : (
+          <ul className="addon-list" aria-label="Resultados de CurseForge">
+            {page.hits.map((h) => (
+              <li key={h.project_id} className="addon-row">
+                <span>
+                  <span className="addon-meta">
+                    <strong translate="no">{h.title}</strong>
+                    <span className="field-help">
+                      de <span translate="no">{h.author}</span> · {h.downloads.toLocaleString("es")} descargas
+                    </span>
+                  </span>
+                  {h.description && (
+                    <span className="field-help" translate="no">
+                      {h.description}
+                    </span>
+                  )}
+                </span>
+                <span className="row-actions">
+                  {canManage && (
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-go"
+                      disabled={disabled || installing !== null}
+                      title={running ? "Detén el servidor para instalar addons." : undefined}
+                      aria-label={`Instalar ${h.title}`}
+                      onClick={() => void install(h.project_id)}
+                    >
+                      {installing === h.project_id ? "Instalando…" : "Instalar"}
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-quiet"
+                    aria-label={`Ver ${h.title} en CurseForge`}
+                    onClick={() => api.openUrl(curseforgeAddonUrl(h.slug))}
+                  >
+                    <ExternalLink size={14} aria-hidden="true" />
+                  </button>
+                </span>
+              </li>
+            ))}
+          </ul>
+        ))}
+      {page && page.hits.length < page.total && (
+        <button type="button" className="btn btn-sm" disabled={searching} onClick={() => void search(query.trim(), page.hits.length)}>
+          Ver más
+        </button>
+      )}
+      <p className="field-help">
+        Se instala la versión más nueva del addon y se comprueba con su huella antes de activarla. Si el autor no permite descargarlo
+        desde otras apps, ábrelo en CurseForge, descárgalo y arrástralo aquí.
+      </p>
+    </section>
   );
 }
 
@@ -243,21 +380,37 @@ export function AddonsPanel({ api, sup, id, running, remote, canManage }: Props)
             </details>
           )}
 
-          <section className="card props-card" aria-label="Buscar addons">
-            <h2>Buscar addons gratis</h2>
-            <button
-              type="button"
-              className="btn btn-go"
-              disabled
-              title="Estará disponible cuando MercHosting tenga su clave oficial de CurseForge"
-            >
-              Buscar en CurseForge <span className="badge badge-muted">Próximamente</span>
-            </button>
-            <p className="field-help">
-              Buscar e instalar addons de CurseForge desde aquí llega cuando MercHosting tenga su clave oficial. Mientras tanto,
-              descárgalos de su página y arrástralos a esta pestaña.
-            </p>
-          </section>
+          {info.curseforge ? (
+            <CurseForgeAddons
+              api={api}
+              sup={sup}
+              id={id}
+              running={running}
+              canManage={canManage}
+              disabled={busy || running}
+              onInstalled={(r) => {
+                setInfo(r);
+                setMsgs(r.last_import ? importSummary(r.last_import) : []);
+                setNotes(r.last_import?.notes ?? []);
+              }}
+            />
+          ) : (
+            <section className="card props-card" aria-label="Buscar addons">
+              <h2>Buscar addons gratis</h2>
+              <button
+                type="button"
+                className="btn btn-go"
+                disabled
+                title="Estará disponible cuando MercHosting tenga su clave oficial de CurseForge"
+              >
+                Buscar en CurseForge <span className="badge badge-muted">Próximamente</span>
+              </button>
+              <p className="field-help">
+                Buscar e instalar addons de CurseForge desde aquí llega cuando MercHosting tenga su clave oficial. Mientras tanto,
+                descárgalos de su página y arrástralos a esta pestaña.
+              </p>
+            </section>
+          )}
         </>
       )}
 

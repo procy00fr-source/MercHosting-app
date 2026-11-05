@@ -2571,7 +2571,28 @@
 "(la más nueva)": " (newest)",
 "Termina de actualizar MercHosting.": "Finish updating MercHosting.",
 "Sigue en marcha el supervisor de la versión anterior porque tienes servidores encendidos, y algunas funciones nuevas no aparecerán hasta cambiarlo. Detén tus servidores y pulsa «Actualizar ahora»: no se pierde nada.": "The previous version’s supervisor is still running because you have servers on, and some new features won’t show up until it’s replaced. Stop your servers and press “Update now”: nothing is lost.",
-"Actualizar ahora": "Update now"
+"Actualizar ahora": "Update now",
+"Buscar addons en CurseForge": "Search add-ons on CurseForge",
+"Nombre del addon": "Add-on name",
+"Por ejemplo: muebles": "For example: furniture",
+"Ver populares": "Show popular",
+"No hay addons con ese nombre.": "No add-ons with that name.",
+"Resultados de CurseForge": "CurseForge results",
+"Ver más": "Show more",
+"Se instala la versión más nueva del addon y se comprueba con su huella antes de activarla. Si el autor no permite descargarlo desde otras apps, ábrelo en CurseForge, descárgalo y arrástralo aquí.": "The newest version of the add-on is installed and checked against its fingerprint before it's turned on. If the author doesn't allow downloads from other apps, open it on CurseForge, download it and drag it here.",
+"En el celular, CurseForge es solo para mods (servidores Fabric)": "On the phone, CurseForge is for mods only (Fabric servers)",
+"Solo mods": "Mods only",
+"Si el autor de un mod de CurseForge no permite descargarlo desde otras apps, MercHosting te lo dice y no lo instala.": "If a CurseForge mod's author doesn't allow downloads from other apps, MercHosting tells you and doesn't install it.",
+"la clave de CurseForge de MercHosting no incluye Minecraft Bedrock": "MercHosting's CurseForge key doesn't include Minecraft Bedrock",
+"CurseForge no tiene la sección de addons de Bedrock": "CurseForge doesn't have the Bedrock add-ons section",
+"Ese archivo no es de este addon": "That file isn't from this add-on",
+"Ese archivo no se puede instalar desde aquí (no es un .mcaddon/.mcpack o el autor no permite descargarlo desde otras apps).": "That file can't be installed from here (it isn't a .mcaddon/.mcpack or the author doesn't allow downloads from other apps).",
+"Este addon todavía no tiene archivos publicados": "This add-on has no published files yet",
+"El autor de este addon no permite descargarlo desde otras aplicaciones (o no publica un .mcaddon/.mcpack). Descárgalo desde su página de CurseForge y arrástralo a esta pestaña.": "This add-on's author doesn't allow downloads from other apps (or doesn't publish a .mcaddon/.mcpack). Download it from its CurseForge page and drag it into this tab.",
+"El addon es demasiado grande": "The add-on is too large",
+"CurseForge no publica la huella de este addon": "CurseForge doesn't publish this add-on's fingerprint",
+"Eso no es un addon de Minecraft Bedrock": "That isn't a Minecraft Bedrock add-on",
+"CurseForge estará disponible próximamente: esta versión de la app no trae la clave oficial.": "CurseForge is coming soon: this version of the app doesn't include the official key."
 },
 "patterns": [
 [
@@ -5713,6 +5734,22 @@
 [
 "En «Mis PCs» los servidores corren en tu PC o en tu servidor casero. La PC tiene que estar encendida, con MercHosting abierto o en segundo plano, y conectada a Internet.",
 "In «My PCs» servers run on your PC or home server. The PC must be on, with MercHosting open or in the background, and connected to the Internet."
+],
+[
+"Ver {0} en CurseForge",
+"View {0} on CurseForge"
+],
+[
+"Buscar en {0}",
+"Search {0}"
+],
+[
+"Resultados de {0}",
+"{0} results"
+],
+[
+"Ver {0} en {1}",
+"View {0} on {1}"
 ]
 ]
 }

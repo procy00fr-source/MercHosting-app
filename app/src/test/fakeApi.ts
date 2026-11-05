@@ -356,7 +356,9 @@ export class FakeApi implements MercApi {
     st.permissions = st.permissions.map((p) => ({ ...p, name: st.known.find((k) => k.xuid === p.xuid)?.name ?? null }));
     return { kind: "bedrock_players" as const, data: structuredClone(st) };
   }
-  addonsState: AddonsInfo = { level_name: "Bedrock level", world_exists: true, packs: [], last_import: null };
+  addonsState: AddonsInfo = { level_name: "Bedrock level", world_exists: true, packs: [], last_import: null, curseforge: false };
+  /** Addons de Bedrock publicados en el CurseForge simulado y los packs que trae cada uno (`null` = sin permiso de descarga). */
+  cfAddons: { hit: ContentHit; packs: AddonPack[] | null }[] = [];
   addonImports: Record<string, AddonPack[]> = {
     "C:\\Users\\ana\\Downloads\\dragones.mcaddon": [
       { uuid: "11111111-2222-3333-4444-555555555555", version: [1, 0, 0], name: "Dragones", description: "Dragones que vuelan", kind: "behavior", folder: "behavior_packs/Dragones_11111111", active: true, bundled: false, scripts: true },
@@ -404,6 +406,22 @@ export class FakeApi implements MercApi {
     const st = this.find(id).status.state;
     return ["STARTING", "LOADING", "ONLINE", "STOPPING", "UNKNOWN", "RECOVERING"].includes(st);
   }
+  private importAddonPacks(packs: AddonPack[]): ResponseBody {
+    const r: AddonImportResult = { installed: [], unchanged: [], replaced: [], notes: [] };
+    for (const p of packs) {
+      const label = `${p.name} ${p.version.join(".")}`;
+      const old = this.addonsState.packs.find((x) => x.uuid === p.uuid);
+      if (old && old.version.join(".") === p.version.join(".")) r.unchanged.push(label);
+      else {
+        if (old) r.replaced.push(label);
+        else r.installed.push(label);
+        this.addonsState.packs = [...this.addonsState.packs.filter((x) => x.uuid !== p.uuid), structuredClone(p)];
+      }
+      if (p.scripts) r.notes.push(`«${p.name}» usa scripts: si no funciona, puede necesitar experimentos o APIs beta activados en el mundo.`);
+    }
+    return { kind: "addons", data: { ...structuredClone(this.addonsState), last_import: r } };
+  }
+
   private requireStopped(id: string) {
     if (this.running(id)) throw new MercError("invalid_state", "Detén el servidor antes de modificar archivos.");
   }
@@ -1464,23 +1482,29 @@ export class FakeApi implements MercApi {
       case "addons":
         if (this.find(body.id).instance.kind !== "bedrock") throw new MercError("bad_request", "Los addons son para servidores Bedrock.");
         return { kind: "addons", data: { ...structuredClone(this.addonsState), last_import: null } };
+      case "addon_search": {
+        if (!this.addonsState.curseforge) throw new MercError("bad_request", "CurseForge estará disponible próximamente");
+        const q = body.query.trim().toLowerCase();
+        const hits = this.cfAddons.map((a) => a.hit).filter((h) => !q || h.title.toLowerCase().includes(q));
+        return { kind: "content_search", data: { hits: structuredClone(hits), total: hits.length, offset: 0 } };
+      }
+      case "addon_install_curseforge": {
+        this.requireStopped(body.id);
+        if (!this.addonsState.curseforge) throw new MercError("bad_request", "CurseForge estará disponible próximamente");
+        const a = this.cfAddons.find((x) => x.hit.project_id === body.project_id);
+        if (!a) throw new MercError("bad_request", "Eso no es un addon de Minecraft Bedrock");
+        if (!a.packs)
+          throw new MercError(
+            "conflict",
+            "El autor de este addon no permite descargarlo desde otras aplicaciones (o no publica un .mcaddon/.mcpack). Descárgalo desde su página de CurseForge y arrástralo a esta pestaña.",
+          );
+        return this.importAddonPacks(a.packs);
+      }
       case "addon_import": {
         this.requireStopped(body.id);
         const packs = this.addonImports[body.source];
         if (!packs) throw new MercError("bad_request", "no se encontró ningún behavior pack ni resource pack dentro");
-        const r: AddonImportResult = { installed: [], unchanged: [], replaced: [], notes: [] };
-        for (const p of packs) {
-          const label = `${p.name} ${p.version.join(".")}`;
-          const old = this.addonsState.packs.find((x) => x.uuid === p.uuid);
-          if (old && old.version.join(".") === p.version.join(".")) r.unchanged.push(label);
-          else {
-            if (old) r.replaced.push(label);
-            else r.installed.push(label);
-            this.addonsState.packs = [...this.addonsState.packs.filter((x) => x.uuid !== p.uuid), structuredClone(p)];
-          }
-          if (p.scripts) r.notes.push(`«${p.name}» usa scripts: si no funciona, puede necesitar experimentos o APIs beta activados en el mundo.`);
-        }
-        return { kind: "addons", data: { ...structuredClone(this.addonsState), last_import: r } };
+        return this.importAddonPacks(packs);
       }
       case "addon_set_active": {
         this.requireStopped(body.id);

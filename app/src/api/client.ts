@@ -465,6 +465,12 @@ export class Supervisor {
   async addonImport(id: InstanceId, source: string): Promise<AddonsInfo> {
     return expect(await this.api.call({ op: "addon_import", id, source }), "addons").data;
   }
+  async addonSearch(id: InstanceId, query: string, sort: SearchSort = "relevance", offset = 0): Promise<SearchPage> {
+    return expect(await this.api.call({ op: "addon_search", id, query, sort, offset }), "content_search").data;
+  }
+  async addonInstallCurseforge(id: InstanceId, projectId: string, fileId: string | null = null): Promise<AddonsInfo> {
+    return expect(await this.api.call({ op: "addon_install_curseforge", id, project_id: projectId, file_id: fileId }), "addons").data;
+  }
   async addonSetActive(id: InstanceId, uuid: string, active: boolean): Promise<AddonsInfo> {
     return expect(await this.api.call({ op: "addon_set_active", id, uuid, active }), "addons").data;
   }

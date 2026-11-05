@@ -59,11 +59,14 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
           GH_TOKEN: ${{ secrets.RELEASES_TOKEN }}
+          # Clave de CurseForge: queda dentro del programa al compilar; nunca está en el repositorio.
+          MERC_CURSEFORGE_API_KEY: ${{ secrets.MERC_CURSEFORGE_API_KEY }}
           # Por variable de entorno (no pegado en el comando) para que nadie pueda inyectar
           # órdenes con el texto de la versión; el script además exige X.Y.Z.
           VERSION: ${{ inputs.version }}
           SUBIR: ${{ inputs.subir }}
         run: |
+          if [ -z "$MERC_CURSEFORGE_API_KEY" ]; then echo "::warning::Falta el secreto MERC_CURSEFORGE_API_KEY: esta versión sale sin CurseForge."; fi
           if [ "$SUBIR" = "true" ]; then node scripts/publicar-linux.mjs "$VERSION"; else node scripts/publicar-linux.mjs "$VERSION" --sin-subir; fi
 
       - name: Guardar los archivos como artefacto

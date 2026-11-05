@@ -29,6 +29,38 @@ pub const CLASS_MODS: u64 = 6;
 /// Clase «Modpacks» de Minecraft.
 pub const CLASS_MODPACKS: u64 = 4471;
 
+/// Juego «Minecraft Bedrock» en CurseForge. Sus identificadores (juego y clase «Addons») se
+/// buscan en la API en vez de escribirlos aquí: así, si la clave no incluye Bedrock, se sabe.
+pub const BEDROCK_GAME_SLUG: &str = "minecraft-bedrock";
+pub const BEDROCK_ADDONS_SLUG: &str = "addons";
+/// Extensiones de archivo de un addon que MercHosting sabe instalar.
+pub const ADDON_EXTENSIONS: [&str; 3] = [".mcaddon", ".mcpack", ".zip"];
+
+/// Dónde están los addons de Bedrock en CurseForge.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct BedrockCatalog {
+    pub game_id: u64,
+    pub class_id: u64,
+}
+
+/// ¿Se puede instalar este archivo de CurseForge como addon? (extensión conocida y el autor deja
+/// descargarlo desde otras apps).
+pub fn is_installable_addon(v: &ContentVersion) -> bool {
+    v.files.first().is_some_and(|f| {
+        let name = f.filename.to_ascii_lowercase();
+        !f.url.is_empty() && ADDON_EXTENSIONS.iter().any(|e| name.ends_with(e))
+    })
+}
+
+/// Elige qué archivo instalar: el más nuevo estable que se pueda instalar; si no hay estables,
+/// el más nuevo que se pueda. `files` llega con los más nuevos primero.
+pub fn pick_addon_file(files: &[ContentVersion]) -> Option<&ContentVersion> {
+    files
+        .iter()
+        .find(|f| f.version_type == "release" && is_installable_addon(f))
+        .or_else(|| files.iter().find(|f| is_installable_addon(f)))
+}
+
 /// `modLoaderType` de CurseForge para un loader de Modrinth.
 pub fn loader_type(loader: &str) -> Option<u32> {
     match loader {
@@ -330,6 +362,76 @@ impl<'a> CurseForge<'a> {
             .unwrap_or(0)
             .min(10_000);
         Ok(SearchPage { hits, total, offset })
+    }
+
+    /// Juego y clase de los addons de Bedrock. Error claro si la clave no incluye Bedrock.
+    pub fn bedrock_catalog(&self) -> Result<BedrockCatalog, ContentError> {
+        let v = self.get("/v1/games?index=0&pageSize=50")?;
+        let game_id = Self::data(&v)?
+            .as_array()
+            .ok_or_else(|| bad("juegos"))?
+            .iter()
+            .find(|g| s(g, "slug") == BEDROCK_GAME_SLUG)
+            .map(|g| num(g, "id"))
+            .filter(|n| *n > 0)
+            .ok_or_else(|| {
+                ContentError::NotFound("la clave de CurseForge de MercHosting no incluye Minecraft Bedrock".into())
+            })?;
+        let v = self.get(&format!("/v1/categories?gameId={game_id}&classesOnly=true"))?;
+        let class_id = Self::data(&v)?
+            .as_array()
+            .ok_or_else(|| bad("clases"))?
+            .iter()
+            .find(|c| s(c, "slug") == BEDROCK_ADDONS_SLUG || s(c, "name").eq_ignore_ascii_case("addons"))
+            .map(|c| num(c, "id"))
+            .filter(|n| *n > 0)
+            .ok_or_else(|| ContentError::NotFound("CurseForge no tiene la sección de addons de Bedrock".into()))?;
+        Ok(BedrockCatalog { game_id, class_id })
+    }
+
+    /// Busca addons de Minecraft Bedrock.
+    pub fn search_bedrock_addons(
+        &self,
+        cat: BedrockCatalog,
+        query: &str,
+        sort: SearchSort,
+        offset: u64,
+    ) -> Result<SearchPage, ContentError> {
+        let sort_field = match sort {
+            SearchSort::Relevance => 2,
+            SearchSort::Downloads => 6,
+            SearchSort::Updated => 3,
+            SearchSort::Newest => 11,
+        };
+        let q: String = query.trim().chars().take(100).collect();
+        let path = format!(
+            "/v1/mods/search?gameId={}&classId={}&searchFilter={}&sortField={sort_field}&sortOrder=desc&index={offset}&pageSize=20",
+            cat.game_id,
+            cat.class_id,
+            crate::modrinth::encode(&q)
+        );
+        let v = self.get(&path)?;
+        let hits = Self::data(&v)?
+            .as_array()
+            .ok_or_else(|| bad("búsqueda"))?
+            .iter()
+            .filter(|m| num(m, "gameId") == 0 || num(m, "gameId") == cat.game_id)
+            .filter_map(|m| parse_hit(m).ok())
+            .collect();
+        let total = v
+            .get("pagination")
+            .and_then(|p| p.get("totalCount"))
+            .and_then(Value::as_u64)
+            .unwrap_or(0)
+            .min(10_000);
+        Ok(SearchPage { hits, total, offset })
+    }
+
+    /// El proyecto es un addon de Bedrock (y no un mod de Java con el mismo número).
+    pub fn is_bedrock_addon(&self, cat: BedrockCatalog, project: &str) -> Result<bool, ContentError> {
+        let v = self.get(&format!("/v1/mods/{}", check_num(project)?))?;
+        let m = Self::data(&v)?;
+        Ok(num(m, "gameId") == cat.game_id && num(m, "classId") == cat.class_id)
     }
 
     /// Archivos publicados de un proyecto (los más nuevos primero), sin filtrar.

@@ -573,6 +573,19 @@
       "source": "C:/Users/amir/Downloads/dragones.mcaddon"
     },
     {
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "offset": 0,
+      "op": "addon_search",
+      "query": "dragones",
+      "sort": "downloads"
+    },
+    {
+      "file_id": "7654321",
+      "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
+      "op": "addon_install_curseforge",
+      "project_id": "123456"
+    },
+    {
       "active": false,
       "id": "2f6d1c3a-8b4e-4c1d-9a7e-5b3c2d1e0f9a",
       "op": "addon_set_active",
@@ -1755,6 +1768,7 @@
     },
     {
       "data": {
+        "curseforge": true,
         "last_import": {
           "installed": [
             "Dragones 1.1.0"

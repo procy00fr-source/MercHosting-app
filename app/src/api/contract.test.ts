@@ -116,6 +116,8 @@ const REQUEST_KEYS: Record<RequestBody["op"], string[]> = {
   bedrock_allowlist_enabled: ["id", "enabled"],
   bedrock_permission: ["id", "xuid", "level"],
   addon_import: ["id", "source"],
+  addon_search: ["id", "query", "sort", "offset"],
+  addon_install_curseforge: ["id", "project_id", "file_id"],
   addon_set_active: ["id", "uuid", "active"],
   addon_remove: ["id", "uuid"],
   mod_sides: ["id"],
@@ -346,7 +348,7 @@ describe("contrato del protocolo v1 con Rust", () => {
       }
       if (r.kind === "player_history") for (const p of r.data) expect(Object.keys(p)).toContain("xuid");
       if (r.kind === "addons") {
-        expect(sorted(Object.keys(r.data))).toEqual(["last_import", "level_name", "packs", "world_exists"]);
+        expect(sorted(Object.keys(r.data))).toEqual(["curseforge", "last_import", "level_name", "packs", "world_exists"]);
         for (const p of r.data.packs)
           expect(sorted(Object.keys(p))).toEqual(sorted(["uuid", "version", "name", "description", "kind", "folder", "active", "bundled", "scripts"]));
         if (r.data.last_import) expect(sorted(Object.keys(r.data.last_import))).toEqual(["installed", "notes", "replaced", "unchanged"]);

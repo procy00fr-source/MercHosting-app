@@ -1,6 +1,6 @@
 //! Mods y plugins de los servidores del celular, desde el catálogo de Modrinth (API pública, sin
-//! cuenta ni clave). CurseForge se muestra como «Próximamente» en la interfaz: necesita una clave
-//! de API que no va en la app.
+//! cuenta ni clave) y, para mods, desde CurseForge si la app se compiló con su clave
+//! (`MERC_CURSEFORGE_API_KEY`, nunca en el repositorio). Sin clave sale como «Próximamente».
 //!
 //! - Plataforma según el tipo: Paper/Purpur → plugins, Fabric → mods, Vanilla → nada.
 //! - Instalar usa el mismo plan verificado de escritorio (dependencias, hash de cada descarga);
@@ -9,6 +9,7 @@
 //! - «Java + Bedrock»: Geyser y Floodgate (GeyserMC, MIT) desde Modrinth en un Paper o Purpur.
 
 use crate::local::{Phone, PhoneError};
+use merc_content::curseforge::CurseForge;
 use merc_content::local::{self as cl, InstallProgress, InstalledItem};
 use merc_content::modrinth::{SearchPage, SearchSort, Source};
 use merc_content::plan::{self, ContentPlan};
@@ -209,10 +210,17 @@ impl Phone {
         Ok(())
     }
 
-    pub fn content_info(&self, id: &str) -> Result<ContentInfo, PhoneError> {
+    /// `curseforge`: la app trae la clave de CurseForge (entonces los mods también se buscan allí).
+    pub fn content_info(&self, id: &str, curseforge: bool) -> Result<ContentInfo, PhoneError> {
         let s = self.get(id)?;
+        let mut platform = platform_for(s.flavor, &self.server_dir(id));
+        if let Some(p) = platform.as_mut() {
+            if curseforge && p.kind == ContentKind::Mod {
+                p.sources.push(ContentSource::Curseforge);
+            }
+        }
         Ok(ContentInfo {
-            platform: platform_for(s.flavor, &self.server_dir(id)),
+            platform,
             mc_version: s.mc_version,
             running: self.pid(id).is_some(),
         })
@@ -235,13 +243,22 @@ impl Phone {
         Ok(source.search(&p, Some(&mc), query, sort, offset)?)
     }
 
-    /// Lo instalado; con conexión se completa con nombre y versión de Modrinth.
-    pub fn content_installed(&self, source: Option<&dyn Source>, id: &str) -> Result<Vec<InstalledItem>, PhoneError> {
+    /// Lo instalado; con conexión se completa con nombre y versión de Modrinth (y de CurseForge,
+    /// por huella, si la app trae su clave y son mods).
+    pub fn content_installed(
+        &self,
+        source: Option<&dyn Source>,
+        curseforge: Option<&CurseForge>,
+        id: &str,
+    ) -> Result<Vec<InstalledItem>, PhoneError> {
         let (mc, p, root) = self.content_target(id)?;
         let mut items = cl::list_local(&root, &p.folder, p.kind.ext())?;
-        if let Some(src) = source {
-            if !items.is_empty() {
+        if !items.is_empty() {
+            if let Some(src) = source {
                 let _ = cl::enrich(src, &p, Some(&mc), &mut items);
+            }
+            if let Some(cf) = curseforge.filter(|_| p.kind == ContentKind::Mod) {
+                let _ = merc_content::curseforge::enrich_curseforge(cf, &root, &p, Some(&mc), &mut items);
             }
         }
         Ok(items)
@@ -481,11 +498,26 @@ mod tests {
             .register(LocalServer {
                 id: "v".into(),
                 flavor: Flavor::Vanilla,
-                ..base
+                ..base.clone()
             })
             .unwrap();
         let src = fake();
-        assert!(phone.content_info("v").unwrap().platform.is_none());
+        assert!(phone.content_info("v", true).unwrap().platform.is_none());
+        // Con la clave de CurseForge: los plugins siguen solo en Modrinth; los mods, también en CurseForge.
+        let sources = |id: &str, cf: bool| phone.content_info(id, cf).unwrap().platform.unwrap().sources;
+        assert_eq!(sources("p", true), vec![ContentSource::Modrinth]);
+        phone
+            .register(LocalServer {
+                id: "f".into(),
+                flavor: Flavor::Fabric,
+                ..base
+            })
+            .unwrap();
+        assert_eq!(sources("f", false), vec![ContentSource::Modrinth]);
+        assert_eq!(
+            sources("f", true),
+            vec![ContentSource::Modrinth, ContentSource::Curseforge]
+        );
         assert!(matches!(
             phone.content_search(&src, "v", "", 0),
             Err(PhoneError::Unsupported(_))
@@ -495,13 +527,13 @@ mod tests {
         let plugins = phone.server_dir("p").join("plugins");
         std::fs::create_dir_all(&plugins).unwrap();
         std::fs::write(plugins.join("a.jar"), b"hola").unwrap();
-        assert_eq!(phone.content_installed(Some(&src), "p").unwrap().len(), 1);
+        assert_eq!(phone.content_installed(Some(&src), None, "p").unwrap().len(), 1);
         assert_eq!(
             phone.content_set_enabled("p", "a.jar", false).unwrap(),
             "a.jar.disabled"
         );
         phone.content_remove("p", "a.jar.disabled").unwrap();
-        assert!(phone.content_installed(None, "p").unwrap().is_empty());
+        assert!(phone.content_installed(None, None, "p").unwrap().is_empty());
         let trashed: Vec<_> = walk(&d.path().join("papelera"));
         assert!(
             trashed.iter().any(|p| p.ends_with("plugins/a.jar.disabled")),

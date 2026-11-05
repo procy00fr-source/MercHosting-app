@@ -162,6 +162,7 @@ fn is_read(body: &RequestBody) -> bool {
             | R::PlayitStatus
             | R::ContentInstalled { .. }
             | R::Addons { .. }
+            | R::AddonSearch { .. }
             | R::BedrockPlayers { .. }
             | R::ContentPlatforms { .. }
             | R::ContentSearch { .. }
